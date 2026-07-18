@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import { materials } from "@/lib/materials";
 import { Bx, Cyl } from "./primitives";
 import { SceneObject } from "@/lib/interactive/SceneObject";
+import { useHoverGlow } from "@/lib/interactive/useHoverGlow";
 import { DESK } from "./Desk";
 
 /**
@@ -102,6 +103,7 @@ function Cables() {
 
 export function Monitor() {
   const keyLight = useRef<THREE.PointLight>(null);
+  const glow = useHoverGlow("monitor");
 
   const screenMat = useMemo(
     () =>
@@ -116,12 +118,13 @@ export function Monitor() {
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    // layered high-frequency flicker, ±1.5%
+    // layered high-frequency flicker, ±1.5%; hover lifts the panel's
+    // brightness and its spill together — the screen "wakes" to you
     const flicker = 1 + (Math.sin(t * 47.3) * Math.sin(t * 31.7) + Math.sin(t * 9.1)) * 0.0075;
+    const lift = 1 + glow.current * 0.22;
     screenMat.uniforms.uTime.value = t;
-    screenMat.uniforms.uFlicker.value = flicker;
-    // the practical inherits the flicker so the spill feels emitted
-    if (keyLight.current) keyLight.current.intensity = 1.2 * flicker;
+    screenMat.uniforms.uFlicker.value = flicker * lift;
+    if (keyLight.current) keyLight.current.intensity = 1.2 * flicker * (1 + glow.current * 0.5);
   });
 
   const y = DESK.surfaceY;

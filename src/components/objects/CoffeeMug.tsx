@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { materials } from "@/lib/materials";
 import { SceneObject } from "@/lib/interactive/SceneObject";
+import { useHoverGlow } from "@/lib/interactive/useHoverGlow";
 import { DESK } from "./Desk";
 
 /**
@@ -104,6 +105,14 @@ function Steam() {
 
 export function CoffeeMug() {
   const y = DESK.surfaceY;
+  const glow = useHoverGlow("coffee-mug");
+  const catchLight = useRef<THREE.PointLight>(null);
+
+  useFrame(() => {
+    // hover: the mug catches a little warm light, as if a lamp turned
+    // its way — glaze specular lifts, nothing moves
+    if (catchLight.current) catchLight.current.intensity = glow.current * 0.55;
+  });
 
   return (
     <SceneObject
@@ -125,6 +134,7 @@ export function CoffeeMug() {
         <primitive object={materials.mug} attach="material" />
       </mesh>
       <Steam />
+      <pointLight ref={catchLight} position={[0.18, 0.28, 0.2]} intensity={0} distance={0.8} decay={2} color="#ffca8a" />
     </SceneObject>
   );
 }

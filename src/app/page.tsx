@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { ViewDock } from "@/components/ui/ViewDock";
 import { ItemLabel } from "@/components/ui/ItemLabel";
+import { FocusCaption } from "@/components/ui/FocusCaption";
 import { flyToView } from "@/components/camera/cameraBus";
 
 // The entire 3D world is client-only and code-split away from the shell.
@@ -29,6 +30,7 @@ export default function Home() {
       <LoadingScreen />
       <ViewDock />
       <ItemLabel />
+      <FocusCaption />
 
       {/* Quiet identity chip — placeholder until Phase 2 HUD */}
       <div className="pointer-events-none absolute top-6 left-6 z-40 select-none">

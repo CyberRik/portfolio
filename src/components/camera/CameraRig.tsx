@@ -9,77 +9,168 @@ import gsap from "gsap";
 import {
   CAMERA_FEEL,
   CAMERA_VIEWS,
+  COMFORT_WEDGE,
   DEFAULT_VIEW,
   IDLE_DRIFT,
   ORBIT_LIMITS,
   type CameraViewId,
 } from "@/config/camera.config";
-import { registerFlyTo, registerFlyToPose } from "./cameraBus";
+import { registerFlyTo, registerFlyToPose, type FlightMeta } from "./cameraBus";
+import { focusStore } from "@/lib/focus";
 
 /**
- * The camera never feels locked:
- *  - constrained, damped OrbitControls (orbit / zoom / slight pan)
- *  - idle drift: two incommensurate sine frequencies on azimuth +
- *    target bob, eased in/out — organic, never metronomic
- *  - permanent micro-motion: fov "breathing" and pointer parallax
- *    applied AFTER controls.update() each frame (controls re-derive
- *    orientation every frame, so the offsets never accumulate)
- *  - gsap flyTo(view) with power3 easing between named views
+ * Directed camera. Every flight is staged like a dolly move:
+ *
+ *   anticipation — a small breath backward before departure
+ *   glide        — a curved path (quadratic bezier, lifted + bowed
+ *                  sideways) so the camera arcs through the room
+ *                  instead of tracking a straight rail
+ *   focus pull   — fov eases slightly tight mid-flight and relaxes
+ *                  on arrival
+ *   settle       — the look-target lands with a whisper of overshoot
+ *
+ * Free orbit stays available but weighted: heavy damping, slow rates,
+ * and the diorama-safe envelope (roof ceiling + side-wall planes).
  */
 export function CameraRig() {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const lastInteraction = useRef(-Infinity);
   const flying = useRef(false);
+  /** true once the user has orbited manually since the last flight —
+   *  only then may the self-recovery re-frame a parked pose */
+  const manualTaken = useRef(false);
   const driftPhase = useRef(0);
   const baseFov = useRef(CAMERA_VIEWS[DEFAULT_VIEW].fov ?? 45);
   const parallax = useRef({ x: 0, y: 0 });
+  const timeline = useRef<gsap.core.Timeline | null>(null);
 
   useEffect(() => {
-    const tweenTo = (
+    const flyTo = (
       position: readonly [number, number, number],
       target: readonly [number, number, number],
       duration: number,
-      fov?: number,
+      fov: number | undefined,
+      meta: FlightMeta | undefined,
+      isHome: boolean,
     ) => {
       const controls = controlsRef.current;
       if (!controls) return;
-      flying.current = true;
+
+      timeline.current?.kill();
       gsap.killTweensOf(camera.position);
       gsap.killTweensOf(controls.target);
-      gsap.to(camera.position, {
-        x: position[0],
-        y: position[1],
-        z: position[2],
-        duration,
-        ease: "power3.inOut",
-      });
-      if (fov) {
-        gsap.to(baseFov, { current: fov, duration, ease: "power3.inOut" });
-      }
-      gsap.to(controls.target, {
-        x: target[0],
-        y: target[1],
-        z: target[2],
-        duration,
-        ease: "power3.inOut",
-        onUpdate: () => controls.update(),
+      flying.current = true;
+      manualTaken.current = false; // a flight re-establishes an authored pose
+
+      if (meta) focusStore.flying(meta.id, meta.name);
+      else if (isHome) focusStore.clear();
+      else focusStore.flying();
+
+      const p1 = new THREE.Vector3(...position);
+      const t1 = new THREE.Vector3(...target);
+      const travel = camera.position.distanceTo(p1);
+
+      // Short hops skip the ceremony — no anticipation on tiny moves
+      const anticipation = travel > 1.6 ? 0.26 : 0;
+
+      const tl = gsap.timeline({
+        defaults: { overwrite: "auto" },
         onComplete: () => {
           flying.current = false;
+          if (meta) focusStore.arrived();
+          else if (!isHome) focusStore.clear();
         },
       });
+      timeline.current = tl;
+
+      // --- anticipation: breathe back along the current view axis ---
+      if (anticipation > 0) {
+        const back = camera.position.clone().sub(controls.target).normalize().multiplyScalar(0.1);
+        tl.to(camera.position, {
+          x: camera.position.x + back.x,
+          y: camera.position.y + back.y * 0.4,
+          z: camera.position.z + back.z,
+          duration: anticipation,
+          ease: "power2.out",
+        });
+      }
+
+      // --- glide along a curved dolly path ---
+      const progress = { t: 0 };
+      const p0 = new THREE.Vector3();
+      const mid = new THREE.Vector3();
+      tl.add(() => {
+        // snapshot departure AFTER the anticipation beat
+        p0.copy(camera.position);
+        mid.copy(p0).lerp(p1, 0.5);
+        mid.y += Math.min(0.45, travel * 0.1);
+        const dx = p1.x - p0.x;
+        const dz = p1.z - p0.z;
+        const h = Math.hypot(dx, dz);
+        if (h > 0.4) {
+          // bow the path sideways, outward from the room's center line
+          let px = -dz / h;
+          let pz = dx / h;
+          if (px * mid.x + pz * mid.z < 0) {
+            px = -px;
+            pz = -pz;
+          }
+          const bow = Math.min(0.5, travel * 0.08);
+          mid.x += px * bow;
+          mid.z += pz * bow;
+        }
+      });
+      tl.to(progress, {
+        t: 1,
+        duration,
+        ease: "power3.inOut",
+        onUpdate: () => {
+          const t = progress.t;
+          const s = 1 - t;
+          camera.position.set(
+            s * s * p0.x + 2 * s * t * mid.x + t * t * p1.x,
+            s * s * p0.y + 2 * s * t * mid.y + t * t * p1.y,
+            s * s * p0.z + 2 * s * t * mid.z + t * t * p1.z,
+          );
+        },
+      });
+
+      // --- look target: eases with a whisper of overshoot-settle ---
+      tl.to(
+        controls.target,
+        {
+          x: t1.x,
+          y: t1.y,
+          z: t1.z,
+          duration: duration * 1.02,
+          ease: "back.out(0.55)",
+          onUpdate: () => controls.update(),
+        },
+        anticipation > 0 ? anticipation * 0.5 : 0,
+      );
+
+      // --- focus pull: tighten slightly mid-flight, relax on arrival ---
+      const targetFov = fov ?? baseFov.current;
+      tl.to(
+        baseFov,
+        { current: targetFov * 0.965, duration: duration * 0.6, ease: "power2.in" },
+        anticipation,
+      );
+      tl.to(baseFov, { current: targetFov, duration: duration * 0.5, ease: "sine.out" }, ">");
     };
 
-    registerFlyTo((view: CameraViewId, duration = 1.8) => {
+    registerFlyTo((view: CameraViewId, duration = 2.2, meta?: FlightMeta) => {
       const v = CAMERA_VIEWS[view];
-      tweenTo(v.position, v.target, duration, v.fov);
+      flyTo(v.position, v.target, duration, v.fov, meta, view === DEFAULT_VIEW);
     });
-    registerFlyToPose((position, target, duration = 1.5) => {
-      tweenTo(position, target, duration);
+    registerFlyToPose((position, target, duration = 2.0, meta) => {
+      flyTo(position, target, duration, undefined, meta, false);
     });
     return () => {
       registerFlyTo(null);
       registerFlyToPose(null);
+      timeline.current?.kill();
     };
   }, [camera]);
 
@@ -88,6 +179,11 @@ export function CameraRig() {
     if (!controls) return;
     const onStart = () => {
       lastInteraction.current = performance.now() / 1000;
+      if (!flying.current) {
+        manualTaken.current = true;
+        // manual input dissolves the staged focus back to exploration
+        if (focusStore.get().phase === "arrived") focusStore.clear();
+      }
     };
     // 'start' only — the drift itself fires 'change', which would
     // otherwise reset the idle timer every frame
@@ -112,6 +208,7 @@ export function CameraRig() {
     // clipping behind them; up close the clamps disengage naturally.
     if (!flying.current) {
       const dist = camera.position.distanceTo(controls.target);
+      const idleFor = performance.now() / 1000 - lastInteraction.current;
 
       const MAX_CAM_Y = 3.0;
       if (camera.position.y > MAX_CAM_Y) {
@@ -119,7 +216,8 @@ export function CameraRig() {
         controls.setPolarAngle(Math.acos(cosP));
       }
 
-      const MAX_CAM_X = 3.85;
+      const MAX_CAM_X = 3.4;
+      const MIN_CAM_Z = -2.5;
       const horiz = dist * Math.sin(controls.getPolarAngle());
       if (horiz > 1e-4) {
         const az = controls.getAzimuthalAngle();
@@ -131,11 +229,51 @@ export function CameraRig() {
         if (sinAzMin > -1 && az < Math.asin(Math.min(sinAzMin, 1))) {
           controls.setAzimuthalAngle(Math.asin(Math.min(sinAzMin, 1)));
         }
+        // back plane: camera.z = target.z + horiz·cos(az) must stay in
+        // front of the rear wall (valid while |az| < π/2, which the
+        // static azimuth limits guarantee)
+        const cosAzMin = THREE.MathUtils.clamp(
+          (MIN_CAM_Z - controls.target.z) / horiz,
+          -1,
+          1,
+        );
+        const azLim = Math.acos(cosAzMin);
+        const azNow = controls.getAzimuthalAngle();
+        if (Math.abs(azNow) > azLim) {
+          controls.setAzimuthalAngle(Math.sign(azNow) * azLim);
+        }
       }
-    }
 
-    if (!flying.current) {
-      const idleFor = performance.now() / 1000 - lastInteraction.current;
+      // --- centre pivot + self-recovery: never irreversibly stuck ---
+      // Flights orbit their authored subject and hold. But manual
+      // control means "look around the room": the moment the user
+      // grabs or scrolls, the look-target glides home to the central
+      // anchor, so all free orbiting pivots around the room itself —
+      // the whole diorama stays in view, turntable-style. Once input
+      // goes quiet, azimuth parked outside the comfort band eases
+      // back inside too — the shot quietly re-frames itself.
+      if (manualTaken.current) {
+        const [ax, ay, az0] = COMFORT_WEDGE.anchor;
+        const aLam = COMFORT_WEDGE.anchorLambda;
+        const tgt = controls.target;
+        tgt.x = THREE.MathUtils.damp(tgt.x, ax, aLam, delta);
+        tgt.y = THREE.MathUtils.damp(tgt.y, ay, aLam, delta);
+        tgt.z = THREE.MathUtils.damp(tgt.z, az0, aLam, delta);
+
+        if (idleFor > COMFORT_WEDGE.settleDelay) {
+          const az = controls.getAzimuthalAngle();
+          if (Math.abs(az) > COMFORT_WEDGE.maxAzimuth) {
+            controls.setAzimuthalAngle(
+              THREE.MathUtils.damp(
+                az,
+                Math.sign(az) * COMFORT_WEDGE.maxAzimuth,
+                COMFORT_WEDGE.lambda,
+                delta,
+              ),
+            );
+          }
+        }
+      }
       const active = idleFor > IDLE_DRIFT.resumeDelay ? 1 : 0;
       driftPhase.current = THREE.MathUtils.damp(driftPhase.current, active, 1.2, delta);
 
@@ -179,12 +317,13 @@ export function CameraRig() {
       makeDefault
       target={home.target}
       enableDamping
-      dampingFactor={0.055}
-      enablePan
-      panSpeed={0.35}
-      screenSpacePanning
-      rotateSpeed={0.5}
-      zoomSpeed={0.65}
+      dampingFactor={0.045}
+      // no pan: it drags the look-target out of the composition
+      // envelope (every clamp is target-relative) — orbit + dolly
+      // covers all exploration; flights handle re-targeting
+      enablePan={false}
+      rotateSpeed={0.38}
+      zoomSpeed={0.5}
       minDistance={ORBIT_LIMITS.minDistance}
       maxDistance={ORBIT_LIMITS.maxDistance}
       minPolarAngle={ORBIT_LIMITS.minPolarAngle}

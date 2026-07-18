@@ -74,14 +74,42 @@ export const DEFAULT_VIEW: CameraViewId = "overview";
  */
 export const ORBIT_LIMITS = {
   minDistance: 1.8,
-  maxDistance: 8.5,
+  maxDistance: 8.2,
   // generous static floor — the CameraRig's per-frame height ceiling
   // (camera.y ≤ roofline) is what actually prevents top-down views
   minPolarAngle: Math.PI * 0.24,
   maxPolarAngle: Math.PI * 0.53,
-  minAzimuthAngle: -Math.PI * 0.36,
-  maxAzimuthAngle: Math.PI * 0.36,
-  panBounds: 1.5,
+  // wide enough that the authored wall-facing views (whiteboard az
+  // ≈ −0.44π, bookshelf ≈ 0.35π) are NOT bent by OrbitControls'
+  // per-update clamp mid-flight; kept under ±π/2 so the CameraRig's
+  // positional plane clamps stay in their valid trig branch
+  minAzimuthAngle: -Math.PI * 0.45,
+  maxAzimuthAngle: Math.PI * 0.45,
+} as const;
+
+/**
+ * Comfort wedge + centre pivot.
+ *
+ * Flights orbit whatever they were authored to look at (whiteboard,
+ * desk, …) and hold their pose. But the moment the USER takes manual
+ * control, the look-target glides home to the room's central anchor —
+ * so all free orbiting and scrolling pivots around the room itself and
+ * the whole diorama stays in view (the "turntable" model). On top of
+ * that, once input goes quiet, azimuth parked outside the comfort band
+ * eases back inside — an operator quietly re-framing. Nothing is ever
+ * irreversibly stuck.
+ */
+export const COMFORT_WEDGE = {
+  /** azimuth band the camera settles back into (rad) */
+  maxAzimuth: Math.PI * 0.3,
+  /** seconds of quiet input before the azimuth glide-back engages */
+  settleDelay: 1.6,
+  /** damping lambda — small = slow, cinematic return */
+  lambda: 0.9,
+  /** the fixed pivot manual exploration orbits around (room centre) */
+  anchor: [0, 1.0, -1.3] as Vector3Tuple,
+  /** how fast the pivot glides home after manual takeover */
+  anchorLambda: 1.4,
 } as const;
 
 /** Idle drift applied on top of the orbit position when the user is inactive. */

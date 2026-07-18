@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
 import { materials, sharedBox } from "@/lib/materials";
 import { Bx } from "./primitives";
 import { SceneObject } from "@/lib/interactive/SceneObject";
+import { useHoverGlow } from "@/lib/interactive/useHoverGlow";
 import { AssetModel, MODEL_URLS } from "./models/AssetModel";
 
 /**
@@ -15,6 +17,19 @@ const BOOK_PALETTE = ["#7a4a3a", "#4a5a6b", "#5a6b4a", "#8a7a5a", "#3d3d4d", "#6
 const SHELF_YS = [0.35, 0.8, 1.25, 1.7];
 
 export function Bookshelf() {
+  const glow = useHoverGlow("bookshelf");
+  const rimRef = useRef<THREE.SpotLight>(null);
+  const rimTarget = useMemo(() => {
+    const o = new THREE.Object3D();
+    o.position.set(0, 1.1, 0);
+    return o;
+  }, []);
+
+  useFrame(() => {
+    // hover: a cool rim wash slides across the spines
+    if (rimRef.current) rimRef.current.intensity = glow.current * 1.6;
+  });
+
   const books = useMemo(() => {
     const count = 96;
     const mesh = new THREE.InstancedMesh(
@@ -77,6 +92,20 @@ export function Bookshelf() {
       ))}
 
       <primitive object={books} />
+
+      {/* hover rim light — cool wash from the upper front */}
+      <primitive object={rimTarget} />
+      <spotLight
+        ref={rimRef}
+        target={rimTarget}
+        position={[0.6, 2.6, 1.4]}
+        angle={0.65}
+        penumbra={1}
+        intensity={0}
+        distance={4}
+        decay={2}
+        color="#bcd0ec"
+      />
 
       {/* Real encyclopedia rows (Poly Haven, CC0) mixed into two shelves */}
       <AssetModel url={MODEL_URLS.encyclopedias} position={[-0.25, 0.815, 0.02]} />

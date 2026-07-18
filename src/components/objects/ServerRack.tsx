@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import { materials, sharedBox } from "@/lib/materials";
 import { Bx } from "./primitives";
 import { SceneObject } from "@/lib/interactive/SceneObject";
+import { useHoverGlow } from "@/lib/interactive/useHoverGlow";
 
 /**
  * GPU / server rack. Status LEDs are a single InstancedMesh whose
@@ -26,7 +27,9 @@ const OFF = new THREE.Color("#0a0f0c");
 
 export function ServerRack() {
   const ledsRef = useRef<THREE.InstancedMesh>(null);
+  const spillRef = useRef<THREE.PointLight>(null);
   const blinkState = useRef(new Float32Array(LED_COUNT));
+  const glow = useHoverGlow("server-rack");
 
   const leds = useMemo(() => {
     const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
@@ -69,6 +72,10 @@ export function ServerRack() {
       }
     }
     if (dirty) mesh.instanceColor.needsUpdate = true;
+
+    // hover: the whole status wall breathes a little brighter
+    (mesh.material as THREE.MeshBasicMaterial).color.setScalar(1 + glow.current * 0.7);
+    if (spillRef.current) spillRef.current.intensity = 0.12 * (1 + glow.current * 2.2);
   });
 
   return (
@@ -99,7 +106,7 @@ export function ServerRack() {
       ))}
       <primitive object={leds} ref={ledsRef} />
       {/* Faint teal spill — visible as a color temperature shift, not a light */}
-      <pointLight position={[0.1, 1, 0.35]} intensity={0.12} distance={1.1} decay={2} color="#4a9a76" />
+      <pointLight ref={spillRef} position={[0.1, 1, 0.35]} intensity={0.12} distance={1.1} decay={2} color="#4a9a76" />
       {/* Feet */}
       <Bx position={[0, 0.02, 0]} scale={[0.5, 0.04, 0.28]} material={materials.deviceBody} />
     </SceneObject>

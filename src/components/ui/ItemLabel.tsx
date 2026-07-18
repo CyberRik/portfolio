@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useHoveredItem } from "@/lib/interaction";
+import { useFocusState } from "@/lib/focus";
 
 /**
  * Game-style item tag that trails the cursor while an interactive
@@ -10,6 +11,7 @@ import { useHoveredItem } from "@/lib/interaction";
  */
 export function ItemLabel() {
   const hovered = useHoveredItem();
+  const focus = useFocusState();
   const [pos, setPos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
@@ -24,7 +26,9 @@ export function ItemLabel() {
       style={{ left: pos.x + 18, top: pos.y + 6 }}
     >
       <AnimatePresence>
-        {hovered && (
+        {/* only while exploring — during flights and staged holds the
+            lower-third caption owns the typography */}
+        {hovered && focus.phase === "idle" && (
           <motion.div
             key={hovered.id}
             initial={{ opacity: 0, y: 4, scale: 0.96 }}

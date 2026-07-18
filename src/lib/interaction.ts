@@ -28,6 +28,15 @@ export function clearHoveredItem(id: string) {
   }
 }
 
+/** Imperative subscription for canvas-side hover-glow effects. */
+export function subscribeHover(cb: (info: HoverInfo | null) => void) {
+  const l = () => cb(hovered);
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+}
+
 export function useHoveredItem(): HoverInfo | null {
   return useSyncExternalStore(
     (cb) => {
