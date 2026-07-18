@@ -181,8 +181,13 @@ export function CameraRig() {
     registerPortalDepth((active) => {
       portalActive.current = active;
       const c = controlsRef.current;
+      if (!c) return;
+      // while a world is open the camera is authored, not navigated —
+      // in-scene worlds (monitor desktop) don't block the canvas, so
+      // orbiting must be off or a drag would tear the camera off the pose
+      c.enabled = !active;
       // relax immediately on open; restoration waits for flight landing
-      if (c && active) c.minDistance = 0.45;
+      if (active) c.minDistance = 0.45;
     });
     return () => {
       registerFlyTo(null);

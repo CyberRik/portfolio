@@ -8,6 +8,7 @@ import { Bx, Cyl } from "./primitives";
 import { SceneObject } from "@/lib/interactive/SceneObject";
 import { useHoverGlow } from "@/lib/interactive/useHoverGlow";
 import { DESK } from "./Desk";
+import { MonitorScreen } from "./MonitorScreen";
 
 /**
  * Ultrawide monitor — the hero. Procedural editor screen with a
@@ -139,6 +140,8 @@ export function Monitor() {
         <mesh position={[0, 0, 0.025]} material={screenMat}>
           <planeGeometry args={[1.44, 0.56]} />
         </mesh>
+        {/* RM-OS desktop, pinned to the panel while the portal is open */}
+        <MonitorScreen />
         {/* Bias light halo behind the panel */}
         <mesh position={[0, 0, -0.03]}>
           <planeGeometry args={[1.56, 0.68]} />

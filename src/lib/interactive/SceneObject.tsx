@@ -8,6 +8,7 @@ import type { InteractiveObjectDef } from "./types";
 import { setHoveredItem, clearHoveredItem } from "@/lib/interaction";
 import { selectObject, deselectObject } from "./selection";
 import { flyToPose, flyToView } from "@/components/camera/cameraBus";
+import { getPortalSection } from "@/lib/portal";
 
 type SceneObjectProps = ThreeElements["group"] & {
   def: InteractiveObjectDef;
@@ -87,6 +88,9 @@ export function SceneObject({ def, children, ...groupProps }: SceneObjectProps) 
 
   const onOver = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
+    // while a portal world is open the room is scenery, not controls —
+    // a click aimed at the monitor's desktop must never fly the camera
+    if (getPortalSection() !== null) return;
     setHovered(true);
     setHoveredItem({ id: def.id, name: def.name });
     if (group.current) selectObject(group.current);
@@ -98,6 +102,7 @@ export function SceneObject({ def, children, ...groupProps }: SceneObjectProps) 
   };
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    if (getPortalSection() !== null) return;
     if (e.delta > CLICK_SLOP_PX) return;
     focus();
   };

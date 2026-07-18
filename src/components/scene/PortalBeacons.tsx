@@ -5,7 +5,7 @@ import type { Vector3Tuple } from "three";
 import type { CameraViewId } from "@/config/camera.config";
 import { flyToView, type FlightMeta } from "@/components/camera/cameraBus";
 import { useFocusState } from "@/lib/focus";
-import { usePortalOpen } from "@/lib/portal";
+import { usePortalSection } from "@/lib/portal";
 
 /**
  * Wayfinding. Small beacons float above each portal object — the room's
@@ -33,7 +33,7 @@ const BEACONS: Beacon[] = [
 
 export function PortalBeacons() {
   const focus = useFocusState();
-  const portalOpen = usePortalOpen();
+  const portalOpen = usePortalSection() !== null;
   const visible = focus.phase === "idle" && !portalOpen;
 
   return (
