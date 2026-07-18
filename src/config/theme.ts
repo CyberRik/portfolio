@@ -36,8 +36,10 @@ export const palette = {
   mug: "#c9553d",
 } as const;
 
+// far enough that the exterior panorama stays clear of the fog;
+// the panorama shader itself opts out of fog entirely
 export const fog = {
   color: "#191512",
-  near: 9,
-  far: 28,
+  near: 11,
+  far: 46,
 } as const;

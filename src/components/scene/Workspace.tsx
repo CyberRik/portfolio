@@ -1,6 +1,8 @@
 "use client";
 
 import { Room } from "./Room";
+import { Exterior } from "./Exterior";
+import { PendantLamp } from "@/components/objects/PendantLamp";
 import { Desk } from "@/components/objects/Desk";
 import { Monitor } from "@/components/objects/Monitor";
 import { Laptop } from "@/components/objects/Laptop";
@@ -28,7 +30,9 @@ import { SunShaft } from "@/components/effects/SunShaft";
 export function Workspace() {
   return (
     <group name="workspace">
+      <Exterior />
       <Room />
+      <PendantLamp />
 
       {/* Desk zone */}
       <Desk />

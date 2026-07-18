@@ -17,11 +17,15 @@ export const CAMERA_VIEWS = {
    * window, desk lamp pool camera-left, rack glow camera-right.
    * Low camera height = intimate; long-ish lens = expensive.
    */
+  /**
+   * Opening shot: pulled back so the whole diorama reads against the
+   * night-city panorama — the reveal, then the user leans in.
+   */
   overview: {
     id: "overview",
-    position: [2.45, 1.65, 2.65],
-    target: [-0.15, 1.05, -1.6],
-    fov: 45,
+    position: [2.9, 2.6, 5.9],
+    target: [0, 1.0, -1.3],
+    fov: 42,
   },
   desk: {
     id: "desk",
@@ -63,13 +67,20 @@ export const DEFAULT_VIEW: CameraViewId = "overview";
  * Orbit constraints — cinematic, never lets the user break the illusion.
  * maxDistance keeps the camera INSIDE the (now fully enclosed) room.
  */
+/**
+ * Polar floor keeps the camera from climbing into a dead top-down
+ * angle where the roof fills the frame; distance cap keeps the
+ * diorama compositionally dominant against the panorama.
+ */
 export const ORBIT_LIMITS = {
   minDistance: 1.8,
-  maxDistance: 5.0,
-  minPolarAngle: Math.PI * 0.22,
-  maxPolarAngle: Math.PI * 0.52,
-  minAzimuthAngle: -Math.PI * 0.42,
-  maxAzimuthAngle: Math.PI * 0.42,
+  maxDistance: 8.5,
+  // generous static floor — the CameraRig's per-frame height ceiling
+  // (camera.y ≤ roofline) is what actually prevents top-down views
+  minPolarAngle: Math.PI * 0.24,
+  maxPolarAngle: Math.PI * 0.53,
+  minAzimuthAngle: -Math.PI * 0.36,
+  maxAzimuthAngle: Math.PI * 0.36,
   panBounds: 1.5,
 } as const;
 

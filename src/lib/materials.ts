@@ -4,6 +4,7 @@ import {
   fabricMap,
   plasterAlbedo,
   plasterRoughness,
+  roofPanels,
   walnutAlbedo,
   walnutRoughness,
 } from "./textures";
@@ -190,6 +191,26 @@ export const materials = {
   /** Matte rubber for cables. */
   get rubber() {
     return std("rubber", { color: "#121213", roughness: 0.92 });
+  },
+  /** Near-black matte skin for the diorama's outer shell + plinth.
+      Env reflection almost fully suppressed — at glancing angles the
+      warm environment was tinting the whole roof slab tan. */
+  get shell() {
+    return std("shell", {
+      color: "#0e0c0a",
+      roughness: 0.96,
+      metalness: 0,
+      envMapIntensity: 0.12,
+    });
+  },
+  /** Rooftop membrane with panel seams. */
+  get roof() {
+    return std("roof", {
+      map: roofPanels(),
+      roughness: 0.95,
+      metalness: 0,
+      envMapIntensity: 0.12,
+    });
   },
 };
 

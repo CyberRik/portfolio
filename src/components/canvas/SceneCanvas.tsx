@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { AdaptiveDpr, Preload } from "@react-three/drei";
+import { Selection } from "@react-three/postprocessing";
 import * as THREE from "three";
 import { CAMERA_VIEWS, DEFAULT_VIEW } from "@/config/camera.config";
 import { fog } from "@/config/theme";
@@ -40,12 +41,14 @@ export function SceneCanvas() {
       }}
     >
       <Suspense fallback={null}>
-        <PhysicsProvider>
-          <Workspace />
-        </PhysicsProvider>
-        <Lighting />
+        <Selection>
+          <PhysicsProvider>
+            <Workspace />
+          </PhysicsProvider>
+          <Lighting />
+          <Effects />
+        </Selection>
         <CameraRig />
-        <Effects />
         <Preload all />
         <ReadyProbe />
       </Suspense>

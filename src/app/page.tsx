@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { ViewDock } from "@/components/ui/ViewDock";
+import { ItemLabel } from "@/components/ui/ItemLabel";
+import { flyToView } from "@/components/camera/cameraBus";
 
 // The entire 3D world is client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
@@ -11,11 +14,21 @@ const SceneCanvas = dynamic(
 );
 
 export default function Home() {
+  // Esc always returns to the wide shot — the "back out" gesture
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") flyToView("overview");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <main className="relative h-dvh w-screen overflow-hidden bg-[#1c1915]">
       <SceneCanvas />
       <LoadingScreen />
       <ViewDock />
+      <ItemLabel />
 
       {/* Quiet identity chip — placeholder until Phase 2 HUD */}
       <div className="pointer-events-none absolute top-6 left-6 z-40 select-none">

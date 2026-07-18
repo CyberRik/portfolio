@@ -217,6 +217,24 @@ export function plasterRoughness() {
   );
 }
 
+/* ---------------------------------- roof ---------------------------------- */
+
+/** Dark rooftop membrane with recessed panel seams. */
+export function roofPanels() {
+  const { fbm } = makeNoise(51);
+  return generate(
+    "roofPanels",
+    256,
+    (x, y) => {
+      const seam = x % 64 < 2 || y % 64 < 2 ? 0.55 : 1;
+      const wear = 0.9 + fbm(x * 0.04, y * 0.04, 3) * 0.25;
+      const v = 26 * seam * wear;
+      return [v, v * 0.97, v * 0.92];
+    },
+    { srgb: true, repeat: [4, 3] },
+  );
+}
+
 /* --------------------------------- fabric --------------------------------- */
 
 /** Fine twill weave for the chair + desk mat. Doubles as a bump map. */

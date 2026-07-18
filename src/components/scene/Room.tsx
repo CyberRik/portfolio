@@ -63,9 +63,39 @@ export function Room() {
       <Bx position={[-W / 2, H / 2, 0]} scale={[0.15, H, D]} material={materials.wallAccent} />
       <Bx position={[W / 2, H / 2, 0]} scale={[0.15, H, D]} material={materials.wallAccent} />
 
-      {/* Front wall — encloses the room so no camera angle ever shows
-          the void outside the shell */}
-      <Bx position={[0, H / 2, halfD]} scale={[W, H, 0.15]} material={materials.wallAccent} />
+      {/* Open front — the room reads as a cutaway diorama against the
+          city panorama. Dark outer skins keep the shell clean from
+          outside angles. */}
+      <Bx position={[0, H / 2, -halfD - 0.1]} scale={[W + 0.24, H + 0.12, 0.06]} material={materials.shell} castShadow={false} />
+      <Bx position={[-W / 2 - 0.1, H / 2, 0]} scale={[0.06, H + 0.12, D + 0.24]} material={materials.shell} castShadow={false} />
+      <Bx position={[W / 2 + 0.1, H / 2, 0]} scale={[0.06, H + 0.12, D + 0.24]} material={materials.shell} castShadow={false} />
+      <Bx position={[0, H + 0.13, 0]} scale={[W + 0.24, 0.06, D + 0.24]} material={materials.roof} castShadow={false} />
+
+      {/* Rooftop dressing — HVAC units + vent, so top-down angles read
+          as a penthouse roof, not a bare slab */}
+      <group position={[0, H + 0.16, 0]}>
+        <Bx position={[2.4, 0.19, -1.1]} scale={[0.75, 0.38, 0.55]} material={materials.metalMid} castShadow={false} />
+        <Bx position={[2.4, 0.395, -1.1]} scale={[0.65, 0.03, 0.45]} material={materials.metalDark} castShadow={false} />
+        <Bx position={[-2.6, 0.14, 0.9]} scale={[0.55, 0.28, 0.45]} material={materials.metalMid} castShadow={false} />
+        <mesh position={[-1.4, 0.14, -2.0]}>
+          <cylinderGeometry args={[0.1, 0.13, 0.3, 12]} />
+          <primitive object={materials.metalDark} attach="material" />
+        </mesh>
+        {/* aviation beacon */}
+        <mesh position={[2.4, 0.44, -1.1]}>
+          <sphereGeometry args={[0.025, 8, 8]} />
+          <meshBasicMaterial color="#ff4444" toneMapped={false} />
+        </mesh>
+      </group>
+
+      {/* Display plinth under the floor — architectural-model base with
+          a warm under-glow line */}
+      <Bx position={[0, -0.12, 0]} scale={[W + 0.3, 0.14, D + 0.3]} material={materials.shell} castShadow={false} />
+      <mesh position={[0, -0.2, 0]}>
+        <boxGeometry args={[W + 0.5, 0.02, D + 0.5]} />
+        <meshStandardMaterial color="#000000" emissive="#ffb375" emissiveIntensity={0.7} />
+      </mesh>
+      <Bx position={[0, -0.34, 0]} scale={[W + 0.7, 0.26, D + 0.7]} material={materials.shell} castShadow={false} />
 
       {/* Ceiling cove — warm recessed LED lines framing the ceiling,
           so the upper third reads as architecture, not dead space */}

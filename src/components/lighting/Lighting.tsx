@@ -114,10 +114,10 @@ export function Lighting() {
       {/* Faint cool skylight so ceiling/far corners don't clip to black */}
       <hemisphereLight args={["#4a5b7a", "#2b2016", 0.32]} />
 
-      {/* HERO SUPPORT — dim, tight practical pool over the desk only */}
+      {/* HERO SUPPORT — warm pool from the pendant lamp over the desk */}
       <spotLight
         target={deskTarget}
-        position={[0, 3.05, -1.5]}
+        position={[0, 2.6, -1.5]}
         angle={0.52}
         penumbra={1}
         intensity={2.5}

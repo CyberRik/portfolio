@@ -14,7 +14,7 @@ import {
   ORBIT_LIMITS,
   type CameraViewId,
 } from "@/config/camera.config";
-import { registerFlyTo } from "./cameraBus";
+import { registerFlyTo, registerFlyToPose } from "./cameraBus";
 
 /**
  * The camera never feels locked:
@@ -36,31 +36,31 @@ export function CameraRig() {
   const parallax = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const flyTo = (view: CameraViewId, duration = 1.8) => {
+    const tweenTo = (
+      position: readonly [number, number, number],
+      target: readonly [number, number, number],
+      duration: number,
+      fov?: number,
+    ) => {
       const controls = controlsRef.current;
       if (!controls) return;
-      const v = CAMERA_VIEWS[view];
       flying.current = true;
       gsap.killTweensOf(camera.position);
       gsap.killTweensOf(controls.target);
       gsap.to(camera.position, {
-        x: v.position[0],
-        y: v.position[1],
-        z: v.position[2],
+        x: position[0],
+        y: position[1],
+        z: position[2],
         duration,
         ease: "power3.inOut",
       });
-      if (v.fov) {
-        gsap.to(baseFov, {
-          current: v.fov,
-          duration,
-          ease: "power3.inOut",
-        });
+      if (fov) {
+        gsap.to(baseFov, { current: fov, duration, ease: "power3.inOut" });
       }
       gsap.to(controls.target, {
-        x: v.target[0],
-        y: v.target[1],
-        z: v.target[2],
+        x: target[0],
+        y: target[1],
+        z: target[2],
         duration,
         ease: "power3.inOut",
         onUpdate: () => controls.update(),
@@ -69,8 +69,18 @@ export function CameraRig() {
         },
       });
     };
-    registerFlyTo(flyTo);
-    return () => registerFlyTo(null);
+
+    registerFlyTo((view: CameraViewId, duration = 1.8) => {
+      const v = CAMERA_VIEWS[view];
+      tweenTo(v.position, v.target, duration, v.fov);
+    });
+    registerFlyToPose((position, target, duration = 1.5) => {
+      tweenTo(position, target, duration);
+    });
+    return () => {
+      registerFlyTo(null);
+      registerFlyToPose(null);
+    };
   }, [camera]);
 
   useEffect(() => {
@@ -92,6 +102,37 @@ export function CameraRig() {
     if (!controls) return;
 
     const t = state.clock.elapsedTime;
+
+    // Diorama-safe orbit envelope. A box with one open face means some
+    // orbit poses stare at the roof or the outer wall skins. OrbitControls
+    // can't couple angles to distance, so each frame we clamp:
+    //   - height ceiling: camera never rises above the roofline
+    //   - side planes: camera never crosses the side-wall planes
+    // The camera glides along these invisible planes instead of
+    // clipping behind them; up close the clamps disengage naturally.
+    if (!flying.current) {
+      const dist = camera.position.distanceTo(controls.target);
+
+      const MAX_CAM_Y = 3.0;
+      if (camera.position.y > MAX_CAM_Y) {
+        const cosP = THREE.MathUtils.clamp((MAX_CAM_Y - controls.target.y) / dist, -1, 1);
+        controls.setPolarAngle(Math.acos(cosP));
+      }
+
+      const MAX_CAM_X = 3.85;
+      const horiz = dist * Math.sin(controls.getPolarAngle());
+      if (horiz > 1e-4) {
+        const az = controls.getAzimuthalAngle();
+        const sinAzMax = (MAX_CAM_X - controls.target.x) / horiz;
+        if (sinAzMax < 1 && az > Math.asin(Math.max(sinAzMax, -1))) {
+          controls.setAzimuthalAngle(Math.asin(Math.max(sinAzMax, -1)));
+        }
+        const sinAzMin = (-MAX_CAM_X - controls.target.x) / horiz;
+        if (sinAzMin > -1 && az < Math.asin(Math.min(sinAzMin, 1))) {
+          controls.setAzimuthalAngle(Math.asin(Math.min(sinAzMin, 1)));
+        }
+      }
+    }
 
     if (!flying.current) {
       const idleFor = performance.now() / 1000 - lastInteraction.current;

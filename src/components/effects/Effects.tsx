@@ -5,6 +5,7 @@ import {
   EffectComposer,
   N8AO,
   Noise,
+  Outline,
   SMAA,
   Vignette,
 } from "@react-three/postprocessing";
@@ -25,9 +26,17 @@ import {
  */
 export function Effects() {
   return (
-    <EffectComposer multisampling={0}>
+    <EffectComposer multisampling={0} autoClear={false}>
       <N8AO aoRadius={0.35} distanceFalloff={0.5} intensity={2.6} quality="performance" halfRes />
       <Bloom mipmapBlur intensity={0.42} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
+      {/* game-style hover highlight — warm edge, no x-ray through walls */}
+      <Outline
+        blur
+        edgeStrength={3.5}
+        visibleEdgeColor={0xffd9a8}
+        hiddenEdgeColor={0x241c12}
+        xRay={false}
+      />
       <SMAA />
       <Noise premultiply opacity={0.4} />
       <Vignette eskil={false} offset={0.22} darkness={0.68} />
