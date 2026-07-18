@@ -14,7 +14,9 @@ export function DeskLamp() {
     <SceneObject
       def={{ id: "desk-lamp", name: "Desk Lamp", cameraView: "desk" }}
       position={[-1.05, DESK.surfaceY, -2.05]}
-      rotation={[0, 0.7, 0]}
+      // yaw chosen so the articulated head reaches over and points AT
+      // the workspace (keyboard/monitor to the lamp's right), not away
+      rotation={[0, -2.4, 0]}
     >
       <AssetModel url={MODEL_URLS.deskLamp} />
       <pointLight

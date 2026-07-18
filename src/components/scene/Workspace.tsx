@@ -20,6 +20,7 @@ import { WallShelf } from "@/components/objects/WallShelf";
 import { DeskChair } from "@/components/objects/DeskChair";
 import { DeskLamp } from "@/components/objects/DeskLamp";
 import { ReadingCorner } from "@/components/objects/ReadingCorner";
+import { Roomba } from "@/components/objects/Roomba";
 import { DustParticles } from "@/components/effects/DustParticles";
 import { SunShaft } from "@/components/effects/SunShaft";
 
@@ -54,6 +55,9 @@ export function Workspace() {
       <WallShelf />
 
       <ReadingCorner />
+
+      {/* the room's one free-roaming inhabitant */}
+      <Roomba />
 
       {/* potted_plant_04 is tabletop-scale in real life — scaled up for
           the floor corner, small variant dressed on the coffee table */}

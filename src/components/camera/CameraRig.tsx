@@ -15,7 +15,12 @@ import {
   ORBIT_LIMITS,
   type CameraViewId,
 } from "@/config/camera.config";
-import { registerFlyTo, registerFlyToPose, type FlightMeta } from "./cameraBus";
+import {
+  registerFlyTo,
+  registerFlyToPose,
+  registerPortalDepth,
+  type FlightMeta,
+} from "./cameraBus";
 import { focusStore } from "@/lib/focus";
 
 /**
@@ -44,6 +49,8 @@ export function CameraRig() {
   const baseFov = useRef(CAMERA_VIEWS[DEFAULT_VIEW].fov ?? 45);
   const parallax = useRef({ x: 0, y: 0 });
   const timeline = useRef<gsap.core.Timeline | null>(null);
+  /** portal experiences dolly inside the normal orbit floor */
+  const portalActive = useRef(false);
 
   useEffect(() => {
     const flyTo = (
@@ -80,6 +87,10 @@ export function CameraRig() {
           flying.current = false;
           if (meta) focusStore.arrived();
           else if (!isHome) focusStore.clear();
+          // restore the orbit floor only once the exit flight has
+          // landed — doing it while still deep would snap the radius
+          const c = controlsRef.current;
+          if (c && !portalActive.current) c.minDistance = ORBIT_LIMITS.minDistance;
         },
       });
       timeline.current = tl;
@@ -167,9 +178,16 @@ export function CameraRig() {
     registerFlyToPose((position, target, duration = 2.0, meta) => {
       flyTo(position, target, duration, undefined, meta, false);
     });
+    registerPortalDepth((active) => {
+      portalActive.current = active;
+      const c = controlsRef.current;
+      // relax immediately on open; restoration waits for flight landing
+      if (c && active) c.minDistance = 0.45;
+    });
     return () => {
       registerFlyTo(null);
       registerFlyToPose(null);
+      registerPortalDepth(null);
       timeline.current?.kill();
     };
   }, [camera]);

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { CAMERA_VIEWS, DEFAULT_VIEW } from "@/config/camera.config";
 import { fog } from "@/config/theme";
 import { Workspace } from "@/components/scene/Workspace";
+import { PortalBeacons } from "@/components/scene/PortalBeacons";
 import { PhysicsProvider } from "@/components/scene/PhysicsProvider";
 import { Lighting } from "@/components/lighting/Lighting";
 import { CameraRig } from "@/components/camera/CameraRig";
@@ -43,6 +44,7 @@ export function SceneCanvas() {
         <PhysicsProvider>
           <Workspace />
         </PhysicsProvider>
+        <PortalBeacons />
         <Lighting />
         <Effects />
         <CameraRig />

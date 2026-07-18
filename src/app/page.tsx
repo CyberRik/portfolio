@@ -2,15 +2,39 @@
 
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
-import { LoadingScreen } from "@/components/ui/LoadingScreen";
-import { ViewDock } from "@/components/ui/ViewDock";
-import { ItemLabel } from "@/components/ui/ItemLabel";
-import { FocusCaption } from "@/components/ui/FocusCaption";
 import { flyToView } from "@/components/camera/cameraBus";
 
-// The entire 3D world is client-only and code-split away from the shell.
+// The entire 3D world and its DOM UI overlays are client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
   () => import("@/components/canvas/SceneCanvas").then((m) => m.SceneCanvas),
+  { ssr: false },
+);
+
+const LoadingScreen = dynamic(
+  () => import("@/components/ui/LoadingScreen").then((m) => m.LoadingScreen),
+  { ssr: false },
+);
+
+const ViewDock = dynamic(
+  () => import("@/components/ui/ViewDock").then((m) => m.ViewDock),
+  { ssr: false },
+);
+
+const ItemLabel = dynamic(
+  () => import("@/components/ui/ItemLabel").then((m) => m.ItemLabel),
+  { ssr: false },
+);
+
+const FocusCaption = dynamic(
+  () => import("@/components/ui/FocusCaption").then((m) => m.FocusCaption),
+  { ssr: false },
+);
+
+const ExperienceOverlay = dynamic(
+  () =>
+    import("@/components/experiences/ExperienceOverlay").then(
+      (m) => m.ExperienceOverlay,
+    ),
   { ssr: false },
 );
 
@@ -31,14 +55,15 @@ export default function Home() {
       <ViewDock />
       <ItemLabel />
       <FocusCaption />
+      <ExperienceOverlay />
 
-      {/* Quiet identity chip — placeholder until Phase 2 HUD */}
+      {/* Quiet identity chip */}
       <div className="pointer-events-none absolute top-6 left-6 z-40 select-none">
         <p className="font-mono text-[11px] tracking-[0.35em] text-[#a89880] uppercase">
           Ritankar Mondal
         </p>
         <p className="mt-1 font-mono text-[10px] tracking-[0.2em] text-[#6b6152]">
-          AI Systems · Workspace 01
+          AI Engineer · IIT Madras
         </p>
       </div>
     </main>

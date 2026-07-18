@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useFocusState } from "@/lib/focus";
+import { OBJECT_SECTION } from "@/content/portfolio";
 
 /**
  * Cinematic lower-third. Appears only after the camera has settled on
  * a subject AND held for a beat — the room gets its moment first.
+ * Section anchors (monitor, whiteboard, ...) are excluded: their
+ * ContentPanel carries the title, and two labels would shout.
  */
 const DWELL_MS = 700;
 
@@ -23,7 +26,8 @@ export function FocusCaption() {
     return () => clearTimeout(t);
   }, [focus.phase, focus.id]);
 
-  const show = revealed && focus.phase === "arrived" && focus.name;
+  const isSectionAnchor = focus.id != null && focus.id in OBJECT_SECTION;
+  const show = revealed && focus.phase === "arrived" && focus.name && !isSectionAnchor;
 
   return (
     <div className="pointer-events-none absolute bottom-24 left-10 z-40">

@@ -21,6 +21,7 @@ type FlyToPose = (
 
 let flyToImpl: FlyTo | null = null;
 let flyToPoseImpl: FlyToPose | null = null;
+let portalDepthImpl: ((active: boolean) => void) | null = null;
 
 export function registerFlyTo(fn: FlyTo | null) {
   flyToImpl = fn;
@@ -41,4 +42,18 @@ export function flyToPose(
   meta?: FlightMeta,
 ) {
   flyToPoseImpl?.(position, target, duration, meta);
+}
+
+export function registerPortalDepth(fn: ((active: boolean) => void) | null) {
+  portalDepthImpl = fn;
+}
+
+/**
+ * Portal experiences dolly the camera INSIDE OrbitControls' normal
+ * minDistance (which clamps the radius every update, even mid-flight).
+ * While a portal is open the rig relaxes the floor; it restores it
+ * only after the exit flight lands, so the pose never snaps.
+ */
+export function setPortalDepth(active: boolean) {
+  portalDepthImpl?.(active);
 }
