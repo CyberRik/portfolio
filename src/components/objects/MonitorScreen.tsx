@@ -605,7 +605,6 @@ function OSWindowChrome({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.92 }}
       transition={{ duration: DUR.ui, ease: EASE.out }}
-      layout
     >
       {/* title bar — drag handle */}
       <div
@@ -749,7 +748,7 @@ function KeyboardWindow({ onClose }: { onClose: () => void }) {
         }}
       >
         {typed || <span style={{ color: OS.faint }}>Start typing...</span>}
-        <span className="cursor-blink" style={{ color: OS.accent }}>▍</span>
+        <span className="cursor-blink" style={{ color: OS.accent }}>|</span>
       </div>
 
       {/* keyboard grid */}

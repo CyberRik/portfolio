@@ -170,7 +170,7 @@ button:disabled,
 .os-surface h3,
 .os-surface span:not(button span):not(a span),
 .os-surface .cursor-text {
-  cursor: url("/cursors/text.png") 4 11, text !important;
+  cursor: text !important;
 }
 /* window title bars are drag handles — these beat Tailwind's own
    cursor-grab / active:cursor-grabbing utilities on specificity */

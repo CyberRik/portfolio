@@ -91,7 +91,7 @@ export function ContactCompose({ onClose }: PortalProps) {
           >
             Open to AI engineering roles, research collaborations, and
             interesting problems. I read everything.
-            {step >= 2 && <span className="cursor-blink not-italic"> ▍</span>}
+            {step >= 2 && <span className="cursor-blink not-italic"> |</span>}
           </motion.p>
         </div>
 

@@ -195,7 +195,7 @@ export function SkillsTerminal({ onClose }: PortalProps) {
               transition={visitedAtMount ? { duration: 0 } : { delay: SKILLS.length * 0.18 + 1.1 }}
             >
               <span style={{ color: T.dim }}>ritankar@rack-01 ~ $ </span>
-              <span className="cursor-blink">▍</span>
+              <span className="cursor-blink">|</span>
             </motion.p>
           </div>
         )}

@@ -51,7 +51,7 @@ export function Typewriter({
   return (
     <span className={className}>
       {text.slice(0, n)}
-      {cursor && n < text.length && <span className="cursor-blink">▍</span>}
+      {cursor && n < text.length && <span className="cursor-blink">|</span>}
     </span>
   );
 }
