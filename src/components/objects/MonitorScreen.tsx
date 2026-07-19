@@ -1,12 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useDragControls } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Html } from "@react-three/drei";
-import { PROFILE, PROJECTS } from "@/content/portfolio";
+import { PROFILE } from "@/content/portfolio";
+import {
+  FEATURED,
+  isTodo,
+  PROJECT_DOCS,
+  todoHint,
+  TRAINING_LOG,
+  type MilestoneId,
+  type ProjectId,
+} from "@/content/work";
+import { TodoNote } from "@/components/os/TodoNote";
 import { closePortal, usePortalSection } from "@/lib/portal";
 import { DUR, EASE } from "@/lib/design";
 import { audioPlayer, useAudioPlayer, TRACKS } from "@/lib/audioStore";
+import { OSWindow } from "@/components/os/OSWindow";
+import { OSRouterContext, type OSRoutes } from "@/components/os/OSRouter";
+import { ProjectsApp } from "@/components/os/ProjectsApp";
+import { TimelineApp } from "@/components/os/TimelineApp";
+import { APP_TINTS, OS } from "@/components/os/theme";
 
 /**
  * PROJECTS — RM-OS, rendered ON the monitor's physical panel.
@@ -30,23 +45,22 @@ import { audioPlayer, useAudioPlayer, TRACKS } from "@/lib/audioStore";
 const CSS_W = 1152;
 const CSS_H = 448;
 
-/** graphite UI + the room's lamp amber; app tints stay in the warm half */
-const OS = {
-  txt: "#ece7dd",
-  dim: "#948d80",
-  faint: "#6b6459",
-  accent: "#ffb361",
-};
-
-const APP_TINTS = ["#ffb361", "#e08b6a", "#a8b48c", "#c49ab0"];
-
-/** macOS-style dock icons — all four are functional mini-apps */
+/**
+ * Dock apps. Timeline and Projects lead — they're the substance of the
+ * machine; the four utilities that follow are what makes it feel lived
+ * in. The divider between the two groups is drawn in the dock itself.
+ */
 const MACOS_DOCK: { id: string; label: string; glyph: string; bg: string }[] = [
+  { id: "timeline", label: "Timeline", glyph: "◷", bg: "linear-gradient(160deg, #ffb361, #d98a3f)" },
+  { id: "projects", label: "Projects", glyph: "◧", bg: "linear-gradient(160deg, #7f8fb8, #4d5b80)" },
   { id: "terminal", label: "Terminal", glyph: "▸_", bg: "linear-gradient(160deg, #1d1d1f, #3a3a3c)" },
   { id: "keyboard", label: "Keyboard", glyph: "⌨", bg: "linear-gradient(160deg, #5e5e63, #3a3a3c)" },
   { id: "notes", label: "Notes", glyph: "✎", bg: "linear-gradient(160deg, #f9e787, #f5d45a)" },
   { id: "music", label: "Music", glyph: "♫", bg: "linear-gradient(160deg, #fa5d6a, #d1344a)" },
 ];
+
+/** desktop icons — the featured work, one double-click from its case study */
+const DESKTOP_ICONS = FEATURED;
 
 export function MonitorScreen() {
   const active = usePortalSection() === "projects";
@@ -77,26 +91,58 @@ function useClock() {
 
 function Desktop() {
   const [awake, setAwake] = useState(false);
-  const [app, setApp] = useState<number | null>(null);
+  /** which case study the Projects app is showing; null = the tab list */
+  const [project, setProject] = useState<ProjectId | null>(null);
+  /** which Timeline chapter is expanded */
+  const [chapter, setChapter] = useState<MilestoneId | null>(null);
   const [selectedIcons, setSelectedIcons] = useState<Set<number>>(new Set());
   const [selectionBox, setSelectionBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
   const [toast, setToast] = useState(false);
-  const [openApps, setOpenApps] = useState<Set<string>>(() => new Set(["terminal"]));
+  // the machine boots into the Timeline — the story, not a utility
+  const [openApps, setOpenApps] = useState<string[]>(["timeline"]);
   const toggleApp = useCallback((id: string) => {
     setOpenApps((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+      if (prev.includes(id)) return prev.filter((a) => a !== id);
+      return [...prev, id];
     });
   }, []);
   const closeApp = useCallback((id: string) => {
+    setOpenApps((prev) => prev.filter((a) => a !== id));
+  }, []);
+  const focusApp = useCallback((id: string) => {
     setOpenApps((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
+      if (!prev.includes(id)) return prev;
+      if (prev[prev.length - 1] === id) return prev;
+      return [...prev.filter((a) => a !== id), id];
     });
   }, []);
+  /**
+   * The cross-links. Opening a project from the Timeline raises the
+   * Projects app on that case study; opening a chapter from a project
+   * raises the Timeline with it expanded. Both go through here so the
+   * apps never have to know about each other.
+   */
+  const routes = useMemo<OSRoutes>(
+    () => ({
+      openProject: (id) => {
+        setProject(id);
+        focusApp("projects");
+        setOpenApps((prev) => (prev.includes("projects") ? prev : [...prev, "projects"]));
+      },
+      openMilestone: (id) => {
+        setChapter(id);
+        focusApp("timeline");
+        setOpenApps((prev) => (prev.includes("timeline") ? prev : [...prev, "timeline"]));
+      },
+      openApp: (id) => {
+        focusApp(id);
+        setOpenApps((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      },
+    }),
+    [focusApp],
+  );
+
   const now = useClock();
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
@@ -112,6 +158,7 @@ function Desktop() {
   }, []);
 
   return (
+    <OSRouterContext.Provider value={routes}>
     <motion.div
       // os-surface swaps the room's cursor for RM-OS's own for as long
       // as the pointer is on the glass (see globals.css)
@@ -202,7 +249,7 @@ function Desktop() {
                 setSelectionBox({ x: boxX, y: boxY, w: boxW, h: boxH });
 
                 const newSelected = new Set<number>();
-                for (let i = 0; i < PROJECTS.length; i++) {
+                for (let i = 0; i < DESKTOP_ICONS.length; i++) {
                   const iconY = 12 + i * 70;
                   const iconX = 12;
                   if (boxX < iconX + 96 && boxX + boxW > iconX && boxY < iconY + 66 && boxY + boxH > iconY) {
@@ -232,13 +279,13 @@ function Desktop() {
                   }}
                 />
               )}
-              {/* desktop icons — all projects visible instantly */}
+              {/* desktop icons — the featured work, straight to its case study */}
               <div className="absolute top-3 left-3 flex flex-col gap-1">
-                {PROJECTS.map((p, i) => (
+                {DESKTOP_ICONS.map((id, i) => (
                   <motion.button
-                    key={p.title}
+                    key={id}
                     onClick={(e) => { e.stopPropagation(); setSelectedIcons(new Set([i])); }}
-                    onDoubleClick={() => setApp(i)}
+                    onDoubleClick={() => routes.openProject(id)}
                     className="group flex w-[96px] flex-col items-center gap-1 rounded-md px-1.5 py-1.5 transition-colors"
                     style={{ background: selectedIcons.has(i) ? "rgba(255,255,255,0.09)" : "transparent" }}
                     initial={{ opacity: 0, x: -10 }}
@@ -246,7 +293,7 @@ function Desktop() {
                     transition={{ delay: 0.08 + i * 0.05, duration: DUR.ui, ease: EASE.out }}
                   >
                     <AppIcon
-                      label={p.title}
+                      label={PROJECT_DOCS[id].title}
                       tint={APP_TINTS[i % APP_TINTS.length]}
                       size={38}
                       radius={10}
@@ -255,28 +302,53 @@ function Desktop() {
                       className="max-w-full text-center text-[9px] leading-tight break-words"
                       style={{ color: selectedIcons.has(i) ? OS.txt : OS.dim }}
                     >
-                      {p.title}
+                      {PROJECT_DOCS[id].title}
                     </span>
                   </motion.button>
                 ))}
               </div>
 
-              {/* system app windows — all toggled from the dock */}
+              {/* the two content apps — the substance of the machine */}
               <AnimatePresence>
-                {openApps.has("terminal") && <TerminalWindow onClose={() => closeApp("terminal")} />}
+                {openApps.includes("timeline") && (
+                  <TimelineApp
+                    onClose={() => closeApp("timeline")}
+                    onFocus={() => focusApp("timeline")}
+                    zIndex={10 + openApps.indexOf("timeline")}
+                    expanded={chapter}
+                    onExpand={setChapter}
+                  />
+                )}
               </AnimatePresence>
               <AnimatePresence>
-                {openApps.has("notes") && <NotesWindow onClose={() => closeApp("notes")} />}
-              </AnimatePresence>
-              <AnimatePresence>
-                {openApps.has("keyboard") && <KeyboardWindow onClose={() => closeApp("keyboard")} />}
-              </AnimatePresence>
-              <AnimatePresence>
-                {openApps.has("music") && <MusicWindow onClose={() => closeApp("music")} />}
+                {openApps.includes("projects") && (
+                  <ProjectsApp
+                    onClose={() => closeApp("projects")}
+                    onFocus={() => focusApp("projects")}
+                    zIndex={10 + openApps.indexOf("projects")}
+                    selected={project}
+                    onSelect={setProject}
+                  />
+                )}
               </AnimatePresence>
 
-              {/* wallpaper idle state — live clock, blinking colon */}
-              {app === null && (
+              {/* system app windows — all toggled from the dock */}
+              <AnimatePresence>
+                {openApps.includes("terminal") && <TerminalWindow onClose={() => closeApp("terminal")} onFocus={() => focusApp("terminal")} zIndex={10 + openApps.indexOf("terminal")} />}
+              </AnimatePresence>
+              <AnimatePresence>
+                {openApps.includes("notes") && <NotesWindow onClose={() => closeApp("notes")} onFocus={() => focusApp("notes")} zIndex={10 + openApps.indexOf("notes")} />}
+              </AnimatePresence>
+              <AnimatePresence>
+                {openApps.includes("keyboard") && <KeyboardWindow onClose={() => closeApp("keyboard")} onFocus={() => focusApp("keyboard")} zIndex={10 + openApps.indexOf("keyboard")} />}
+              </AnimatePresence>
+              <AnimatePresence>
+                {openApps.includes("music") && <MusicWindow onClose={() => closeApp("music")} onFocus={() => focusApp("music")} zIndex={10 + openApps.indexOf("music")} />}
+              </AnimatePresence>
+
+              {/* wallpaper idle state — live clock, blinking colon.
+                  Hidden once a content app owns the panel. */}
+              {!openApps.includes("timeline") && !openApps.includes("projects") && (
                 <motion.div
                   className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center select-none"
                   initial={{ opacity: 0 }}
@@ -330,130 +402,14 @@ function Desktop() {
                       </p>
                     </div>
                     <p className="mt-1.5 text-[11px] leading-snug" style={{ color: OS.txt }}>
-                      Hi — I&apos;m Ritankar. Four shipped projects on this desktop; the
-                      resume lives in the dock.
+                      Hi — I&apos;m Ritankar. Timeline is the story; Projects has the case
+                      studies. The résumé lives in the dock.
                     </p>
                   </motion.button>
                 )}
               </AnimatePresence>
 
-              {/* app window */}
-              <AnimatePresence mode="popLayout">
-                {app !== null && (
-                  <motion.section
-                    key={app}
-                    className="absolute top-3 right-4 bottom-13 left-32 flex flex-col overflow-hidden rounded-xl backdrop-blur-2xl"
-                    style={{
-                      background: "rgba(30,27,23,0.94)",
-                      border: "1px solid rgba(255,255,255,0.10)",
-                      boxShadow:
-                        "0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07)",
-                    }}
-                    initial={{ opacity: 0, y: 22, scale: 0.94 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 14, scale: 0.96 }}
-                    transition={{ duration: DUR.tap, ease: EASE.out }}
-                  >
-                    {/* titlebar — real traffic lights, glyphs on hover */}
-                    <div
-                      className="group/bar flex items-center gap-1.5 px-3 py-2"
-                      style={{
-                        background: "rgba(255,255,255,0.035)",
-                        borderBottom: "1px solid rgba(255,255,255,0.06)",
-                      }}
-                    >
-                      <button
-                        onClick={() => setApp(null)}
-                        aria-label="Close window"
-                        className="flex h-[11px] w-[11px] items-center justify-center rounded-full text-[8px] leading-none font-bold text-black/55 opacity-100"
-                        style={{ background: "#ff5f57" }}
-                      >
-                        <span className="opacity-0 transition-opacity group-hover/bar:opacity-100">
-                          ✕
-                        </span>
-                      </button>
-                      <span
-                        className="h-[11px] w-[11px] rounded-full"
-                        style={{ background: "#febc2e" }}
-                      />
-                      <span
-                        className="h-[11px] w-[11px] rounded-full"
-                        style={{ background: "#28c840" }}
-                      />
-                      <span
-                        className="ml-2 text-[10px] font-medium"
-                        style={{ color: OS.txt }}
-                      >
-                        {PROJECTS[app].title}
-                      </span>
-                      <span className="ml-auto font-mono text-[9px]" style={{ color: OS.faint }}>
-                        {PROJECTS[app].period}
-                      </span>
-                    </div>
-
-                    <div className="os-scroll overflow-y-auto px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <AppIcon
-                          label={PROJECTS[app].title}
-                          tint={APP_TINTS[app % APP_TINTS.length]}
-                          size={26}
-                          radius={7}
-                        />
-                        <div>
-                          <p
-                            className="font-mono text-[9px] tracking-[0.18em] uppercase"
-                            style={{ color: APP_TINTS[app % APP_TINTS.length] }}
-                          >
-                            {PROJECTS[app].role}
-                          </p>
-                          {PROJECTS[app].context && (
-                            <p className="text-[11px]" style={{ color: OS.dim }}>
-                              {PROJECTS[app].context}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <ul className="mt-3 space-y-1.5">
-                        {PROJECTS[app].bullets.map((b, i) => (
-                          <motion.li
-                            key={b}
-                            className="flex gap-2 text-[11px] leading-relaxed"
-                            style={{ color: OS.txt }}
-                            initial={{ opacity: 0, x: 8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.06 + i * 0.04, duration: DUR.tap, ease: EASE.out }}
-                          >
-                            <span
-                              className="mt-[7px] h-[3px] w-[3px] shrink-0 rounded-full"
-                              style={{ background: APP_TINTS[app % APP_TINTS.length] }}
-                            />
-                            <span>{b}</span>
-                          </motion.li>
-                        ))}
-                      </ul>
-
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {PROJECTS[app].tags.map((t) => (
-                          <span
-                            key={t}
-                            className="rounded-md px-1.5 py-0.5 font-mono text-[9px]"
-                            style={{
-                              background: "rgba(255,255,255,0.05)",
-                              border: "1px solid rgba(255,255,255,0.07)",
-                              color: OS.dim,
-                            }}
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.section>
-                )}
-              </AnimatePresence>
-
-              {/* dock — the four apps + the résumé, always one click away */}
+              {/* dock — content apps, utilities, then the résumé */}
               <motion.div
                 className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-end gap-1.5 rounded-2xl px-2 py-1.5 backdrop-blur-2xl"
                 style={{
@@ -466,21 +422,26 @@ function Desktop() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: DUR.ui, ease: EASE.out }}
               >
-                {MACOS_DOCK.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => toggleApp(d.id)}
-                    className="group relative flex flex-col items-center"
-                  >
-                    <DockTip label={d.label} />
-                    <span className="transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110">
-                      <MacOSDockIcon glyph={d.glyph} bg={d.bg} />
-                    </span>
-                    <span
-                      className="mt-0.5 h-[3px] w-[3px] rounded-full transition-opacity"
-                      style={{ background: OS.txt, opacity: openApps.has(d.id) ? 0.8 : 0 }}
-                    />
-                  </button>
+                {MACOS_DOCK.map((d, i) => (
+                  <div key={d.id} className="flex items-end gap-1.5">
+                    <button
+                      onClick={() => toggleApp(d.id)}
+                      className="group relative flex flex-col items-center"
+                    >
+                      <DockTip label={d.label} />
+                      <span className="transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110">
+                        <MacOSDockIcon glyph={d.glyph} bg={d.bg} />
+                      </span>
+                      <span
+                        className="mt-0.5 h-[3px] w-[3px] rounded-full transition-opacity"
+                        style={{ background: OS.txt, opacity: openApps.includes(d.id) ? 0.8 : 0 }}
+                      />
+                    </button>
+                    {/* content apps sit apart from the utilities */}
+                    {i === 1 && (
+                      <div className="mx-0.5 mb-1 h-6 w-px" style={{ background: "rgba(255,255,255,0.12)" }} />
+                    )}
+                  </div>
                 ))}
                 <div className="mx-0.5 mb-1 h-6 w-px" style={{ background: "rgba(255,255,255,0.12)" }} />
                 <a
@@ -511,6 +472,7 @@ function Desktop() {
         )}
       </AnimatePresence>
     </motion.div>
+    </OSRouterContext.Provider>
   );
 }
 
@@ -562,127 +524,80 @@ function DockTip({ label }: { label: string }) {
   );
 }
 
-/** 
- * Shared window chrome for all system apps — draggable, opaque, traffic lights.
- * Red = close, Yellow = minimize (hide), Green = toggle fullscreen.
- */
-function OSWindowChrome({
-  title,
-  onClose,
-  onMinimize,
-  children,
-  className,
-  style,
-}: {
-  title: string;
-  onClose: () => void;
-  onMinimize?: () => void;
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-}) {
-  const dragControls = useDragControls();
-  const [maximized, setMaximized] = useState(false);
-
-  return (
-    <motion.div
-      className={`absolute flex flex-col overflow-hidden rounded-lg ${className ?? ""}`}
-      style={{
-        background: "#1a1816",
-        border: "1px solid rgba(255,255,255,0.10)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-        zIndex: 10,
-        ...(maximized
-          ? { top: 0, left: 0, right: 0, bottom: 44, width: "auto", height: "auto", borderRadius: 0, transform: "none" }
-          : style),
-      }}
-      drag={!maximized}
-      dragControls={dragControls}
-      dragListener={false}
-      dragMomentum={false}
-      dragElastic={0}
-      initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.92 }}
-      transition={{ duration: DUR.ui, ease: EASE.out }}
-    >
-      {/* title bar — drag handle */}
-      <div
-        className="group/tb flex items-center gap-1.5 px-3 py-1.5 border-b cursor-grab active:cursor-grabbing select-none"
-        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}
-        onPointerDown={(e) => { if (!maximized) dragControls.start(e); }}
-      >
-        {/* red — close */}
-        <button
-          onClick={onClose}
-          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
-          style={{ background: "#ff5f57" }}
-        >
-          <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">✕</span>
-        </button>
-        {/* yellow — minimize */}
-        <button
-          onClick={onMinimize ?? onClose}
-          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
-          style={{ background: "#febc2e" }}
-        >
-          <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">−</span>
-        </button>
-        {/* green — fullscreen toggle */}
-        <button
-          onClick={() => setMaximized((m) => !m)}
-          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
-          style={{ background: "#28c840" }}
-        >
-          <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">{maximized ? "↙" : "↗"}</span>
-        </button>
-        <span className="ml-2 font-mono text-[9px] tracking-wide" style={{ color: OS.dim }}>
-          {title}
-        </span>
-      </div>
-      <div className="flex-1 overflow-auto">{children}</div>
-    </motion.div>
-  );
-}
-
 /* ===== TERMINAL ===== */
-function TerminalWindow({ onClose }: { onClose: () => void }) {
+/**
+ * A viewer over TRAINING_LOG, not a prop.
+ *
+ * This window used to display an invented run — an H100 cluster, an
+ * epoch counter, a loss curve — none of which happened. Everything it
+ * shows now comes from content/work.ts, where what's publishable is
+ * documented alongside it. Nothing here is generated at render time.
+ */
+function TerminalWindow({ onClose, onFocus, zIndex }: { onClose: () => void; onFocus: () => void; zIndex: number }) {
   const [blink, setBlink] = useState(true);
   useEffect(() => {
     const id = setInterval(() => setBlink((b) => !b), 530);
     return () => clearInterval(id);
   }, []);
 
+  const tone: Record<string, string> = {
+    dim: OS.dim,
+    txt: OS.txt,
+    ok: "#a8b48c",
+    accent: OS.accent,
+  };
+
   return (
-    <OSWindowChrome
-      title="train_agent.py"
+    <OSWindow
+      title={TRAINING_LOG.title}
       onClose={onClose}
-      style={{ width: 280, right: 8, bottom: 50 }}
+      onFocus={onFocus}
+      style={{ width: 300, right: 8, bottom: 50, zIndex }}
     >
-      <div className="px-3 py-3 font-mono text-[9px] leading-[1.6]">
-        <p><span style={{ color: "#c49ab0" }}>import</span> <span style={{ color: OS.txt }}>torch</span></p>
-        <p><span style={{ color: "#c49ab0" }}>from</span> <span style={{ color: OS.txt }}>transformers</span> <span style={{ color: "#c49ab0" }}>import</span> <span style={{ color: OS.txt }}>AutoModel</span></p>
-        <br />
-        <p style={{ color: OS.dim }}># Initialize cluster...</p>
-        <p style={{ color: OS.txt }}>Allocating 4x H100 (80GB) GPUs...</p>
-        <p style={{ color: "#a8b48c" }}>Success: cluster connected.</p>
-        <br />
-        <p style={{ color: OS.txt }}>Epoch 42/100</p>
-        <div className="my-1.5 h-1 w-full rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.4)" }}>
-          <div className="h-full w-[88%]" style={{ background: OS.accent }} />
-        </div>
-        <p style={{ color: OS.dim }}>loss: 0.1042 - val_loss: 0.1298</p>
-        <p className="mt-1.5" style={{ color: OS.txt }}>
-          optimizer.step()
-          <span style={{ opacity: blink ? 1 : 0, color: OS.accent }}>_</span>
+      <div className="px-3 py-2.5 font-mono text-[9px] leading-[1.6]">
+        {TRAINING_LOG.lines.map((l, i) => {
+          if (l.bar !== undefined) {
+            return (
+              <div
+                key={i}
+                className="my-1.5 h-1 w-full overflow-hidden rounded-full"
+                style={{ background: "rgba(0,0,0,0.4)" }}
+              >
+                <div className="h-full" style={{ width: `${l.bar * 100}%`, background: OS.accent }} />
+              </div>
+            );
+          }
+          if (isTodo(l.text)) {
+            return (
+              <div key={i} className="my-1.5">
+                <TodoNote hint={todoHint(l.text)} />
+              </div>
+            );
+          }
+          if (!l.text) return <br key={i} />;
+          return (
+            <p key={i} style={{ color: tone[l.tone ?? "txt"] }}>
+              {l.text}
+            </p>
+          );
+        })}
+        <p style={{ color: OS.txt }}>
+          $<span style={{ opacity: blink ? 1 : 0, color: OS.accent }}>_</span>
         </p>
       </div>
-    </OSWindowChrome>
+      {/* where these numbers come from — the log is attributable */}
+      <div
+        className="border-t px-3 py-1 font-mono text-[7.5px] leading-snug"
+        style={{ borderColor: "rgba(255,255,255,0.05)", color: OS.faint }}
+      >
+        {TRAINING_LOG.provenance}
+      </div>
+    </OSWindow>
   );
 }
 
 /* ===== NOTES ===== */
-function NotesWindow({ onClose }: { onClose: () => void }) {
+function NotesWindow({ onClose, onFocus, zIndex }: { onClose: () => void; onFocus: () => void; zIndex: number }) {
   const [text, setText] = useState("# Ideas\n\nType anything here...\n");
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -692,10 +607,11 @@ function NotesWindow({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <OSWindowChrome
+    <OSWindow
       title="Notes"
       onClose={onClose}
-      style={{ width: 240, right: 8, top: 28 }}
+      onFocus={onFocus}
+      style={{ width: 240, right: 8, top: 28, zIndex }}
     >
       <textarea
         ref={taRef}
@@ -712,7 +628,7 @@ function NotesWindow({ onClose }: { onClose: () => void }) {
         <span>{text.length} chars</span>
         <span>{text.split("\n").length} lines</span>
       </div>
-    </OSWindowChrome>
+    </OSWindow>
   );
 }
 
@@ -723,7 +639,7 @@ const KB_ROWS = [
   ["Z", "X", "C", "V", "B", "N", "M", "⌫"],
 ];
 
-function KeyboardWindow({ onClose }: { onClose: () => void }) {
+function KeyboardWindow({ onClose, onFocus, zIndex }: { onClose: () => void; onFocus: () => void; zIndex: number }) {
   const [typed, setTyped] = useState("");
 
   const press = (key: string) => {
@@ -732,10 +648,11 @@ function KeyboardWindow({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <OSWindowChrome
+    <OSWindow
       title="Keyboard"
       onClose={onClose}
-      style={{ width: 380, left: "50%", bottom: 50, transform: "translateX(-50%)" }}
+      onFocus={onFocus}
+      style={{ width: 380, left: "50%", bottom: 50, transform: "translateX(-50%)", zIndex }}
     >
       {/* typed text display */}
       <div
@@ -803,7 +720,7 @@ function KeyboardWindow({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
-    </OSWindowChrome>
+    </OSWindow>
   );
 }
 
@@ -850,7 +767,7 @@ function SpeakerIcon({ muted, size = 12 }: { muted: boolean; size?: number }) {
   );
 }
 
-function MusicWindow({ onClose }: { onClose: () => void }) {
+function MusicWindow({ onClose, onFocus, zIndex }: { onClose: () => void; onFocus: () => void; zIndex: number }) {
   const { idx, playing, muted, progress: at, len } = useAudioPlayer();
   const track = TRACKS[idx];
 
@@ -866,10 +783,11 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
   const progressPct = len ? (at / len) * 100 : 0;
 
   return (
-    <OSWindowChrome
+    <OSWindow
       title="Music"
       onClose={onClose}
-      style={{ width: 240, left: 110, bottom: 50 }}
+      onFocus={onFocus}
+      style={{ width: 240, left: 110, bottom: 50, zIndex }}
     >
       <div className="px-3 py-3">
         {/* track info */}
@@ -956,7 +874,7 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       </div>
-    </OSWindowChrome>
+    </OSWindow>
   );
 }
 
