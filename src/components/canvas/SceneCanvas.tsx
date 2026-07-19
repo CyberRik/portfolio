@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { AdaptiveDpr, AdaptiveEvents, PerformanceMonitor, Preload } from "@react-three/drei";
+import { AdaptiveDpr, PerformanceMonitor, Preload } from "@react-three/drei";
 import * as THREE from "three";
 import { CAMERA_VIEWS, DEFAULT_VIEW } from "@/config/camera.config";
 import { fog } from "@/config/theme";
@@ -76,9 +76,14 @@ export function SceneCanvas() {
         </Suspense>
       </PerformanceMonitor>
       <AdaptiveDpr pixelated={false} />
-      {/* raycasting is throttled while the camera is moving — the room has
-          ~45 meshes and pointer-move hit-testing is pure CPU */}
-      <AdaptiveEvents />
+      {/* NO <AdaptiveEvents/> here, deliberately. It is implemented as
+          `setEvents({ enabled: performance.current === 1 })`, i.e. it
+          disables ALL raycasting whenever performance is regressed — so
+          hovering an object stops highlighting it, the pointer cursor
+          never appears, and clicking it does nothing. On a machine that
+          sits below the threshold that state is permanent. Saving a few
+          raycasts is not worth silently killing every interaction in the
+          room. */}
     </Canvas>
   );
 }

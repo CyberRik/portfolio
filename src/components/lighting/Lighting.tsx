@@ -161,24 +161,10 @@ export function Lighting() {
       ) : (
         <>
           <primitive object={fillTarget} />
-          <spotLight
+          <directionalLight
             target={fillTarget}
-            position={[-0.9, 1.9, -3.0]}
-            angle={1.1}
-            penumbra={1}
-            intensity={4.4}
-            distance={11}
-            decay={2}
-            color="#7593c6"
-          />
-          <spotLight
-            target={fillTarget}
-            position={[0.9, 1.9, -3.0]}
-            angle={1.1}
-            penumbra={1}
-            intensity={4.4}
-            distance={11}
-            decay={2}
+            position={[0, 1.9, -3.15]}
+            intensity={1.2}
             color="#7593c6"
           />
         </>

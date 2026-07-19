@@ -23,6 +23,23 @@ canvas {
   touch-action: none;
 }
 
+/* Tailwind v4's preflight sets `button { cursor: default }` — a change
+   from v3 — which silently removes the pointer hand from every button on
+   the site. Put it back for anything actually actionable. Kept at
+   element-selector specificity so RM-OS's own pixel cursor set (further
+   down, class-scoped) still wins inside the desktop. */
+button,
+[role="button"],
+a[href],
+label[for],
+summary {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled="true"] {
+  cursor: default;
+}
+
 /* waypoint beacon dot — slow breathing glow */
 @keyframes beacon-breathe {
   0%,
