@@ -426,7 +426,7 @@ function Desktop() {
                   rel="noopener noreferrer"
                   className="group relative flex flex-col items-center"
                 >
-                  <DockTip label="Résumé.pdf" />
+                  <DockTip label="Resume.pdf" />
                   <span className="transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110">
                     <span
                       className="flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[9px] font-semibold"

@@ -102,7 +102,7 @@ export function ContactCompose({ onClose }: PortalProps) {
             rel="noopener noreferrer"
             className="font-mono text-[11px] tracking-[0.15em] text-[#8f96a3] uppercase transition-colors hover:text-[#e4e9f2]"
           >
-            ⎘ attach résumé
+            ⎘ attach resume
           </a>
           <button
             onClick={() => setSent(true)}

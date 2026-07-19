@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { flyToView } from "@/components/camera/cameraBus";
 import { PROFILE } from "@/content/portfolio";
+import { isExitKey } from "@/lib/keys";
 
 // The entire 3D world and its DOM UI overlays are client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
@@ -36,10 +37,12 @@ const ExperienceOverlay = dynamic(
 );
 
 export default function Home() {
-  // Esc always returns to the wide shot — the "back out" gesture
+  // any key returns to the wide shot — the "back out" gesture. Same rule
+  // as the portal worlds use, so backing out feels identical whether or
+  // not a world is open (see lib/keys.ts for what "any" excludes).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") flyToView("overview");
+      if (isExitKey(e)) flyToView("overview");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -73,7 +76,7 @@ export default function Home() {
           rel="noopener noreferrer"
           className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
         >
-          résumé ↓
+          resume ↓
         </a>
         <a
           href={`mailto:${PROFILE.email}`}

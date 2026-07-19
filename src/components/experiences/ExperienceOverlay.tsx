@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { useFocusState } from "@/lib/focus";
 import { closePortal, openPortal, usePortalSection } from "@/lib/portal";
 import { OBJECT_SECTION } from "@/content/portfolio";
+import { isExitKey } from "@/lib/keys";
 import { ExperienceBoard } from "./ExperienceBoard";
 import { SkillsTerminal } from "./SkillsTerminal";
 import { AchievementsBook } from "./AchievementsBook";
@@ -42,12 +43,12 @@ export function ExperienceOverlay() {
     return () => clearTimeout(t);
   }, [focus.phase, focus.id]);
 
-  // Esc leaves the world (capture phase — the page-level Esc handler
+  // any key leaves the world (capture phase — the page-level handler
   // also flies home, which is the same flight close() requests)
   useEffect(() => {
     if (!section) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closePortal();
+      if (isExitKey(e)) closePortal();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);

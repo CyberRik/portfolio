@@ -26,16 +26,23 @@ const PENCIL = "#8d8168";
 export function AchievementsBook({ onClose }: PortalProps) {
   const [opened, setOpened] = useState(false);
   const [chapter, setChapter] = useState(0);
-  const [dir, setDir] = useState(1);
 
   useEffect(() => {
     const t = setTimeout(() => setOpened(true), 1900);
     return () => clearTimeout(t);
   }, []);
 
-  const turn = (d: number) => {
-    setDir(d);
-    setChapter((c) => Math.min(CHAPTERS.length - 1, Math.max(0, c + d)));
+  const last = chapter === CHAPTERS.length - 1;
+
+  /**
+   * The book IS the control. A click turns the page; a click on the last
+   * page closes it. This replaced a nav bar hung below the spread, which
+   * fell off the bottom of the viewport on short laptop screens — the
+   * only affordance was the one people couldn't see.
+   */
+  const advance = () => {
+    if (last) onClose();
+    else setChapter((c) => c + 1);
   };
 
   return (
@@ -80,10 +87,14 @@ export function AchievementsBook({ onClose }: PortalProps) {
       {/* open spread */}
       {opened && (
         <motion.div
-          className="relative flex h-[560px] w-[min(880px,94vw)]"
+          // height yields to short viewports so the whole trim always
+          // fits — nothing about the book may live below the fold
+          className="relative flex h-[min(560px,78vh)] w-[min(880px,94vw)] cursor-pointer"
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          onClick={advance}
+          title={last ? "Close the book" : "Turn the page"}
         >
           {/* left page: chapter frontispiece */}
           <div
@@ -130,24 +141,22 @@ export function AchievementsBook({ onClose }: PortalProps) {
               perspective: "1600px",
             }}
           >
-            <AnimatePresence mode="wait" custom={dir}>
+            <AnimatePresence mode="wait">
               <motion.div
                 key={chapter}
-                className="h-full overflow-y-auto px-10 py-10"
+                // pb reserves the footer gutter so body text never runs
+                // underneath the page-turn hint
+                className="h-full overflow-y-auto px-10 pt-10 pb-16"
                 style={{ transformOrigin: "left center" }}
-                custom={dir}
-                variants={{
-                  enter: (d: number) => ({ rotateY: d > 0 ? 70 : -18, opacity: 0 }),
-                  center: { rotateY: 0, opacity: 1 },
-                  exit: (d: number) => ({
-                    rotateY: d > 0 ? -55 : 40,
-                    opacity: 0,
-                    transition: { duration: 0.45, ease: [0.5, 0, 0.75, 1] },
-                  }),
+                // pages only ever turn forward now, so the sheet always
+                // sweeps the same way
+                initial={{ rotateY: 70, opacity: 0 }}
+                animate={{ rotateY: 0, opacity: 1 }}
+                exit={{
+                  rotateY: -55,
+                  opacity: 0,
+                  transition: { duration: 0.45, ease: [0.5, 0, 0.75, 1] },
                 }}
-                initial="enter"
-                animate="center"
-                exit="exit"
                 transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
               >
                 {chapter === 0 && <EducationPage />}
@@ -155,6 +164,25 @@ export function AchievementsBook({ onClose }: PortalProps) {
                 {chapter === 2 && <CourseworkPage />}
               </motion.div>
             </AnimatePresence>
+
+            {/* page footer — folio left, the book's own affordance right,
+                both inside the trim. Written in the same pencil as the
+                rest of the marginalia rather than as UI chrome. */}
+            <div className="pointer-events-none absolute right-14 bottom-4 left-10 flex items-baseline justify-between">
+              <span className="font-serif text-[11px] tracking-[0.3em] text-[#a08b60] uppercase">
+                {NUMERALS[chapter]} · {CHAPTERS.length}
+              </span>
+              <motion.span
+                key={chapter}
+                className="-rotate-1 text-[15px]"
+                style={{ fontFamily: HAND, color: PENCIL }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.85 }}
+                transition={{ delay: 0.9, duration: 0.7 }}
+              >
+                {last ? "close the book ✎" : "turn the page ✎"}
+              </motion.span>
+            </div>
 
             {/* folded corner — someone kept their place here */}
             <div
@@ -164,27 +192,6 @@ export function AchievementsBook({ onClose }: PortalProps) {
                   "linear-gradient(315deg, #d9cca9 0%, #cfc19c 46%, rgba(90,72,40,0.18) 50%, transparent 52%)",
               }}
             />
-          </div>
-
-          {/* chapter navigation — the corner of the page */}
-          <div className="absolute -bottom-14 left-1/2 flex -translate-x-1/2 items-center gap-6 font-serif text-[14px] text-[#6d5c3c]">
-            <button
-              onClick={() => turn(-1)}
-              disabled={chapter === 0}
-              className="transition-opacity disabled:opacity-25 hover:text-[#3a2f1d]"
-            >
-              ‹ previous
-            </button>
-            <span className="text-[12px] tracking-[0.3em] uppercase">
-              {NUMERALS[chapter]} · {CHAPTERS.length}
-            </span>
-            <button
-              onClick={() => turn(1)}
-              disabled={chapter === CHAPTERS.length - 1}
-              className="transition-opacity disabled:opacity-25 hover:text-[#3a2f1d]"
-            >
-              turn the page ›
-            </button>
           </div>
         </motion.div>
       )}
