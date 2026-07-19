@@ -120,6 +120,44 @@ canvas {
   }
 }
 
+/* RM-OS runs its own pointer set. Crossing onto the panel should feel
+   like taking control of a different machine, not like hovering a div,
+   so the room's cursor is replaced by a full pixel-art set — arrow,
+   pointing hand, I-beam and grab hands — for as long as you are on the
+   glass. The whole set changes together; swapping only the arrow reads
+   as a glitch rather than as a different machine.
+
+   Art: "Pixel Art Cursors" by aspecsgaming (itch.io). Free for personal
+   and commercial use, no attribution required — credited anyway. The
+   pack ships at 3x; public/cursors/* are reduced to the native pixel
+   grid and re-upscaled at exactly 2x, because non-integer scaling is
+   what turns pixel art to mush. Hotspots below are in 2x pixels.
+
+   Tailwind v4 preflight sets `button { cursor: default }`, so without
+   these rules nothing inside the desktop reacts at all. Each rule keeps
+   a native keyword as its fallback for when the PNG can't load. */
+.os-surface {
+  cursor: url("/cursors/arrow.png") 0 0, default;
+}
+.os-surface button,
+.os-surface a,
+.os-surface [role="button"],
+.os-surface .cursor-pointer {
+  cursor: url("/cursors/point.png") 12 0, pointer;
+}
+.os-surface textarea,
+.os-surface input {
+  cursor: url("/cursors/text.png") 8 22, text;
+}
+/* window title bars are drag handles — these beat Tailwind's own
+   cursor-grab / active:cursor-grabbing utilities on specificity */
+.os-surface .cursor-grab {
+  cursor: url("/cursors/grab.png") 16 16, grab;
+}
+.os-surface .cursor-grab:active {
+  cursor: url("/cursors/grabbing.png") 16 16, grabbing;
+}
+
 /* RM-OS window scrollbar — macOS overlay style: thin, neutral, no track */
 .os-scroll {
   scrollbar-width: thin;

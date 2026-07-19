@@ -77,6 +77,9 @@ function useClock() {
 function Desktop() {
   const [awake, setAwake] = useState(false);
   const [app, setApp] = useState<number | null>(null);
+  const [selectedIcons, setSelectedIcons] = useState<Set<number>>(new Set());
+  const [selectionBox, setSelectionBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
   const [toast, setToast] = useState(false);
   const [openApps, setOpenApps] = useState<Set<string>>(() => new Set(["terminal"]));
   const toggleApp = useCallback((id: string) => {
@@ -109,7 +112,9 @@ function Desktop() {
 
   return (
     <motion.div
-      className="relative overflow-hidden bg-black"
+      // os-surface swaps the room's cursor for RM-OS's own for as long
+      // as the pointer is on the glass (see globals.css)
+      className="os-surface relative overflow-hidden bg-black"
       style={{ width: CSS_W, height: CSS_H }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -168,16 +173,73 @@ function Desktop() {
               </div>
             </div>
 
-            <div className="relative flex-1">
+            <div
+              className="relative flex-1 touch-none"
+              onPointerDown={(e) => {
+                if (e.target !== e.currentTarget) return;
+                setSelectedIcons(new Set());
+                e.currentTarget.setPointerCapture(e.pointerId);
+                const x = e.nativeEvent.offsetX;
+                const y = e.nativeEvent.offsetY;
+                dragStart.current = { x, y };
+                setSelectionBox({ x, y, w: 0, h: 0 });
+              }}
+              onPointerMove={(e) => {
+                if (!dragStart.current) return;
+                
+                // With pointer capture, e.target is always e.currentTarget.
+                // nativeEvent.offsetX/Y correctly accounts for 3D CSS transforms!
+                const currentX = Math.max(0, Math.min(e.nativeEvent.offsetX, e.currentTarget.offsetWidth));
+                const currentY = Math.max(0, Math.min(e.nativeEvent.offsetY, e.currentTarget.offsetHeight));
+
+                const sx = dragStart.current.x;
+                const sy = dragStart.current.y;
+                const boxX = Math.min(sx, currentX);
+                const boxY = Math.min(sy, currentY);
+                const boxW = Math.abs(currentX - sx);
+                const boxH = Math.abs(currentY - sy);
+                setSelectionBox({ x: boxX, y: boxY, w: boxW, h: boxH });
+
+                const newSelected = new Set<number>();
+                for (let i = 0; i < PROJECTS.length; i++) {
+                  const iconY = 12 + i * 70;
+                  const iconX = 12;
+                  if (boxX < iconX + 96 && boxX + boxW > iconX && boxY < iconY + 66 && boxY + boxH > iconY) {
+                    newSelected.add(i);
+                  }
+                }
+                setSelectedIcons(newSelected);
+              }}
+              onPointerUp={(e) => {
+                if (dragStart.current) {
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                  dragStart.current = null;
+                  setSelectionBox(null);
+                }
+              }}
+            >
+              {selectionBox && (
+                <div
+                  className="pointer-events-none absolute z-50 border"
+                  style={{
+                    left: selectionBox.x,
+                    top: selectionBox.y,
+                    width: selectionBox.w,
+                    height: selectionBox.h,
+                    backgroundColor: "rgba(0, 120, 215, 0.2)",
+                    borderColor: "rgba(0, 120, 215, 0.6)",
+                  }}
+                />
+              )}
               {/* desktop icons — all projects visible instantly */}
               <div className="absolute top-3 left-3 flex flex-col gap-1">
                 {PROJECTS.map((p, i) => (
                   <motion.button
                     key={p.title}
-                    onClick={() => setApp(app === i ? null : i)}
+                    onClick={(e) => { e.stopPropagation(); setSelectedIcons(new Set([i])); }}
                     onDoubleClick={() => setApp(i)}
                     className="group flex w-[96px] flex-col items-center gap-1 rounded-md px-1.5 py-1.5 transition-colors"
-                    style={{ background: app === i ? "rgba(255,255,255,0.09)" : "transparent" }}
+                    style={{ background: selectedIcons.has(i) ? "rgba(255,255,255,0.09)" : "transparent" }}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.08 + i * 0.05, duration: DUR.ui, ease: EASE.out }}
@@ -190,7 +252,7 @@ function Desktop() {
                     />
                     <span
                       className="max-w-full text-center text-[9px] leading-tight break-words"
-                      style={{ color: app === i ? OS.txt : OS.dim }}
+                      style={{ color: selectedIcons.has(i) ? OS.txt : OS.dim }}
                     >
                       {p.title}
                     </span>

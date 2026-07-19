@@ -32,14 +32,18 @@ const CONTAINERS = [
   ["pipeline-scheduler", "airflow · apify", "Up 27 days"],
 ];
 
+let hasVisited = false;
+
 /** steps gate the transcript; each unlocks the next */
 export function SkillsTerminal({ onClose }: PortalProps) {
-  const [step, setStep] = useState(0);
+  const [visitedAtMount] = useState(hasVisited);
+  const [step, setStep] = useState(() => (visitedAtMount ? 10 : 0));
   const scroller = useRef<HTMLDivElement>(null);
   const next = (n: number) => () => setStep((s) => Math.max(s, n));
 
   // timed steps for non-typed blocks
   useEffect(() => {
+    if (visitedAtMount) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (s: number, ms: number) => timers.push(setTimeout(next(s), ms));
     if (step === 1) at(2, 700);
@@ -49,11 +53,19 @@ export function SkillsTerminal({ onClose }: PortalProps) {
     if (step === 7) at(8, 1400);
     if (step === 9) at(10, 400);
     return () => timers.forEach(clearTimeout);
-  }, [step]);
+  }, [step, visitedAtMount]);
 
   useEffect(() => {
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
-  }, [step]);
+    // After mounting once, future mounts will show instantly
+    hasVisited = true;
+  }, []);
+
+  useEffect(() => {
+    scroller.current?.scrollTo({
+      top: scroller.current.scrollHeight,
+      behavior: visitedAtMount ? "auto" : "smooth",
+    });
+  }, [step, visitedAtMount]);
 
   return (
     <motion.div
@@ -81,7 +93,11 @@ export function SkillsTerminal({ onClose }: PortalProps) {
         {/* login */}
         <p>
           <span style={{ color: T.dim }}>guest@portfolio ~ $ </span>
-          <Typewriter text="ssh rack-01" cps={16} startDelay={1.3} cursor onDone={next(1)} />
+          {visitedAtMount ? (
+            "ssh rack-01"
+          ) : (
+            <Typewriter text="ssh rack-01" cps={16} startDelay={1.3} cursor onDone={next(1)} />
+          )}
         </p>
         {step >= 1 && (
           <p style={{ color: T.dim }}>
@@ -93,16 +109,24 @@ export function SkillsTerminal({ onClose }: PortalProps) {
         {step >= 2 && (
           <p className="mt-4">
             <span style={{ color: T.dim }}>ritankar@rack-01 ~ $ </span>
-            <Typewriter text="nvidia-smi --loop" cps={18} cursor onDone={next(3)} />
+            {visitedAtMount ? (
+              "nvidia-smi --loop"
+            ) : (
+              <Typewriter text="nvidia-smi --loop" cps={18} cursor onDone={next(3)} />
+            )}
           </p>
         )}
-        {step >= 4 && <GpuMeters onSettled={next(5)} />}
+        {step >= 4 && <GpuMeters instant={visitedAtMount} onSettled={next(5)} />}
 
         {/* containers */}
         {step >= 5 && (
           <p className="mt-4">
             <span style={{ color: T.dim }}>ritankar@rack-01 ~ $ </span>
-            <Typewriter text="docker ps" cps={18} cursor onDone={next(6)} />
+            {visitedAtMount ? (
+              "docker ps"
+            ) : (
+              <Typewriter text="docker ps" cps={18} cursor onDone={next(6)} />
+            )}
           </p>
         )}
         {step >= 7 && (
@@ -113,7 +137,7 @@ export function SkillsTerminal({ onClose }: PortalProps) {
                 key={name}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.14 }}
+                transition={visitedAtMount ? { duration: 0 } : { delay: i * 0.14 }}
                 className="whitespace-pre"
               >
                 <span style={{ color: T.hot }}>{name.padEnd(22)}</span>
@@ -128,7 +152,11 @@ export function SkillsTerminal({ onClose }: PortalProps) {
         {step >= 8 && (
           <p className="mt-4">
             <span style={{ color: T.dim }}>ritankar@rack-01 ~ $ </span>
-            <Typewriter text="capabilities --list" cps={18} cursor onDone={next(9)} />
+            {visitedAtMount ? (
+              "capabilities --list"
+            ) : (
+              <Typewriter text="capabilities --list" cps={18} cursor onDone={next(9)} />
+            )}
           </p>
         )}
         {step >= 10 && (
@@ -139,7 +167,7 @@ export function SkillsTerminal({ onClose }: PortalProps) {
                 className="mt-2"
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.18, duration: 0.35 }}
+                transition={visitedAtMount ? { duration: 0 } : { delay: i * 0.18, duration: 0.35 }}
               >
                 <p>
                   <span style={{ color: T.warn }}>
@@ -155,7 +183,7 @@ export function SkillsTerminal({ onClose }: PortalProps) {
               style={{ color: T.dim }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: SKILLS.length * 0.18 + 0.5 }}
+              transition={visitedAtMount ? { duration: 0 } : { delay: SKILLS.length * 0.18 + 0.5 }}
             >
               esc — close connection
             </motion.p>
@@ -164,7 +192,7 @@ export function SkillsTerminal({ onClose }: PortalProps) {
               className="mt-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: SKILLS.length * 0.18 + 1.1 }}
+              transition={visitedAtMount ? { duration: 0 } : { delay: SKILLS.length * 0.18 + 1.1 }}
             >
               <span style={{ color: T.dim }}>ritankar@rack-01 ~ $ </span>
               <span className="cursor-blink">▍</span>
@@ -188,8 +216,8 @@ export function SkillsTerminal({ onClose }: PortalProps) {
 }
 
 /** nvidia-smi style block with live, fluctuating utilization bars */
-function GpuMeters({ onSettled }: { onSettled: () => void }) {
-  const [util, setUtil] = useState([0, 0, 0, 0]);
+function GpuMeters({ instant = false, onSettled }: { instant?: boolean; onSettled: () => void }) {
+  const [util, setUtil] = useState(() => (instant ? [87, 62, 94, 41] : [0, 0, 0, 0]));
   const targets = useRef([87, 62, 94, 41]);
   const settled = useRef(false);
 
@@ -209,17 +237,27 @@ function GpuMeters({ onSettled }: { onSettled: () => void }) {
         );
       }
     }, 160);
-    const done = setTimeout(() => {
-      if (!settled.current) {
-        settled.current = true;
-        onSettled();
-      }
-    }, 1400);
+
+    if (instant) {
+      settled.current = true;
+      onSettled();
+    } else {
+      const done = setTimeout(() => {
+        if (!settled.current) {
+          settled.current = true;
+          onSettled();
+        }
+      }, 1400);
+      return () => {
+        clearInterval(id);
+        clearTimeout(done);
+      };
+    }
+
     return () => {
       clearInterval(id);
-      clearTimeout(done);
     };
-  }, [onSettled]);
+  }, [onSettled, instant]);
 
   const bar = (v: number) => {
     const cells = 26;
