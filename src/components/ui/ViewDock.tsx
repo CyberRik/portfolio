@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type { CameraViewId } from "@/config/camera.config";
 import { flyToView, type FlightMeta } from "@/components/camera/cameraBus";
 import { useFocusState } from "@/lib/focus";
+import { DUR, EASE } from "@/lib/design";
 
 /**
  * The portfolio's navigation, disguised as a camera dock. Each entry
@@ -42,7 +43,7 @@ export function ViewDock() {
       className="absolute bottom-6 left-1/2 z-40 flex -translate-x-1/2 gap-1 rounded-full border border-white/8 bg-black/30 px-2 py-1.5 backdrop-blur-md"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: receded ? 0.15 : 1, y: 0 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
+      transition={{ duration: DUR.move, ease: EASE.out }}
     >
       {ENTRIES.map((e) => (
         <button

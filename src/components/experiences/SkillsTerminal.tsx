@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { SKILLS } from "@/content/portfolio";
 import type { PortalProps } from "./ExperienceOverlay";
 import { Typewriter } from "./Typewriter";
+import { WORLD_FADE } from "@/lib/design";
 
 /**
  * SKILLS — an SSH session onto the rack.
@@ -58,10 +59,7 @@ export function SkillsTerminal({ onClose }: PortalProps) {
     <motion.div
       className="absolute inset-0 overflow-hidden"
       style={{ background: T.bg }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1.2, ease: "easeInOut" }}
-      exit={{ opacity: 0, transition: { duration: 0.45, ease: "easeIn" } }}
+      {...WORLD_FADE}
     >
       {/* scanlines + vignette */}
       <div
@@ -160,6 +158,16 @@ export function SkillsTerminal({ onClose }: PortalProps) {
               transition={{ delay: SKILLS.length * 0.18 + 0.5 }}
             >
               esc — close connection
+            </motion.p>
+            {/* idle prompt — the session stays live, waiting on you */}
+            <motion.p
+              className="mt-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: SKILLS.length * 0.18 + 1.1 }}
+            >
+              <span style={{ color: T.dim }}>ritankar@rack-01 ~ $ </span>
+              <span className="cursor-blink">▍</span>
             </motion.p>
           </div>
         )}

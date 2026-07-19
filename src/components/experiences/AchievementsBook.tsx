@@ -4,17 +4,24 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ACHIEVEMENTS, COURSEWORK, EDUCATION } from "@/content/portfolio";
 import type { PortalProps } from "./ExperienceOverlay";
+import { DUR, EASE } from "@/lib/design";
 
 /**
  * ACHIEVEMENTS & EDUCATION — a book slides off the shelf and opens.
  *
  * Identity: paper. The one serif world — cream stock, ink, drop caps,
  * roman-numeral chapters, real page turns. Pacing is the slowest of
- * all portals: a book is read, not scanned.
+ * all portals: a book is read, not scanned. This is a working copy,
+ * not a display copy: pencil notes in the margins, a sketch, a folded
+ * corner — the marks of an owner who actually reads it.
  */
 
 const CHAPTERS = ["Education", "Achievements", "Coursework"] as const;
 const NUMERALS = ["I", "II", "III"];
+
+/** the pencil the margins are written with */
+const HAND = "var(--font-caveat), cursive";
+const PENCIL = "#8d8168";
 
 export function AchievementsBook({ onClose }: PortalProps) {
   const [opened, setOpened] = useState(false);
@@ -39,8 +46,8 @@ export function AchievementsBook({ onClose }: PortalProps) {
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 1.3, ease: "easeInOut" }}
-      exit={{ opacity: 0, transition: { duration: 0.5, ease: "easeIn" } }}
+      transition={{ duration: DUR.world, ease: EASE.inOut }}
+      exit={{ opacity: 0, transition: { duration: DUR.exit, ease: EASE.in } }}
     >
       {/* the closed cover — approaches, then opens away */}
       <AnimatePresence>
@@ -148,6 +155,15 @@ export function AchievementsBook({ onClose }: PortalProps) {
                 {chapter === 2 && <CourseworkPage />}
               </motion.div>
             </AnimatePresence>
+
+            {/* folded corner — someone kept their place here */}
+            <div
+              className="pointer-events-none absolute right-0 bottom-0 h-9 w-9"
+              style={{
+                background:
+                  "linear-gradient(315deg, #d9cca9 0%, #cfc19c 46%, rgba(90,72,40,0.18) 50%, transparent 52%)",
+              }}
+            />
           </div>
 
           {/* chapter navigation — the corner of the page */}
@@ -210,6 +226,45 @@ function EducationPage() {
           either would admit.
         </p>
       </div>
+
+      {/* the owner's pencil sketch — column, arrow, attention block */}
+      <svg className="mt-6 ml-2 h-[92px] w-[230px]" viewBox="0 0 230 92">
+        {[
+          "M 26 8 h 26 v 68 h -26 Z", // column shell
+          "M 26 26 h 26 M 26 44 h 26 M 26 62 h 26", // trays
+          "M 52 40 C 74 34, 92 34, 112 40 m -8 -6 l 8 6 l -9 4", // arrow
+          "M 124 22 h 74 v 44 h -74 Z", // attention block
+          "M 134 44 C 148 30, 172 56, 188 40", // the wavy "attention" line
+        ].map((d, i) => (
+          <motion.path
+            key={d}
+            d={d}
+            fill="none"
+            stroke={PENCIL}
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 0.9 }}
+            transition={{ delay: 0.7 + i * 0.3, duration: 0.5, ease: "easeInOut", opacity: { delay: 0.7 + i * 0.3, duration: 0.01 } }}
+          />
+        ))}
+        <motion.text x={22} y={90} fontSize={15} fill={PENCIL} style={{ fontFamily: HAND }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2, duration: 0.5 }}>
+          distill
+        </motion.text>
+        <motion.text x={130} y={82} fontSize={15} fill={PENCIL} style={{ fontFamily: HAND }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.4, duration: 0.5 }}>
+          attend
+        </motion.text>
+      </svg>
+      <motion.p
+        className="mt-1 ml-3 -rotate-2 text-[16px]"
+        style={{ fontFamily: HAND, color: PENCIL }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.7, duration: 0.6 }}
+      >
+        same math, different plumbing ✎
+      </motion.p>
     </div>
   );
 }
@@ -230,9 +285,28 @@ function AchievementsPage() {
               {String(i + 1).padStart(2, "0")}
             </span>
             <span className="text-[15px] leading-relaxed">{a}</span>
+            {/* checked off in pencil, one by one */}
+            <motion.span
+              className="mt-0.5 text-[15px]"
+              style={{ fontFamily: HAND, color: PENCIL }}
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.85 + i * 0.18, duration: 0.3 }}
+            >
+              ✓
+            </motion.span>
           </motion.li>
         ))}
       </ol>
+      <motion.p
+        className="mt-6 ml-8 -rotate-1 text-[16px]"
+        style={{ fontFamily: HAND, color: PENCIL }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.85 + ACHIEVEMENTS.length * 0.18 + 0.4, duration: 0.6 }}
+      >
+        all of these counted honestly ✎
+      </motion.p>
     </div>
   );
 }
@@ -246,19 +320,45 @@ function CourseworkPage() {
         somewhere in the experience chapters.
       </p>
       <ul className="mt-6 space-y-2.5">
-        {COURSEWORK.map((c, i) => (
-          <motion.li
-            key={c}
-            className="flex items-baseline gap-3 text-[15px]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 + i * 0.12, duration: 0.4 }}
-          >
-            <span className="text-[#a08b60]">✦</span>
-            <span>{c}</span>
-          </motion.li>
-        ))}
+        {COURSEWORK.map((c, i) => {
+          // a reader underlines favourites — wavy pencil, not highlighter
+          const favourite = i === 0 || i === 3;
+          return (
+            <motion.li
+              key={c}
+              className="flex items-baseline gap-3 text-[15px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 + i * 0.12, duration: 0.4 }}
+            >
+              <span className="text-[#a08b60]">✦</span>
+              <span
+                style={
+                  favourite
+                    ? {
+                        textDecoration: "underline wavy",
+                        textDecorationColor: PENCIL,
+                        textDecorationThickness: "1px",
+                        textUnderlineOffset: "4px",
+                      }
+                    : undefined
+                }
+              >
+                {c}
+              </span>
+            </motion.li>
+          );
+        })}
       </ul>
+      <motion.p
+        className="mt-5 ml-6 rotate-1 text-[16px]"
+        style={{ fontFamily: HAND, color: PENCIL }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 + COURSEWORK.length * 0.12 + 0.5, duration: 0.6 }}
+      >
+        wavy lines = the fun ones
+      </motion.p>
     </div>
   );
 }

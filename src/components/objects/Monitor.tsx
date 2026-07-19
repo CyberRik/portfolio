@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { materials } from "@/lib/materials";
@@ -74,6 +74,57 @@ const screenShader = {
   `,
 };
 
+/**
+ * A handwritten sticky note on the bezel's corner — the one personal
+ * mark on the machine. Drawn once into a canvas with the Caveat font
+ * (waits for document.fonts so the handwriting is real, not fallback).
+ */
+function StickyNote() {
+  const [tex, setTex] = useState<THREE.CanvasTexture | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    document.fonts.ready.then(() => {
+      if (!alive) return;
+      const c = document.createElement("canvas");
+      c.width = c.height = 256;
+      const g = c.getContext("2d");
+      if (!g) return;
+      g.fillStyle = "#efd875";
+      g.fillRect(0, 0, 256, 256);
+      // slight curl shadow along the bottom edge
+      const grad = g.createLinearGradient(0, 205, 0, 256);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(110,85,20,0.28)");
+      g.fillStyle = grad;
+      g.fillRect(0, 205, 256, 51);
+      const fam =
+        getComputedStyle(document.body).getPropertyValue("--font-caveat").trim() || "cursive";
+      g.fillStyle = "#3a3428";
+      g.textAlign = "center";
+      g.font = `600 66px ${fam}`;
+      g.fillText("ship it,", 128, 112);
+      g.font = `500 50px ${fam}`;
+      g.fillText("then sleep", 128, 172);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = 4;
+      setTex(t);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!tex) return null;
+  return (
+    <mesh position={[-0.655, -0.2, 0.031]} rotation={[0, 0, 0.055]}>
+      <planeGeometry args={[0.085, 0.085]} />
+      <meshStandardMaterial map={tex} roughness={0.9} />
+    </mesh>
+  );
+}
+
 /** Two sagging cables from the panel down through the cable tray. */
 function Cables() {
   const geoA = useMemo(() => {
@@ -142,6 +193,7 @@ export function Monitor() {
         </mesh>
         {/* RM-OS desktop, pinned to the panel while the portal is open */}
         <MonitorScreen />
+        <StickyNote />
         {/* Bias light halo behind the panel */}
         <mesh position={[0, 0, -0.03]}>
           <planeGeometry args={[1.56, 0.68]} />

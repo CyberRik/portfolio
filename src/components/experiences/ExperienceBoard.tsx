@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { EXPERIENCE } from "@/content/portfolio";
 import type { PortalProps } from "./ExperienceOverlay";
+import { WORLD_FADE } from "@/lib/design";
 
 /**
  * EXPERIENCE — the whiteboard comes alive.
@@ -35,6 +36,53 @@ const ARROWS = [
   "M 1205 590 C 1280 560, 1255 420, 1300 375",
 ];
 
+/**
+ * tiny marker sketches — one per stop, its domain in a few strokes:
+ * an automation bot, a parsed document, a retrieval graph, a torii
+ * gate for Tokyo. Each sits above its node and draws on after it.
+ */
+const DOODLES: { at: [number, number]; color: string; paths: string[] }[] = [
+  // Tecnod8 — little automation bot
+  {
+    at: [355, 460],
+    color: INK,
+    paths: [
+      "M 12 26 h 38 v 28 h -38 Z",
+      "M 23 39 a 3 3 0 1 0 0.1 0",
+      "M 40 39 a 3 3 0 1 0 0.1 0",
+      "M 31 26 v -9 m -4 -4 a 4 4 0 1 1 8 0",
+    ],
+  },
+  // OctonData — a parsed document
+  {
+    at: [745, 152],
+    color: BLUE,
+    paths: [
+      "M 14 8 h 26 l 10 11 v 42 h -36 Z",
+      "M 40 8 v 11 h 10",
+      "M 22 32 h 20 M 22 41 h 20 M 22 50 h 13",
+    ],
+  },
+  // Gravton — retrieval graph
+  {
+    at: [1125, 455],
+    color: INK,
+    paths: [
+      "M 16 48 L 34 16 L 56 40 L 38 58 L 16 48",
+      "M 16 48 a 4 4 0 1 0 0.1 0",
+      "M 34 16 a 4 4 0 1 0 0.1 0",
+      "M 56 40 a 4 4 0 1 0 0.1 0",
+      "M 38 58 a 4 4 0 1 0 0.1 0",
+    ],
+  },
+  // Otsuka — torii gate, Tokyo
+  {
+    at: [1490, 150],
+    color: RED,
+    paths: ["M 6 20 C 20 12, 44 12, 58 20", "M 12 30 h 40", "M 18 26 v 32 M 46 26 v 32"],
+  },
+];
+
 // EXPERIENCE is newest-first; the board reads oldest → newest
 const ROLES = [...EXPERIENCE].reverse();
 
@@ -48,13 +96,7 @@ export function ExperienceBoard({ onClose }: PortalProps) {
   });
 
   return (
-    <motion.div
-      className="absolute inset-0 overflow-hidden bg-[#f2eee4]"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1.1, ease: "easeInOut" }}
-      exit={{ opacity: 0, transition: { duration: 0.45, ease: "easeIn" } }}
-    >
+    <motion.div className="absolute inset-0 overflow-hidden bg-[#f2eee4]" {...WORLD_FADE}>
       {/* faint board texture: old ghost strokes */}
       <div
         className="absolute inset-0 opacity-[0.05]"
@@ -163,6 +205,52 @@ export function ExperienceBoard({ onClose }: PortalProps) {
             />
           </g>
         ))}
+
+        {/* the sketches — drawn after their node settles */}
+        {DOODLES.map((dl, i) => (
+          <g key={i} transform={`translate(${dl.at[0]} ${dl.at[1]})`}>
+            {dl.paths.map((p, j) => (
+              <motion.path
+                key={p}
+                d={p}
+                fill="none"
+                stroke={dl.color}
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                {...draw(2.15 + i * 0.75 + j * 0.14, 0.35)}
+              />
+            ))}
+          </g>
+        ))}
+
+        {/* margin annotations, in red marker */}
+        <motion.text
+          x={158}
+          y={528}
+          style={{ fontFamily: MARKER }}
+          fontSize={26}
+          fill={RED}
+          transform="rotate(-3 158 528)"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2.1, duration: 0.5 }}
+        >
+          started here
+        </motion.text>
+        <motion.text
+          x={1272}
+          y={228}
+          style={{ fontFamily: MARKER }}
+          fontSize={26}
+          fill={RED}
+          transform="rotate(2 1272 228)"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 4.3, duration: 0.5 }}
+        >
+          now — tokyo
+        </motion.text>
       </svg>
 
       {/* the story of the selected node gets written below the board */}

@@ -39,6 +39,22 @@ canvas {
   animation: beacon-breathe 3.2s ease-in-out infinite;
 }
 
+/* the product's one cursor — a crisp terminal blink (stepped, not a
+   pulse) shared by the OS clock, the SSH session and the compose window */
+@keyframes cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.cursor-blink {
+  animation: cursor-blink 1.06s steps(1) infinite;
+}
+
 /* slow star twinkle for the About journey portal */
 @keyframes star-twinkle {
   0%,
@@ -51,6 +67,57 @@ canvas {
 }
 .star-twinkle {
   animation: star-twinkle 5.5s ease-in-out infinite;
+}
+
+/* the About sky is never still: two star layers drift at different
+   rates (parallax) and, occasionally, a meteor crosses */
+@keyframes star-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-60px, 22px, 0);
+  }
+}
+.star-layer-a {
+  animation: star-drift 240s linear infinite alternate;
+}
+.star-layer-b {
+  animation: star-drift 150s linear infinite alternate-reverse;
+}
+@keyframes shooting-star {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(206deg);
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.9;
+  }
+  7% {
+    transform: translate3d(-340px, 150px, 0) rotate(206deg);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.shooting-star {
+  position: absolute;
+  width: 90px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(230, 237, 251, 0.9), transparent);
+  animation: shooting-star 13s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-blink,
+  .star-twinkle,
+  .star-layer-a,
+  .star-layer-b,
+  .shooting-star,
+  .beacon-dot {
+    animation: none;
+  }
 }
 
 /* thin, quiet scrollbar for the content panel */

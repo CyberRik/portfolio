@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { PROFILE } from "@/content/portfolio";
 import type { PortalProps } from "./ExperienceOverlay";
 import { Typewriter } from "./Typewriter";
+import { DUR, EASE } from "@/lib/design";
+
+const MAILTO = `mailto:${PROFILE.email}?subject=${encodeURIComponent("Let's build something")}`;
 
 /**
  * CONTACT — the laptop opens a message.
@@ -15,24 +18,34 @@ import { Typewriter } from "./Typewriter";
  */
 export function ContactCompose({ onClose }: PortalProps) {
   const [step, setStep] = useState(0);
+  const [sent, setSent] = useState(false);
+
+  // the send moment plays first; the mail client opens on its heels
+  useEffect(() => {
+    if (!sent) return;
+    const t = setTimeout(() => {
+      window.location.href = MAILTO;
+    }, 900);
+    return () => clearTimeout(t);
+  }, [sent]);
 
   return (
     <motion.div
       className="absolute inset-0 flex items-center justify-center bg-black/45 backdrop-blur-[2.5px]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.9, ease: "easeInOut" }}
-      exit={{ opacity: 0, transition: { duration: 0.4, ease: "easeIn" } }}
+      transition={{ duration: 0.9, ease: EASE.inOut }}
+      exit={{ opacity: 0, transition: { duration: DUR.exit, ease: EASE.in } }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <motion.div
-        className="w-[min(460px,92vw)] overflow-hidden rounded-2xl border border-white/10 bg-[#191b20]/97 shadow-[0_50px_120px_rgba(0,0,0,0.6)]"
+        className="relative w-[min(460px,92vw)] overflow-hidden rounded-2xl border border-white/10 bg-[#191b20]/97 shadow-[0_50px_120px_rgba(0,0,0,0.6)]"
         initial={{ opacity: 0, y: 46, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 30, scale: 0.96 }}
-        transition={{ delay: 0.5, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ delay: 0.5, duration: DUR.move, ease: EASE.out }}
       >
         {/* title bar */}
         <div className="flex items-center gap-2 border-b border-white/6 px-4 py-3">
@@ -78,6 +91,7 @@ export function ContactCompose({ onClose }: PortalProps) {
           >
             Open to AI engineering roles, research collaborations, and
             interesting problems. I read everything.
+            {step >= 2 && <span className="cursor-blink not-italic"> ▍</span>}
           </motion.p>
         </div>
 
@@ -90,13 +104,38 @@ export function ContactCompose({ onClose }: PortalProps) {
           >
             ⎘ attach résumé
           </a>
-          <a
-            href={`mailto:${PROFILE.email}?subject=${encodeURIComponent("Let's build something")}`}
+          <button
+            onClick={() => setSent(true)}
             className="rounded-full bg-[#e4e9f2] px-5 py-1.5 font-mono text-[12px] font-medium tracking-[0.1em] text-[#14161a] uppercase transition-transform hover:scale-[1.04]"
           >
             Send ↗
-          </a>
+          </button>
         </div>
+
+        {/* the send moment — then the mail client takes over */}
+        <AnimatePresence>
+          {sent && (
+            <motion.div
+              key="sent"
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[#191b20]/97"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: DUR.tap, ease: EASE.out }}
+            >
+              <motion.span
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#8be0c8]/40 text-[20px] text-[#8be0c8]"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: DUR.ui, ease: EASE.out }}
+              >
+                ✓
+              </motion.span>
+              <p className="font-mono text-[11px] tracking-[0.2em] text-[#8f96a3] uppercase">
+                opening your mail app
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

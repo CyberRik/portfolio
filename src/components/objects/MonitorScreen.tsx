@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Html } from "@react-three/drei";
-import { PROJECTS } from "@/content/portfolio";
+import { PROFILE, PROJECTS } from "@/content/portfolio";
 import { closePortal, usePortalSection } from "@/lib/portal";
+import { DUR, EASE } from "@/lib/design";
 
 /**
  * PROJECTS — RM-OS, rendered ON the monitor's physical panel.
@@ -14,6 +15,10 @@ import { closePortal, usePortalSection } from "@/lib/portal";
  * of the machine — desk, lamp glow and room edges stay in your
  * peripheral vision while you mouse over a real desktop. Icons are
  * visible the instant the panel wakes; one click opens a project.
+ *
+ * OS furniture that earns its place: a live clock (the machine is on),
+ * a dock holding the four apps + the résumé (always one click away),
+ * and a single welcome notification that says who this desk belongs to.
  *
  * Geometry: the shader screen plane is 1.44 × 0.56 world units; in
  * transform mode worldSize = cssPx × distanceFactor / 400, so a
@@ -41,18 +46,31 @@ export function MonitorScreen() {
   );
 }
 
+/** ticks once a second — the OS is alive even when you do nothing */
+function useClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 function Desktop() {
   const [awake, setAwake] = useState(false);
   const [app, setApp] = useState<number | null>(null);
-  const clock = useMemo(
-    () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    [],
-  );
+  const [toast, setToast] = useState(false);
+  const now = useClock();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
 
-  // brief power-on beat while the camera is still settling in
+  // brief power-on beat while the camera is still settling in, then a
+  // single welcome notification — dismissed by click or on its own
   useEffect(() => {
-    const t = setTimeout(() => setAwake(true), 700);
-    return () => clearTimeout(t);
+    const wake = setTimeout(() => setAwake(true), 700);
+    const hello = setTimeout(() => setToast(true), 1800);
+    const bye = setTimeout(() => setToast(false), 8200);
+    return () => [wake, hello, bye].forEach(clearTimeout);
   }, []);
 
   return (
@@ -61,7 +79,7 @@ function Desktop() {
       style={{ width: CSS_W, height: CSS_H }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
+      transition={{ duration: DUR.ui, ease: EASE.inOut }}
     >
       <AnimatePresence>
         {awake && (
@@ -74,7 +92,7 @@ function Desktop() {
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.45, ease: "easeOut" }}
+            transition={{ duration: DUR.ui, ease: EASE.out }}
           >
             {/* menu bar */}
             <div className="flex items-center justify-between border-b border-white/6 bg-white/3 px-4 py-1.5 font-mono text-[10px] text-[#8ba3c7]">
@@ -83,7 +101,11 @@ function Desktop() {
                 <span>Projects</span>
               </div>
               <div className="flex items-center gap-4">
-                <span>{clock}</span>
+                <span>
+                  {hh}
+                  <span className="cursor-blink">:</span>
+                  {mm}
+                </span>
                 <button
                   onClick={closePortal}
                   className="rounded px-1.5 py-0.5 tracking-[0.15em] uppercase transition-colors hover:bg-white/10 hover:text-[#dce7f7]"
@@ -103,7 +125,7 @@ function Desktop() {
                     className="group flex w-[92px] flex-col items-center gap-1 rounded-md p-1.5 transition-colors hover:bg-white/6"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.08 + i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ delay: 0.08 + i * 0.05, duration: DUR.ui, ease: EASE.out }}
                   >
                     <span
                       className="flex h-10 w-10 items-center justify-center rounded-xl font-mono text-[13px] font-semibold text-black/80 shadow-md transition-transform group-hover:scale-105"
@@ -122,16 +144,18 @@ function Desktop() {
                 ))}
               </div>
 
-              {/* wallpaper idle state */}
+              {/* wallpaper idle state — live clock, blinking colon */}
               {app === null && (
                 <motion.div
                   className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center select-none"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2, duration: 0.6 }}
+                  transition={{ delay: 0.2, duration: DUR.move, ease: EASE.out }}
                 >
-                  <p className="font-mono text-[44px] font-light tracking-tight text-[#dce7f7]/85">
-                    {clock}
+                  <p className="font-mono text-[44px] font-light tracking-tight text-[#dce7f7]/85 tabular-nums">
+                    {hh}
+                    <span className="cursor-blink">:</span>
+                    {mm}
                   </p>
                   <p className="mt-1 font-mono text-[9px] tracking-[0.4em] text-[#5f7ea6] uppercase">
                     open a project
@@ -139,16 +163,39 @@ function Desktop() {
                 </motion.div>
               )}
 
+              {/* welcome notification — who this desk belongs to */}
+              <AnimatePresence>
+                {toast && (
+                  <motion.button
+                    key="toast"
+                    onClick={() => setToast(false)}
+                    className="absolute top-3 right-4 w-[270px] rounded-lg border border-white/10 bg-[#101827]/95 px-3.5 py-2.5 text-left shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 16, transition: { duration: DUR.tap, ease: EASE.in } }}
+                    transition={{ duration: DUR.ui, ease: EASE.out }}
+                  >
+                    <p className="font-mono text-[9px] tracking-[0.2em] text-[#5f7ea6] uppercase">
+                      RM-OS · welcome
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-[#c6d4ea]">
+                      Hi — I&apos;m Ritankar. Four shipped projects on this desktop; the
+                      résumé lives in the dock.
+                    </p>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
               {/* app window */}
               <AnimatePresence mode="popLayout">
                 {app !== null && (
                   <motion.section
                     key={app}
-                    className="absolute top-3 right-4 bottom-3 left-32 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[#0d1524]/97 shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
+                    className="absolute top-3 right-4 bottom-13 left-32 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[#0d1524]/97 shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
                     initial={{ opacity: 0, y: 22, scale: 0.94 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 14, scale: 0.96 }}
-                    transition={{ duration: 0.22, ease: [0.2, 0.9, 0.25, 1] }}
+                    transition={{ duration: DUR.tap, ease: EASE.out }}
                   >
                     <div className="flex items-center gap-1.5 border-b border-white/6 px-3 py-1.5">
                       <button
@@ -184,7 +231,7 @@ function Desktop() {
                             className="flex gap-2 text-[11px] leading-relaxed text-[#c6d4ea]"
                             initial={{ opacity: 0, x: 8 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.06 + i * 0.04, duration: 0.2 }}
+                            transition={{ delay: 0.06 + i * 0.04, duration: DUR.tap, ease: EASE.out }}
                           >
                             <span
                               className="mt-[7px] h-[3px] w-[3px] shrink-0 rounded-full"
@@ -208,6 +255,57 @@ function Desktop() {
                   </motion.section>
                 )}
               </AnimatePresence>
+
+              {/* dock — the four apps + the résumé, always one click away */}
+              <motion.div
+                className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-end gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-md"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: DUR.ui, ease: EASE.out }}
+              >
+                {PROJECTS.map((p, i) => (
+                  <button
+                    key={p.title}
+                    onClick={() => setApp(app === i ? null : i)}
+                    className="group relative flex flex-col items-center"
+                  >
+                    <span className="pointer-events-none absolute -top-6 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 font-mono text-[8px] whitespace-nowrap text-[#c6d4ea] opacity-0 transition-opacity group-hover:opacity-100">
+                      {p.title}
+                    </span>
+                    <span
+                      className="flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[10px] font-semibold text-black/80 transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110"
+                      style={{
+                        background: `linear-gradient(135deg, ${APP_ACCENTS[i % APP_ACCENTS.length]}, ${APP_ACCENTS[i % APP_ACCENTS.length]}88)`,
+                      }}
+                    >
+                      {p.title.replace(/[^A-Za-z]/g, "").slice(0, 2)}
+                    </span>
+                    {/* running indicator */}
+                    <span
+                      className="mt-0.5 h-[3px] w-[3px] rounded-full transition-opacity"
+                      style={{
+                        background: APP_ACCENTS[i % APP_ACCENTS.length],
+                        opacity: app === i ? 1 : 0,
+                      }}
+                    />
+                  </button>
+                ))}
+                <div className="mx-0.5 mb-1 h-6 w-px bg-white/10" />
+                <a
+                  href={PROFILE.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative flex flex-col items-center"
+                >
+                  <span className="pointer-events-none absolute -top-6 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 font-mono text-[8px] whitespace-nowrap text-[#c6d4ea] opacity-0 transition-opacity group-hover:opacity-100">
+                    Résumé.pdf
+                  </span>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0ead8] to-[#c9c2b0] font-mono text-[9px] font-semibold text-[#4a4335] transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110">
+                    CV
+                  </span>
+                  <span className="mt-0.5 h-[3px] w-[3px]" />
+                </a>
+              </motion.div>
             </div>
           </motion.div>
         )}

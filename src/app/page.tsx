@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import { flyToView } from "@/components/camera/cameraBus";
+import { PROFILE } from "@/content/portfolio";
 
 // The entire 3D world and its DOM UI overlays are client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
@@ -65,6 +66,25 @@ export default function Home() {
         <p className="mt-1 font-mono text-[10px] tracking-[0.2em] text-[#6b6152]">
           AI Engineer · IIT Madras
         </p>
+      </div>
+
+      {/* The 20-second answers — résumé and a way to reach me, always
+          one click away, no exploring required */}
+      <div className="absolute top-6 right-6 z-40 flex items-center gap-5 font-mono text-[10px] tracking-[0.2em] uppercase">
+        <a
+          href={PROFILE.resumeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
+        >
+          résumé ↓
+        </a>
+        <a
+          href={`mailto:${PROFILE.email}`}
+          className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
+        >
+          say hello ↗
+        </a>
       </div>
     </main>
   );

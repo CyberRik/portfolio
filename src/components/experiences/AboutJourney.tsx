@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { PROFILE } from "@/content/portfolio";
 import type { PortalProps } from "./ExperienceOverlay";
+import { WORLD_FADE } from "@/lib/design";
 
 /**
  * ABOUT — the world outside the window.
@@ -44,25 +45,35 @@ export function AboutJourney({ onClose }: PortalProps) {
       style={{
         background: "linear-gradient(180deg, #040711 0%, #0a1122 55%, #131b31 100%)",
       }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 2.0, ease: "easeInOut" }}
-      exit={{ opacity: 0, transition: { duration: 0.6, ease: "easeIn" } }}
+      {...WORLD_FADE}
     >
-      {/* starfield — slow twinkle */}
-      {stars.map((s, i) => (
-        <span
-          key={i}
-          className="star-twinkle absolute rounded-full bg-[#cdd8ee]"
-          style={{
-            left: `${s.x}%`,
-            top: `${s.y}%`,
-            width: s.r,
-            height: s.r,
-            animationDelay: `${s.d}s`,
-          }}
-        />
+      {/* starfield — two layers drifting at different rates, slow twinkle */}
+      {[0, 1].map((layer) => (
+        <div
+          key={layer}
+          className={`absolute -inset-20 ${layer === 0 ? "star-layer-a" : "star-layer-b"}`}
+        >
+          {stars
+            .filter((_, i) => i % 2 === layer)
+            .map((s, i) => (
+              <span
+                key={i}
+                className="star-twinkle absolute rounded-full bg-[#cdd8ee]"
+                style={{
+                  left: `${s.x}%`,
+                  top: `${s.y}%`,
+                  width: s.r,
+                  height: s.r,
+                  animationDelay: `${s.d}s`,
+                }}
+              />
+            ))}
+        </div>
       ))}
+
+      {/* every few seconds, a meteor */}
+      <span className="shooting-star" style={{ top: "16%", left: "68%", animationDelay: "4s" }} />
+      <span className="shooting-star" style={{ top: "9%", left: "34%", animationDelay: "10.5s" }} />
 
       {/* the journey constellation */}
       <svg
