@@ -32,6 +32,13 @@ const BARE_MODIFIERS = new Set([
 ]);
 
 export function isExitKey(e: KeyboardEvent): boolean {
+  // Auto-repeat. Holding a key fires keydown every ~30ms, and each one
+  // used to restart the fly-home: the timeline was killed and a fresh
+  // full-length flight began from wherever the camera had crept to, so
+  // holding a key made the camera crawl instead of travel — and letting
+  // go mid-flight could strand it partway. One press, one flight.
+  if (e.repeat) return false;
+
   if (e.ctrlKey || e.metaKey || e.altKey) return false;
   if (e.isComposing) return false;
   if (BARE_MODIFIERS.has(e.key)) return false;

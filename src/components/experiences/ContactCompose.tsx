@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PROFILE } from "@/content/portfolio";
 import type { PortalProps } from "./ExperienceOverlay";
 import { Typewriter } from "./Typewriter";
 import { DUR, EASE } from "@/lib/design";
-
-const MAILTO = `mailto:${PROFILE.email}?subject=${encodeURIComponent("Let's build something")}`;
+import { GMAIL_COMPOSE, MAILTO } from "@/lib/mail";
 
 /**
  * CONTACT — the laptop opens a message.
@@ -19,15 +18,16 @@ const MAILTO = `mailto:${PROFILE.email}?subject=${encodeURIComponent("Let's buil
 export function ContactCompose({ onClose }: PortalProps) {
   const [step, setStep] = useState(0);
   const [sent, setSent] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // the send moment plays first; the mail client opens on its heels
-  useEffect(() => {
-    if (!sent) return;
-    const t = setTimeout(() => {
-      window.location.href = MAILTO;
-    }, 900);
-    return () => clearTimeout(t);
-  }, [sent, onClose]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(PROFILE.email);
+      setCopied(true);
+    } catch {
+      /* clipboard blocked — the address is on screen behind this anyway */
+    }
+  };
 
   return (
     <motion.div
@@ -104,12 +104,15 @@ export function ContactCompose({ onClose }: PortalProps) {
           >
             ⎘ attach resume
           </a>
-          <button
+          {/* a real anchor, not a button + scripted navigation: the click
+              itself carries the user activation the mail handler needs */}
+          <a
+            href={MAILTO}
             onClick={() => setSent(true)}
             className="rounded-full bg-[#e4e9f2] px-5 py-1.5 font-mono text-[12px] font-medium tracking-[0.1em] text-[#14161a] uppercase transition-transform hover:scale-[1.04]"
           >
             Send ↗
-          </button>
+          </a>
         </div>
 
         {/* the send moment — then the mail client takes over */}
@@ -133,6 +136,25 @@ export function ContactCompose({ onClose }: PortalProps) {
               <p className="font-mono text-[11px] tracking-[0.2em] text-[#8f96a3] uppercase">
                 opening your mail app
               </p>
+              {/* mailto: silently does nothing when no client is
+                  registered, so the address stays reachable regardless */}
+              <div className="mt-3 flex items-center gap-3 font-mono text-[11px]">
+                <a
+                  href={GMAIL_COMPOSE}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#8be0c8] transition-colors hover:text-[#e4e9f2]"
+                >
+                  use gmail
+                </a>
+                <span className="text-[#3d434d]">·</span>
+                <button
+                  onClick={copy}
+                  className="text-[#8f96a3] transition-colors hover:text-[#e4e9f2]"
+                >
+                  {copied ? "copied ✓" : "copy address"}
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

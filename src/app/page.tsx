@@ -40,9 +40,16 @@ export default function Home() {
   // any key returns to the wide shot — the "back out" gesture. Same rule
   // as the portal worlds use, so backing out feels identical whether or
   // not a world is open (see lib/keys.ts for what "any" excludes).
+  //
+  // While a world IS open, closePortal owns the exit and stages its own
+  // flight. Firing this one too meant a single keypress started two gsap
+  // timelines that killed each other mid-move, which is how the camera
+  // ended up parked somewhere between the two poses.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isExitKey(e)) flyToView("overview");
+      if (!isExitKey(e)) return;
+      if (getPortalSection() !== null) return;
+      flyToView("overview");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

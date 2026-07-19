@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { SceneObject } from "@/lib/interactive/SceneObject";
@@ -62,7 +62,33 @@ export function Roomba() {
   const ringGeo = useMemo(() => new THREE.TorusGeometry(0.055, 0.004, 8, 40), []);
   const isLow = useQuality() === "low";
 
+  /**
+   * Held invisible for the first few rendered frames.
+   *
+   * ContactShadows bakes the floor ONCE (`frames={1}`) and then paints
+   * that texture forever. Anything in the scene at bake time is burned
+   * in permanently — so the one object that drives around left its
+   * shadow behind as a stain on the open floor while the bot itself was
+   * somewhere else entirely.
+   *
+   * Invisible objects are skipped by the renderer, including the depth
+   * pass ContactShadows uses, so missing that bake is the whole fix. The
+   * count is in FRAMES, not milliseconds, deliberately: it shares the
+   * frame loop with the bake, so it can't race it on a slow machine the
+   * way a wall-clock timer would. The bot still casts a normal, moving
+   * shadow from the lights — that one was never the problem.
+   */
+  const [visible, setVisible] = useState(false);
+  const framesSeen = useRef(0);
+
   useFrame(({ clock }, delta) => {
+    if (!visible) {
+      framesSeen.current += 1;
+      // bake lands on frame 1; a small margin costs nothing and this is
+      // all behind the loading screen anyway
+      if (framesSeen.current > 3) setVisible(true);
+      return;
+    }
     if (isLow) return; // skip animation on weak GPUs
     const s = state.current;
     const t = clock.elapsedTime;
@@ -112,7 +138,7 @@ export function Roomba() {
   });
 
   return (
-    <SceneObject def={{ id: "roomba", name: "Vacuum Unit 01" }}>
+    <SceneObject def={{ id: "roomba", name: "Vacuum Unit 01" }} visible={visible}>
       <group ref={body}>
         {/* main disc */}
         <mesh position={[0, BODY_H / 2 + 0.006, 0]} castShadow>
