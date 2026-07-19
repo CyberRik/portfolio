@@ -4,7 +4,7 @@ import { useRef, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { SceneObject } from "@/lib/interactive/SceneObject";
-import { materials, emissive } from "@/lib/materials";
+import { materials, emissive, sharedCylinder } from "@/lib/materials";
 import { Bx, Cyl } from "./primitives";
 import { useAudioPlayer } from "@/lib/audioStore";
 
@@ -84,12 +84,15 @@ export function Speaker({ id = "speaker", position, rotationY = 0 }: { id?: stri
         material={materials.metalMid}
       />
       {/* Woofer Cone (Classic stark white studio monitor look) */}
-      <Cyl
+      <mesh
         ref={wooferRef}
+        geometry={sharedCylinder()}
         position={[0, 0.25, 0.152]}
         rotation={[Math.PI / 2, 0, 0]}
         scale={[0.17, 0.003, 0.17]}
-        material={materials.whiteboard} 
+        material={materials.whiteboard}
+        castShadow
+        receiveShadow
       />
       {/* Woofer center dome */}
       <Cyl
@@ -111,12 +114,14 @@ export function Speaker({ id = "speaker", position, rotationY = 0 }: { id?: stri
       <Bx position={[0, 0.09, 0.151]} scale={[0.04, 0.015, 0.002]} material={materials.metalMid} />
 
       {/* Status LED */}
-      <Cyl
+      <mesh
         ref={ledRef}
+        geometry={sharedCylinder()}
         position={[0.09, 0.62, 0.151]}
         rotation={[Math.PI / 2, 0, 0]}
         scale={[0.005, 0.005, 0.005]}
         material={ledOff}
+        castShadow={false}
       />
     </SceneObject>
   );
