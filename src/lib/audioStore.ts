@@ -71,7 +71,9 @@ class AudioPlayer {
 
   subscribe(l: (s: typeof this.state) => void) {
     this.listeners.add(l);
-    return () => this.listeners.delete(l);
+    return () => {
+      this.listeners.delete(l);
+    };
   }
 
   playTrack(idx: number) {
