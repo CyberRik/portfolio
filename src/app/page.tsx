@@ -21,10 +21,6 @@ const ViewDock = dynamic(
   { ssr: false },
 );
 
-const ItemLabel = dynamic(
-  () => import("@/components/ui/ItemLabel").then((m) => m.ItemLabel),
-  { ssr: false },
-);
 
 const FocusCaption = dynamic(
   () => import("@/components/ui/FocusCaption").then((m) => m.FocusCaption),
@@ -54,7 +50,7 @@ export default function Home() {
       <SceneCanvas />
       <LoadingScreen />
       <ViewDock />
-      <ItemLabel />
+
       <FocusCaption />
       <ExperienceOverlay />
 

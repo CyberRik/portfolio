@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { Html } from "@react-three/drei";
 import { PROFILE, PROJECTS } from "@/content/portfolio";
 import { closePortal, usePortalSection } from "@/lib/portal";
@@ -16,9 +16,11 @@ import { DUR, EASE } from "@/lib/design";
  * peripheral vision while you mouse over a real desktop. Icons are
  * visible the instant the panel wakes; one click opens a project.
  *
- * OS furniture that earns its place: a live clock (the machine is on),
- * a dock holding the four apps + the résumé (always one click away),
- * and a single welcome notification that says who this desk belongs to.
+ * Palette: the screen is a light source IN a warm room, so it can't be
+ * cold. Neutral graphite (not navy) with the room's amber as the only
+ * accent — the lamp reflecting off the panel. Chrome is mono, content
+ * is sans: the macOS split, and what keeps a dense window readable at
+ * this size.
  *
  * Geometry: the shader screen plane is 1.44 × 0.56 world units; in
  * transform mode worldSize = cssPx × distanceFactor / 400, so a
@@ -27,7 +29,23 @@ import { DUR, EASE } from "@/lib/design";
 const CSS_W = 1152;
 const CSS_H = 448;
 
-const APP_ACCENTS = ["#7fb4ff", "#ff8f7a", "#8be0c8", "#d8b4ff"];
+/** graphite UI + the room's lamp amber; app tints stay in the warm half */
+const OS = {
+  txt: "#ece7dd",
+  dim: "#948d80",
+  faint: "#6b6459",
+  accent: "#ffb361",
+};
+
+const APP_TINTS = ["#ffb361", "#e08b6a", "#a8b48c", "#c49ab0"];
+
+/** macOS-style dock icons — all four are functional mini-apps */
+const MACOS_DOCK: { id: string; label: string; glyph: string; bg: string }[] = [
+  { id: "terminal",  label: "Terminal",  glyph: "▸_", bg: "linear-gradient(160deg, #1d1d1f, #3a3a3c)" },
+  { id: "keyboard",  label: "Keyboard",  glyph: "⌨",  bg: "linear-gradient(160deg, #5e5e63, #3a3a3c)" },
+  { id: "notes",     label: "Notes",     glyph: "✎",  bg: "linear-gradient(160deg, #f9e787, #f5d45a)" },
+  { id: "music",     label: "Music",     glyph: "♫",  bg: "linear-gradient(160deg, #fa5d6a, #d1344a)" },
+];
 
 export function MonitorScreen() {
   const active = usePortalSection() === "projects";
@@ -60,9 +78,25 @@ function Desktop() {
   const [awake, setAwake] = useState(false);
   const [app, setApp] = useState<number | null>(null);
   const [toast, setToast] = useState(false);
+  const [openApps, setOpenApps] = useState<Set<string>>(() => new Set(["terminal"]));
+  const toggleApp = useCallback((id: string) => {
+    setOpenApps((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const closeApp = useCallback((id: string) => {
+    setOpenApps((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
   const now = useClock();
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
+  const day = now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
   // brief power-on beat while the camera is still settling in, then a
   // single welcome notification — dismissed by click or on its own
@@ -87,62 +121,96 @@ function Desktop() {
             key="desktop"
             className="absolute inset-0 flex flex-col"
             style={{
+              // graphite desktop, warmed from the top-left the way the
+              // desk lamp actually falls across the panel
               background:
-                "radial-gradient(120% 90% at 50% 0%, #101a2e 0%, #0a1120 55%, #060a14 100%)",
+                "radial-gradient(90% 120% at 22% -10%, #2b2722 0%, #201d19 42%, #131211 100%)",
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: DUR.ui, ease: EASE.out }}
           >
-            {/* menu bar */}
-            <div className="flex items-center justify-between border-b border-white/6 bg-white/3 px-4 py-1.5 font-mono text-[10px] text-[#8ba3c7]">
-              <div className="flex items-center gap-4">
-                <span className="font-semibold tracking-[0.2em] text-[#dce7f7]">RM-OS</span>
+            {/* menu bar — translucent, vibrancy-blurred, macOS proportions */}
+            <div
+              className="flex items-center justify-between px-4 py-1 font-mono text-[10px] backdrop-blur-xl"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                color: OS.dim,
+              }}
+            >
+              <div className="flex items-center gap-3.5">
+                <span className="text-[11px] leading-none" style={{ color: OS.txt }}>
+                  ⌘
+                </span>
+                <span className="font-semibold" style={{ color: OS.txt }}>
+                  RM-OS
+                </span>
                 <span>Projects</span>
+                <span>Window</span>
               </div>
-              <div className="flex items-center gap-4">
-                <span>
+              <div className="flex items-center gap-3.5">
+                <span>{day}</span>
+                <span className="tabular-nums" style={{ color: OS.txt }}>
                   {hh}
                   <span className="cursor-blink">:</span>
                   {mm}
                 </span>
                 <button
                   onClick={closePortal}
-                  className="rounded px-1.5 py-0.5 tracking-[0.15em] uppercase transition-colors hover:bg-white/10 hover:text-[#dce7f7]"
+                  className="rounded px-1.5 py-0.5 transition-colors hover:bg-white/10"
+                  style={{ color: OS.dim }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = OS.txt)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = OS.dim)}
                 >
-                  ⏻ shut down
+                  ⏻
                 </button>
               </div>
             </div>
 
             <div className="relative flex-1">
               {/* desktop icons — all projects visible instantly */}
-              <div className="absolute top-3 left-3 flex flex-col gap-2.5">
+              <div className="absolute top-3 left-3 flex flex-col gap-1">
                 {PROJECTS.map((p, i) => (
                   <motion.button
                     key={p.title}
                     onClick={() => setApp(app === i ? null : i)}
-                    className="group flex w-[92px] flex-col items-center gap-1 rounded-md p-1.5 transition-colors hover:bg-white/6"
+                    onDoubleClick={() => setApp(i)}
+                    className="group flex w-[96px] flex-col items-center gap-1 rounded-md px-1.5 py-1.5 transition-colors"
+                    style={{ background: app === i ? "rgba(255,255,255,0.09)" : "transparent" }}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.08 + i * 0.05, duration: DUR.ui, ease: EASE.out }}
                   >
+                    <AppIcon
+                      label={p.title}
+                      tint={APP_TINTS[i % APP_TINTS.length]}
+                      size={38}
+                      radius={10}
+                    />
                     <span
-                      className="flex h-10 w-10 items-center justify-center rounded-xl font-mono text-[13px] font-semibold text-black/80 shadow-md transition-transform group-hover:scale-105"
-                      style={{
-                        background: `linear-gradient(135deg, ${APP_ACCENTS[i % APP_ACCENTS.length]}, ${APP_ACCENTS[i % APP_ACCENTS.length]}88)`,
-                        outline: app === i ? `2px solid ${APP_ACCENTS[i % APP_ACCENTS.length]}66` : "none",
-                        outlineOffset: 2,
-                      }}
+                      className="max-w-full text-center text-[9px] leading-tight break-words"
+                      style={{ color: app === i ? OS.txt : OS.dim }}
                     >
-                      {p.title.replace(/[^A-Za-z]/g, "").slice(0, 2)}
-                    </span>
-                    <span className="max-w-full text-center font-mono text-[9px] leading-tight break-words text-[#c6d4ea]">
                       {p.title}
                     </span>
                   </motion.button>
                 ))}
               </div>
+
+              {/* system app windows — all toggled from the dock */}
+              <AnimatePresence>
+                {openApps.has("terminal") && <TerminalWindow onClose={() => closeApp("terminal")} />}
+              </AnimatePresence>
+              <AnimatePresence>
+                {openApps.has("notes") && <NotesWindow onClose={() => closeApp("notes")} />}
+              </AnimatePresence>
+              <AnimatePresence>
+                {openApps.has("keyboard") && <KeyboardWindow onClose={() => closeApp("keyboard")} />}
+              </AnimatePresence>
+              <AnimatePresence>
+                {openApps.has("music") && <MusicWindow onClose={() => closeApp("music")} />}
+              </AnimatePresence>
 
               {/* wallpaper idle state — live clock, blinking colon */}
               {app === null && (
@@ -152,12 +220,18 @@ function Desktop() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2, duration: DUR.move, ease: EASE.out }}
                 >
-                  <p className="font-mono text-[44px] font-light tracking-tight text-[#dce7f7]/85 tabular-nums">
+                  <p
+                    className="text-[46px] leading-none font-extralight tracking-tight tabular-nums"
+                    style={{ color: `${OS.txt}d0` }}
+                  >
                     {hh}
-                    <span className="cursor-blink">:</span>
+                    <span className="cursor-blink font-thin">:</span>
                     {mm}
                   </p>
-                  <p className="mt-1 font-mono text-[9px] tracking-[0.4em] text-[#5f7ea6] uppercase">
+                  <p
+                    className="mt-3 font-mono text-[9px] tracking-[0.38em] uppercase"
+                    style={{ color: OS.faint }}
+                  >
                     open a project
                   </p>
                 </motion.div>
@@ -169,16 +243,30 @@ function Desktop() {
                   <motion.button
                     key="toast"
                     onClick={() => setToast(false)}
-                    className="absolute top-3 right-4 w-[270px] rounded-lg border border-white/10 bg-[#101827]/95 px-3.5 py-2.5 text-left shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+                    className="absolute top-3 right-4 w-[272px] rounded-xl px-3.5 py-2.5 text-left backdrop-blur-xl"
+                    style={{
+                      background: "rgba(38,34,29,0.82)",
+                      border: "1px solid rgba(255,255,255,0.09)",
+                      boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
+                    }}
                     initial={{ opacity: 0, x: 24 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 16, transition: { duration: DUR.tap, ease: EASE.in } }}
                     transition={{ duration: DUR.ui, ease: EASE.out }}
                   >
-                    <p className="font-mono text-[9px] tracking-[0.2em] text-[#5f7ea6] uppercase">
-                      RM-OS · welcome
-                    </p>
-                    <p className="mt-1 text-[11px] leading-snug text-[#c6d4ea]">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ background: OS.accent }}
+                      />
+                      <p
+                        className="font-mono text-[8px] tracking-[0.22em] uppercase"
+                        style={{ color: OS.faint }}
+                      >
+                        RM-OS · welcome
+                      </p>
+                    </div>
+                    <p className="mt-1.5 text-[11px] leading-snug" style={{ color: OS.txt }}>
                       Hi — I&apos;m Ritankar. Four shipped projects on this desktop; the
                       résumé lives in the dock.
                     </p>
@@ -191,61 +279,107 @@ function Desktop() {
                 {app !== null && (
                   <motion.section
                     key={app}
-                    className="absolute top-3 right-4 bottom-13 left-32 flex flex-col overflow-hidden rounded-lg border border-white/10 bg-[#0d1524]/97 shadow-[0_20px_50px_rgba(0,0,0,0.55)]"
+                    className="absolute top-3 right-4 bottom-13 left-32 flex flex-col overflow-hidden rounded-xl backdrop-blur-2xl"
+                    style={{
+                      background: "rgba(30,27,23,0.94)",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      boxShadow:
+                        "0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07)",
+                    }}
                     initial={{ opacity: 0, y: 22, scale: 0.94 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 14, scale: 0.96 }}
                     transition={{ duration: DUR.tap, ease: EASE.out }}
                   >
-                    <div className="flex items-center gap-1.5 border-b border-white/6 px-3 py-1.5">
+                    {/* titlebar — real traffic lights, glyphs on hover */}
+                    <div
+                      className="group/bar flex items-center gap-1.5 px-3 py-2"
+                      style={{
+                        background: "rgba(255,255,255,0.035)",
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
                       <button
                         onClick={() => setApp(null)}
                         aria-label="Close window"
-                        className="h-2.5 w-2.5 rounded-full bg-[#ff5f57] transition-transform hover:scale-110"
+                        className="flex h-[11px] w-[11px] items-center justify-center rounded-full text-[8px] leading-none font-bold text-black/55 opacity-100"
+                        style={{ background: "#ff5f57" }}
+                      >
+                        <span className="opacity-0 transition-opacity group-hover/bar:opacity-100">
+                          ✕
+                        </span>
+                      </button>
+                      <span
+                        className="h-[11px] w-[11px] rounded-full"
+                        style={{ background: "#febc2e" }}
                       />
-                      <span className="h-2.5 w-2.5 rounded-full bg-white/12" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-white/12" />
-                      <span className="ml-2 font-mono text-[10px] text-[#8ba3c7]">
-                        {PROJECTS[app].title}.app
+                      <span
+                        className="h-[11px] w-[11px] rounded-full"
+                        style={{ background: "#28c840" }}
+                      />
+                      <span
+                        className="ml-2 text-[10px] font-medium"
+                        style={{ color: OS.txt }}
+                      >
+                        {PROJECTS[app].title}
                       </span>
-                      <span className="ml-auto font-mono text-[9px] text-[#50658a]">
+                      <span className="ml-auto font-mono text-[9px]" style={{ color: OS.faint }}>
                         {PROJECTS[app].period}
                       </span>
                     </div>
-                    <div className="overflow-y-auto px-4 py-3">
-                      <p
-                        className="font-mono text-[9px] tracking-[0.2em] uppercase"
-                        style={{ color: APP_ACCENTS[app % APP_ACCENTS.length] }}
-                      >
-                        {PROJECTS[app].role}
-                      </p>
-                      {PROJECTS[app].context && (
-                        <p className="mt-1 text-[11px] text-[#a7b8d4] italic">
-                          {PROJECTS[app].context}
-                        </p>
-                      )}
-                      <ul className="mt-2.5 space-y-1.5">
+
+                    <div className="os-scroll overflow-y-auto px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <AppIcon
+                          label={PROJECTS[app].title}
+                          tint={APP_TINTS[app % APP_TINTS.length]}
+                          size={26}
+                          radius={7}
+                        />
+                        <div>
+                          <p
+                            className="font-mono text-[9px] tracking-[0.18em] uppercase"
+                            style={{ color: APP_TINTS[app % APP_TINTS.length] }}
+                          >
+                            {PROJECTS[app].role}
+                          </p>
+                          {PROJECTS[app].context && (
+                            <p className="text-[11px]" style={{ color: OS.dim }}>
+                              {PROJECTS[app].context}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <ul className="mt-3 space-y-1.5">
                         {PROJECTS[app].bullets.map((b, i) => (
                           <motion.li
                             key={b}
-                            className="flex gap-2 text-[11px] leading-relaxed text-[#c6d4ea]"
+                            className="flex gap-2 text-[11px] leading-relaxed"
+                            style={{ color: OS.txt }}
                             initial={{ opacity: 0, x: 8 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.06 + i * 0.04, duration: DUR.tap, ease: EASE.out }}
                           >
                             <span
                               className="mt-[7px] h-[3px] w-[3px] shrink-0 rounded-full"
-                              style={{ background: APP_ACCENTS[app % APP_ACCENTS.length] }}
+                              style={{ background: APP_TINTS[app % APP_TINTS.length] }}
                             />
                             <span>{b}</span>
                           </motion.li>
                         ))}
                       </ul>
+
                       <div className="mt-3 flex flex-wrap gap-1">
                         {PROJECTS[app].tags.map((t) => (
                           <span
                             key={t}
-                            className="rounded border border-white/8 bg-white/4 px-1.5 py-0.5 font-mono text-[9px] text-[#8ba3c7]"
+                            className="rounded-md px-1.5 py-0.5 font-mono text-[9px]"
+                            style={{
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid rgba(255,255,255,0.07)",
+                              color: OS.dim,
+                            }}
                           >
                             {t}
                           </span>
@@ -258,50 +392,53 @@ function Desktop() {
 
               {/* dock — the four apps + the résumé, always one click away */}
               <motion.div
-                className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-end gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-md"
+                className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-end gap-1.5 rounded-2xl px-2 py-1.5 backdrop-blur-2xl"
+                style={{
+                  background: "rgba(255,255,255,0.07)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  boxShadow:
+                    "0 12px 34px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.10)",
+                }}
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: DUR.ui, ease: EASE.out }}
               >
-                {PROJECTS.map((p, i) => (
+                {MACOS_DOCK.map((d) => (
                   <button
-                    key={p.title}
-                    onClick={() => setApp(app === i ? null : i)}
+                    key={d.id}
+                    onClick={() => toggleApp(d.id)}
                     className="group relative flex flex-col items-center"
                   >
-                    <span className="pointer-events-none absolute -top-6 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 font-mono text-[8px] whitespace-nowrap text-[#c6d4ea] opacity-0 transition-opacity group-hover:opacity-100">
-                      {p.title}
+                    <DockTip label={d.label} />
+                    <span className="transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110">
+                      <MacOSDockIcon glyph={d.glyph} bg={d.bg} />
                     </span>
-                    <span
-                      className="flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[10px] font-semibold text-black/80 transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110"
-                      style={{
-                        background: `linear-gradient(135deg, ${APP_ACCENTS[i % APP_ACCENTS.length]}, ${APP_ACCENTS[i % APP_ACCENTS.length]}88)`,
-                      }}
-                    >
-                      {p.title.replace(/[^A-Za-z]/g, "").slice(0, 2)}
-                    </span>
-                    {/* running indicator */}
                     <span
                       className="mt-0.5 h-[3px] w-[3px] rounded-full transition-opacity"
-                      style={{
-                        background: APP_ACCENTS[i % APP_ACCENTS.length],
-                        opacity: app === i ? 1 : 0,
-                      }}
+                      style={{ background: OS.txt, opacity: openApps.has(d.id) ? 0.8 : 0 }}
                     />
                   </button>
                 ))}
-                <div className="mx-0.5 mb-1 h-6 w-px bg-white/10" />
+                <div className="mx-0.5 mb-1 h-6 w-px" style={{ background: "rgba(255,255,255,0.12)" }} />
                 <a
                   href={PROFILE.resumeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group relative flex flex-col items-center"
                 >
-                  <span className="pointer-events-none absolute -top-6 rounded border border-white/10 bg-black/80 px-1.5 py-0.5 font-mono text-[8px] whitespace-nowrap text-[#c6d4ea] opacity-0 transition-opacity group-hover:opacity-100">
-                    Résumé.pdf
-                  </span>
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#f0ead8] to-[#c9c2b0] font-mono text-[9px] font-semibold text-[#4a4335] transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110">
-                    CV
+                  <DockTip label="Résumé.pdf" />
+                  <span className="transition-transform duration-200 group-hover:-translate-y-1 group-hover:scale-110">
+                    <span
+                      className="flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[9px] font-semibold"
+                      style={{
+                        background: "linear-gradient(160deg, #f2ece0, #cec6b6)",
+                        color: "#4a4335",
+                        boxShadow:
+                          "inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.35)",
+                      }}
+                    >
+                      CV
+                    </span>
                   </span>
                   <span className="mt-0.5 h-[3px] w-[3px]" />
                 </a>
@@ -313,3 +450,428 @@ function Desktop() {
     </motion.div>
   );
 }
+
+/** one squircle icon, used at three sizes — desktop, titlebar, dock */
+function AppIcon({
+  label,
+  tint,
+  size,
+  radius,
+}: {
+  label: string;
+  tint: string;
+  size: number;
+  radius: number;
+}) {
+  return (
+    <span
+      className="flex items-center justify-center font-mono font-semibold"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        fontSize: size * 0.34,
+        // glass-over-tint: a light top edge and a darker floor, so the
+        // icon reads as a physical chip rather than a flat swatch
+        background: `linear-gradient(160deg, ${tint}, ${tint}88)`,
+        color: "rgba(0,0,0,0.62)",
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.35)`,
+      }}
+    >
+      {label.replace(/[^A-Za-z]/g, "").slice(0, 2)}
+    </span>
+  );
+}
+
+/** dock tooltip — the label that rises on hover */
+function DockTip({ label }: { label: string }) {
+  return (
+    <span
+      className="pointer-events-none absolute -top-6 rounded-md px-1.5 py-0.5 font-mono text-[8px] whitespace-nowrap opacity-0 transition-opacity group-hover:opacity-100"
+      style={{
+        background: "rgba(20,18,16,0.92)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        color: "#ece7dd",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+/** 
+ * Shared window chrome for all system apps — draggable, opaque, traffic lights.
+ * Red = close, Yellow = minimize (hide), Green = toggle fullscreen.
+ */
+function OSWindowChrome({
+  title,
+  onClose,
+  onMinimize,
+  children,
+  className,
+  style,
+}: {
+  title: string;
+  onClose: () => void;
+  onMinimize?: () => void;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const dragControls = useDragControls();
+  const [maximized, setMaximized] = useState(false);
+
+  return (
+    <motion.div
+      className={`absolute flex flex-col overflow-hidden rounded-lg ${className ?? ""}`}
+      style={{
+        background: "#1a1816",
+        border: "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+        zIndex: 10,
+        ...(maximized
+          ? { top: 0, left: 0, right: 0, bottom: 44, width: "auto", height: "auto", borderRadius: 0, transform: "none" }
+          : style),
+      }}
+      drag={!maximized}
+      dragControls={dragControls}
+      dragListener={false}
+      dragMomentum={false}
+      dragElastic={0}
+      initial={{ opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.92 }}
+      transition={{ duration: DUR.ui, ease: EASE.out }}
+      layout
+    >
+      {/* title bar — drag handle */}
+      <div
+        className="group/tb flex items-center gap-1.5 px-3 py-1.5 border-b cursor-grab active:cursor-grabbing select-none"
+        style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}
+        onPointerDown={(e) => { if (!maximized) dragControls.start(e); }}
+      >
+        {/* red — close */}
+        <button
+          onClick={onClose}
+          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
+          style={{ background: "#ff5f57" }}
+        >
+          <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">✕</span>
+        </button>
+        {/* yellow — minimize */}
+        <button
+          onClick={onMinimize ?? onClose}
+          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
+          style={{ background: "#febc2e" }}
+        >
+          <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">−</span>
+        </button>
+        {/* green — fullscreen toggle */}
+        <button
+          onClick={() => setMaximized((m) => !m)}
+          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
+          style={{ background: "#28c840" }}
+        >
+          <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">{maximized ? "↙" : "↗"}</span>
+        </button>
+        <span className="ml-2 font-mono text-[9px] tracking-wide" style={{ color: OS.dim }}>
+          {title}
+        </span>
+      </div>
+      <div className="flex-1 overflow-auto">{children}</div>
+    </motion.div>
+  );
+}
+
+/* ===== TERMINAL ===== */
+function TerminalWindow({ onClose }: { onClose: () => void }) {
+  const [blink, setBlink] = useState(true);
+  useEffect(() => {
+    const id = setInterval(() => setBlink((b) => !b), 530);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <OSWindowChrome
+      title="train_agent.py"
+      onClose={onClose}
+      style={{ width: 280, right: 8, bottom: 50 }}
+    >
+      <div className="px-3 py-3 font-mono text-[9px] leading-[1.6]">
+        <p><span style={{ color: "#c49ab0" }}>import</span> <span style={{ color: OS.txt }}>torch</span></p>
+        <p><span style={{ color: "#c49ab0" }}>from</span> <span style={{ color: OS.txt }}>transformers</span> <span style={{ color: "#c49ab0" }}>import</span> <span style={{ color: OS.txt }}>AutoModel</span></p>
+        <br />
+        <p style={{ color: OS.dim }}># Initialize cluster...</p>
+        <p style={{ color: OS.txt }}>Allocating 4x H100 (80GB) GPUs...</p>
+        <p style={{ color: "#a8b48c" }}>Success: cluster connected.</p>
+        <br />
+        <p style={{ color: OS.txt }}>Epoch 42/100</p>
+        <div className="my-1.5 h-1 w-full rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.4)" }}>
+          <div className="h-full w-[88%]" style={{ background: OS.accent }} />
+        </div>
+        <p style={{ color: OS.dim }}>loss: 0.1042 - val_loss: 0.1298</p>
+        <p className="mt-1.5" style={{ color: OS.txt }}>
+          optimizer.step()
+          <span style={{ opacity: blink ? 1 : 0, color: OS.accent }}>_</span>
+        </p>
+      </div>
+    </OSWindowChrome>
+  );
+}
+
+/* ===== NOTES ===== */
+function NotesWindow({ onClose }: { onClose: () => void }) {
+  const [text, setText] = useState("# Ideas\n\nType anything here...\n");
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    // auto-focus the textarea when the window opens
+    taRef.current?.focus();
+  }, []);
+
+  return (
+    <OSWindowChrome
+      title="Notes"
+      onClose={onClose}
+      style={{ width: 240, right: 8, top: 28 }}
+    >
+      <textarea
+        ref={taRef}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        spellCheck={false}
+        className="flex-1 resize-none bg-transparent px-3 py-2 font-mono text-[10px] leading-relaxed outline-none"
+        style={{ color: OS.txt, height: 160, caretColor: OS.accent }}
+      />
+      <div
+        className="flex items-center justify-between px-3 py-1 border-t font-mono text-[8px]"
+        style={{ borderColor: "rgba(255,255,255,0.05)", color: OS.faint }}
+      >
+        <span>{text.length} chars</span>
+        <span>{text.split("\n").length} lines</span>
+      </div>
+    </OSWindowChrome>
+  );
+}
+
+/* ===== KEYBOARD ===== */
+const KB_ROWS = [
+  ["Q","W","E","R","T","Y","U","I","O","P"],
+  ["A","S","D","F","G","H","J","K","L"],
+  ["Z","X","C","V","B","N","M","⌫"],
+];
+
+function KeyboardWindow({ onClose }: { onClose: () => void }) {
+  const [typed, setTyped] = useState("");
+
+  const press = (key: string) => {
+    if (key === "⌫") setTyped((t) => t.slice(0, -1));
+    else setTyped((t) => t + key);
+  };
+
+  return (
+    <OSWindowChrome
+      title="Keyboard"
+      onClose={onClose}
+      style={{ width: 380, left: "50%", bottom: 50, transform: "translateX(-50%)" }}
+    >
+      {/* typed text display */}
+      <div
+        className="mx-2.5 mt-2 rounded-md px-2 py-1.5 font-mono text-[10px] overflow-x-auto whitespace-nowrap"
+        style={{
+          background: "rgba(0,0,0,0.3)",
+          color: OS.txt,
+          minHeight: 28,
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        {typed || <span style={{ color: OS.faint }}>Start typing...</span>}
+        <span className="cursor-blink" style={{ color: OS.accent }}>▍</span>
+      </div>
+
+      {/* keyboard grid */}
+      <div className="flex flex-col items-center gap-[3px] px-2 py-2">
+        {KB_ROWS.map((row, ri) => (
+          <div key={ri} className="flex gap-[3px]">
+            {row.map((key) => (
+              <button
+                key={key}
+                onClick={() => press(key)}
+                className="flex items-center justify-center rounded font-mono text-[9px] font-medium transition-all active:scale-90"
+                style={{
+                  width: key === "⌫" ? 40 : 30,
+                  height: 24,
+                  background: key === "⌫" ? "rgba(255,95,87,0.2)" : "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  color: key === "⌫" ? "#ff5f57" : OS.txt,
+                }}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+        ))}
+        {/* bottom row: space + enter */}
+        <div className="flex gap-[3px]">
+          <button
+            onClick={() => press(" ")}
+            className="flex items-center justify-center rounded font-mono text-[8px] transition-all active:scale-95"
+            style={{
+              width: 200,
+              height: 24,
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              color: OS.faint,
+            }}
+          >
+            space
+          </button>
+          <button
+            onClick={() => press("\u21B5\n")}
+            className="flex items-center justify-center rounded font-mono text-[8px] transition-all active:scale-95"
+            style={{
+              width: 60,
+              height: 24,
+              background: "rgba(255,179,97,0.15)",
+              border: "1px solid rgba(255,179,97,0.2)",
+              color: OS.accent,
+            }}
+          >
+            return
+          </button>
+        </div>
+      </div>
+    </OSWindowChrome>
+  );
+}
+
+/* ===== MUSIC ===== */
+const TRACKS = [
+  { name: "gradient_descent.wav", artist: "Neural Orchestra", duration: 214 },
+  { name: "backprop_symphony.flac", artist: "Deep Ensemble", duration: 187 },
+  { name: "attention_is_all.mp3", artist: "Transformer FM", duration: 243 },
+  { name: "loss_function_blues.wav", artist: "Overfitters", duration: 196 },
+];
+
+function MusicWindow({ onClose }: { onClose: () => void }) {
+  const [playing, setPlaying] = useState(false);
+  const [trackIdx, setTrackIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const track = TRACKS[trackIdx];
+
+  useEffect(() => {
+    if (!playing) return;
+    const id = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 100) {
+          // auto-advance to next track
+          setTrackIdx((i) => (i + 1) % TRACKS.length);
+          return 0;
+        }
+        return p + 100 / track.duration;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [playing, track.duration]);
+
+  const skip = (dir: 1 | -1) => {
+    setTrackIdx((i) => (i + dir + TRACKS.length) % TRACKS.length);
+    setProgress(0);
+  };
+
+  const mm = Math.floor((track.duration * progress / 100) / 60);
+  const ss = Math.floor((track.duration * progress / 100) % 60);
+  const totalMm = Math.floor(track.duration / 60);
+  const totalSs = track.duration % 60;
+
+  return (
+    <OSWindowChrome
+      title="Music"
+      onClose={onClose}
+      style={{ width: 240, left: 110, bottom: 50 }}
+    >
+      <div className="px-3 py-3">
+        {/* track info */}
+        <p className="font-mono text-[10px] truncate" style={{ color: OS.txt }}>
+          {track.name}
+        </p>
+        <p className="font-mono text-[8px] mt-0.5" style={{ color: OS.faint }}>
+          {track.artist}
+        </p>
+
+        {/* progress bar */}
+        <div
+          className="mt-2.5 h-[3px] w-full rounded-full overflow-hidden cursor-pointer"
+          style={{ background: "rgba(255,255,255,0.08)" }}
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setProgress(((e.clientX - rect.left) / rect.width) * 100);
+          }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{ width: `${progress}%`, background: "#fa5d6a" }}
+          />
+        </div>
+        <div className="flex justify-between mt-1 font-mono text-[7px]" style={{ color: OS.faint }}>
+          <span>{mm}:{String(ss).padStart(2, "0")}</span>
+          <span>{totalMm}:{String(totalSs).padStart(2, "0")}</span>
+        </div>
+
+        {/* controls */}
+        <div className="flex items-center justify-center gap-4 mt-2">
+          <button
+            onClick={() => skip(-1)}
+            className="font-mono text-[10px] transition-colors hover:text-white"
+            style={{ color: OS.dim }}
+          >
+            ⏮
+          </button>
+          <button
+            onClick={() => setPlaying(!playing)}
+            className="flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110"
+            style={{
+              background: playing ? "rgba(250,93,106,0.2)" : "rgba(255,255,255,0.1)",
+              color: playing ? "#fa5d6a" : OS.txt,
+              fontSize: 12,
+            }}
+          >
+            {playing ? "⏸" : "▶"}
+          </button>
+          <button
+            onClick={() => skip(1)}
+            className="font-mono text-[10px] transition-colors hover:text-white"
+            style={{ color: OS.dim }}
+          >
+            ⏭
+          </button>
+        </div>
+      </div>
+    </OSWindowChrome>
+  );
+}
+
+/** realistic macOS squircle dock icon */
+function MacOSDockIcon({ glyph, bg }: { glyph: string; bg: string }) {
+  return (
+    <span
+      className="flex items-center justify-center"
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        background: bg,
+        fontSize: glyph.length > 1 ? 9 : 14,
+        lineHeight: 1,
+        fontFamily: glyph.length > 1 ? "monospace" : "inherit",
+        fontWeight: glyph.length > 1 ? 700 : 400,
+        color: "#fff",
+        boxShadow:
+          "inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.35)",
+      }}
+    >
+      {glyph}
+    </span>
+  );
+}
+
