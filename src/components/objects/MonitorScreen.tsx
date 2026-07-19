@@ -6,6 +6,7 @@ import { Html } from "@react-three/drei";
 import { PROFILE, PROJECTS } from "@/content/portfolio";
 import { closePortal, usePortalSection } from "@/lib/portal";
 import { DUR, EASE } from "@/lib/design";
+import { audioPlayer, useAudioPlayer, TRACKS } from "@/lib/audioStore";
 
 /**
  * PROJECTS — RM-OS, rendered ON the monitor's physical panel.
@@ -186,7 +187,7 @@ function Desktop() {
               }}
               onPointerMove={(e) => {
                 if (!dragStart.current) return;
-                
+
                 // With pointer capture, e.target is always e.currentTarget.
                 // nativeEvent.offsetX/Y correctly accounts for 3D CSS transforms!
                 const currentX = Math.max(0, Math.min(e.nativeEvent.offsetX, e.currentTarget.offsetWidth));
@@ -810,37 +811,8 @@ function KeyboardWindow({ onClose }: { onClose: () => void }) {
 /* ===== MUSIC ===== */
 /**
  * A real playlist, playing real files.
- *
- * The artist line is not decoration — two of these are CC-BY, which
- * requires visible credit, and rendering it per track is how that
- * obligation is met. Do not reduce this to filenames.
- *
- * Ordered calm-first so the default press of play suits the room; the
- * livelier track is there but has to be chosen.
- *
- * Deliberate:
- *   - preload="none" on the single <audio> element. ~1.5MB of audio sits
- *     in public/ and none of it is fetched until someone presses play.
- *   - No autoplay, ever. Starts on a click and only a click.
+ * Tracks moved to global store to play in the background across the site.
  */
-const TRACKS = [
-  {
-    src: "/audio/forgotten-path.mp3",
-    name: "forgotten_path.mp3",
-    artist: "johndekale · CC0",
-  },
-  {
-    src: "/audio/menu-theme.mp3",
-    name: "menu_theme.mp3",
-    artist: "CodeManu · CC-BY 3.0",
-  },
-  {
-    src: "/audio/chip-drive.mp3",
-    name: "chip_drive.mp3",
-    artist: "CodeManu · CC-BY 3.0",
-  },
-];
-
 const clock = (s: number) =>
   `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
@@ -880,70 +852,19 @@ function SpeakerIcon({ muted, size = 12 }: { muted: boolean; size?: number }) {
 }
 
 function MusicWindow({ onClose }: { onClose: () => void }) {
-  const audio = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [idx, setIdx] = useState(0);
-  const [at, setAt] = useState(0);
-  const [len, setLen] = useState(0);
+  const { idx, playing, muted, progress: at, len } = useAudioPlayer();
   const track = TRACKS[idx];
 
-  // closing the window stops the music — the window IS the player
-  useEffect(() => () => audio.current?.pause(), []);
-
-  /**
-   * Changing `src` resets the media element, so a switch made while
-   * playing has to explicitly resume — otherwise picking a track mid-
-   * listen silently stops the music, which reads as a broken button.
-   * Skipped on first mount so nothing ever plays unasked.
-   */
-  const first = useRef(true);
-  useEffect(() => {
-    const a = audio.current;
-    if (!a) return;
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    setAt(0);
-    setLen(0);
-    if (playing) a.play().catch(() => setPlaying(false));
-    // `playing` intentionally omitted — this must run on track change only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx]);
-
-  const step = (d: 1 | -1) => setIdx((i) => (i + d + TRACKS.length) % TRACKS.length);
-
-  const toggleMute = () => {
-    const a = audio.current;
-    if (!a) return;
-    a.muted = !a.muted;
-    setMuted(a.muted);
+  const step = (d: 1 | -1) => {
+    const nextIdx = (idx + d + TRACKS.length) % TRACKS.length;
+    audioPlayer.playTrack(nextIdx);
   };
 
-  const toggle = async () => {
-    const a = audio.current;
-    if (!a) return;
-    if (a.paused) {
-      try {
-        a.volume = 0.55;
-        await a.play();
-        setPlaying(true);
-      } catch {
-        /* blocked or file missing — leave the button in its off state */
-      }
-    } else {
-      a.pause();
-      setPlaying(false);
-    }
-  };
+  const toggleMute = () => audioPlayer.setMuted(!muted);
+  const toggle = () => audioPlayer.togglePlay();
+  const seek = (fraction: number) => audioPlayer.seek(fraction);
 
-  const seek = (fraction: number) => {
-    const a = audio.current;
-    if (a && Number.isFinite(a.duration)) a.currentTime = fraction * a.duration;
-  };
-
-  const progress = len ? (at / len) * 100 : 0;
+  const progressPct = len ? (at / len) * 100 : 0;
 
   return (
     <OSWindowChrome
@@ -952,17 +873,6 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
       style={{ width: 240, left: 110, bottom: 50 }}
     >
       <div className="px-3 py-3">
-        <audio
-          ref={audio}
-          src={track.src}
-          loop
-          preload="none"
-          onLoadedMetadata={(e) => setLen(e.currentTarget.duration)}
-          onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
-          onPause={() => setPlaying(false)}
-          onPlay={() => setPlaying(true)}
-        />
-
         {/* track info */}
         <p className="font-mono text-[10px] truncate" style={{ color: OS.txt }}>
           {track.name}
@@ -982,7 +892,7 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
         >
           <div
             className="h-full rounded-full"
-            style={{ width: `${progress}%`, background: "#fa5d6a" }}
+            style={{ width: `${progressPct}%`, background: "#fa5d6a" }}
           />
         </div>
         <div className="flex justify-between mt-1 font-mono text-[7px]" style={{ color: OS.faint }}>
@@ -1030,12 +940,12 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* the playlist — switching tracks from the desktop itself */}
+        {/* the playlist */}
         <div className="mt-2.5 border-t pt-1.5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
           {TRACKS.map((t, i) => (
             <button
               key={t.src}
-              onClick={() => setIdx(i)}
+              onClick={() => audioPlayer.playTrack(i)}
               className="flex w-full items-center gap-1.5 rounded px-1 py-[3px] text-left transition-colors hover:bg-white/5"
               style={{ color: i === idx ? OS.txt : OS.faint }}
             >

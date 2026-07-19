@@ -13,6 +13,7 @@ import { Whiteboard } from "@/components/objects/Whiteboard";
 import { Bookshelf } from "@/components/objects/Bookshelf";
 import { ServerRack } from "@/components/objects/ServerRack";
 import { Plant } from "@/components/objects/Plant";
+import { Speaker } from "@/components/objects/Speaker";
 import { CityWindow } from "@/components/objects/CityWindow";
 import { FloorLamp } from "@/components/objects/FloorLamp";
 import { WallFrames } from "@/components/objects/WallFrames";
@@ -62,6 +63,11 @@ export function Workspace() {
       {/* potted_plant_04 is tabletop-scale in real life — scaled up for
           the floor corner, small variant dressed on the coffee table */}
       <Plant id="plant-corner" position={[-3.3, 0, -2.5]} variant="large" scale={2.6} rotationY={0.6} />
+      
+      {/* Studio Monitors flanking the desk area */}
+      <Speaker id="speaker-left" position={[-2.3, 0, -2.1]} rotationY={0.35} />
+      <Speaker id="speaker-right" position={[2.3, 0, -2.1]} rotationY={-0.35} />
+
       <Plant id="plant-entry" position={[3.35, 0, 1.95]} variant="small" scale={1.5} rotationY={-1.2} />
       <Plant id="plant-table" position={[-1.95, 0.31, 1.55]} variant="large" scale={0.9} rotationY={2.1} />
 

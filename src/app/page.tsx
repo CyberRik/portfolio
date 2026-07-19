@@ -6,6 +6,7 @@ import { flyToView } from "@/components/camera/cameraBus";
 import { PROFILE } from "@/content/portfolio";
 import { isExitKey } from "@/lib/keys";
 import { getPortalSection } from "@/lib/portal";
+import { AmbientAudio } from "@/components/ui/AmbientAudio";
 
 // The entire 3D world and its DOM UI overlays are client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
@@ -78,6 +79,7 @@ export default function Home() {
       {/* The 20-second answers — résumé and a way to reach me, always
           one click away, no exploring required */}
       <div className="absolute top-6 right-6 z-40 flex items-center gap-5 font-mono text-[10px] tracking-[0.2em] uppercase">
+        <AmbientAudio />
         <a
           href={PROFILE.resumeUrl}
           target="_blank"
