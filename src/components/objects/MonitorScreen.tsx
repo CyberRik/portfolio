@@ -41,10 +41,10 @@ const APP_TINTS = ["#ffb361", "#e08b6a", "#a8b48c", "#c49ab0"];
 
 /** macOS-style dock icons — all four are functional mini-apps */
 const MACOS_DOCK: { id: string; label: string; glyph: string; bg: string }[] = [
-  { id: "terminal",  label: "Terminal",  glyph: "▸_", bg: "linear-gradient(160deg, #1d1d1f, #3a3a3c)" },
-  { id: "keyboard",  label: "Keyboard",  glyph: "⌨",  bg: "linear-gradient(160deg, #5e5e63, #3a3a3c)" },
-  { id: "notes",     label: "Notes",     glyph: "✎",  bg: "linear-gradient(160deg, #f9e787, #f5d45a)" },
-  { id: "music",     label: "Music",     glyph: "♫",  bg: "linear-gradient(160deg, #fa5d6a, #d1344a)" },
+  { id: "terminal", label: "Terminal", glyph: "▸_", bg: "linear-gradient(160deg, #1d1d1f, #3a3a3c)" },
+  { id: "keyboard", label: "Keyboard", glyph: "⌨", bg: "linear-gradient(160deg, #5e5e63, #3a3a3c)" },
+  { id: "notes", label: "Notes", glyph: "✎", bg: "linear-gradient(160deg, #f9e787, #f5d45a)" },
+  { id: "music", label: "Music", glyph: "♫", bg: "linear-gradient(160deg, #fa5d6a, #d1344a)" },
 ];
 
 export function MonitorScreen() {
@@ -268,7 +268,7 @@ function Desktop() {
                     </div>
                     <p className="mt-1.5 text-[11px] leading-snug" style={{ color: OS.txt }}>
                       Hi — I&apos;m Ritankar. Four shipped projects on this desktop; the
-                      résumé lives in the dock.
+                      resume lives in the dock.
                     </p>
                   </motion.button>
                 )}
@@ -656,9 +656,9 @@ function NotesWindow({ onClose }: { onClose: () => void }) {
 
 /* ===== KEYBOARD ===== */
 const KB_ROWS = [
-  ["Q","W","E","R","T","Y","U","I","O","P"],
-  ["A","S","D","F","G","H","J","K","L"],
-  ["Z","X","C","V","B","N","M","⌫"],
+  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+  ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+  ["Z", "X", "C", "V", "B", "N", "M", "⌫"],
 ];
 
 function KeyboardWindow({ onClose }: { onClose: () => void }) {

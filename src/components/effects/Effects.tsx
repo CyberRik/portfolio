@@ -8,29 +8,42 @@ import {
   SMAA,
   Vignette,
 } from "@react-three/postprocessing";
+import { useQuality } from "@/lib/gpuTier";
 
 /**
- * Post pipeline — graded like film, not like a Three.js demo:
+ * Post pipeline — quality-adaptive.
  *
- *   N8AO      grounds geometry into its corners (half-res, cheap)
- *   Bloom     threshold 0.9: only the screen, lamp filament and LED
- *             strips lift. Never the walls.
- *   SMAA      crisp edges without MSAA cost (composer runs multisampling 0)
- *   Noise     film grain — kills banding in the dark gradients and
- *             makes flat CG surfaces read as photographed
- *   Vignette  quiet corner falloff, eye funnels to the desk
- *
- * No depth of field: at wide orbit angles it smeared the whole frame.
- * Crispness beats a depth cue.
+ * High:   full pipeline (N8AO + Bloom + SMAA + Noise + Vignette)
+ * Medium: no AO, lighter bloom/noise
+ * Low:    Vignette only — skips EffectComposer overhead entirely
  */
 export function Effects() {
+  const q = useQuality();
+
+  // Low tier: just a CSS vignette would be cheaper, but even the
+  // single-pass Vignette in the composer is lightweight enough.
+  // The key saving is skipping N8AO, Bloom and SMAA.
+  if (q === "low") {
+    return (
+      <EffectComposer multisampling={0} autoClear={false}>
+        <Vignette eskil={false} offset={0.22} darkness={0.68} />
+      </EffectComposer>
+    );
+  }
+
   return (
     <EffectComposer multisampling={0} autoClear={false}>
-      <N8AO aoRadius={0.35} distanceFalloff={0.5} intensity={2.6} quality="performance" halfRes />
-      <Bloom mipmapBlur intensity={0.42} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
-
-      <SMAA />
-      <Noise premultiply opacity={0.4} />
+      {q === "high" && (
+        <N8AO aoRadius={0.35} distanceFalloff={0.5} intensity={2.6} quality="performance" halfRes />
+      )}
+      <Bloom
+        mipmapBlur
+        intensity={q === "high" ? 0.42 : 0.25}
+        luminanceThreshold={0.9}
+        luminanceSmoothing={0.25}
+      />
+      {q === "high" && <SMAA />}
+      <Noise premultiply opacity={q === "high" ? 0.4 : 0.2} />
       <Vignette eskil={false} offset={0.22} darkness={0.68} />
     </EffectComposer>
   );

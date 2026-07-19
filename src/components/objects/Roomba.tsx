@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { SceneObject } from "@/lib/interactive/SceneObject";
+import { useQuality } from "@/lib/gpuTier";
 
 /**
  * Autonomous vacuum bot — the room's one free-roaming inhabitant.
@@ -59,8 +60,10 @@ export function Roomba() {
   });
 
   const ringGeo = useMemo(() => new THREE.TorusGeometry(0.055, 0.004, 8, 40), []);
+  const isLow = useQuality() === "low";
 
   useFrame(({ clock }, delta) => {
+    if (isLow) return; // skip animation on weak GPUs
     const s = state.current;
     const t = clock.elapsedTime;
     const g = body.current;

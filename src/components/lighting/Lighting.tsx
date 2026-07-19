@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, SoftShadows } from "@react-three/drei";
 import { RectAreaLightUniformsLib } from "three-stdlib";
+import { useQuality } from "@/lib/gpuTier";
 
 /**
  * Cinematic lighting rig — one story, told in light:
@@ -25,6 +26,7 @@ import { RectAreaLightUniformsLib } from "three-stdlib";
 let rectAreaInit = false;
 
 export function Lighting() {
+  const q = useQuality();
   const sunRef = useRef<THREE.DirectionalLight>(null);
 
   // Light targets must live in the scene graph for their matrices to update
@@ -75,7 +77,7 @@ export function Lighting() {
 
   return (
     <>
-      <SoftShadows size={24} samples={16} focus={0.5} />
+      {q !== "low" && <SoftShadows size={24} samples={q === "high" ? 16 : 8} focus={0.5} />}
 
       <primitive object={sunTarget} />
       <primitive object={deskTarget} />
@@ -90,7 +92,7 @@ export function Lighting() {
         intensity={3.1}
         color="#ff9a50"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[q === "high" ? 2048 : q === "medium" ? 1024 : 512, q === "high" ? 2048 : q === "medium" ? 1024 : 512]}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
         shadow-camera-left={-5}
@@ -124,8 +126,8 @@ export function Lighting() {
         distance={6}
         decay={2}
         color="#ffe0ba"
-        castShadow
-        shadow-mapSize={[1024, 1024]}
+        castShadow={q !== "low"}
+        shadow-mapSize={[q === "high" ? 1024 : 512, q === "high" ? 1024 : 512]}
         shadow-bias={-0.0004}
       />
 
@@ -186,7 +188,7 @@ export function Lighting() {
         scale={9}
         blur={3}
         far={2.2}
-        resolution={512}
+        resolution={q === "high" ? 512 : q === "medium" ? 256 : 128}
         color="#0e0a06"
         frames={1}
       />

@@ -7,6 +7,7 @@ import type { PortalProps } from "./ExperienceOverlay";
 import { Typewriter } from "./Typewriter";
 import { DUR, EASE } from "@/lib/design";
 
+const MAILTO = `mailto:${PROFILE.email}?subject=${encodeURIComponent("Let's build something")}`;
 
 /**
  * CONTACT — the laptop opens a message.
@@ -19,13 +20,12 @@ export function ContactCompose({ onClose }: PortalProps) {
   const [step, setStep] = useState(0);
   const [sent, setSent] = useState(false);
 
-  // instead of a mailto: link which fails for many users, we copy the email
+  // the send moment plays first; the mail client opens on its heels
   useEffect(() => {
     if (!sent) return;
-    navigator.clipboard.writeText(PROFILE.email).catch(() => {});
     const t = setTimeout(() => {
-      onClose();
-    }, 2500);
+      window.location.href = MAILTO;
+    }, 900);
     return () => clearTimeout(t);
   }, [sent, onClose]);
 
@@ -108,7 +108,7 @@ export function ContactCompose({ onClose }: PortalProps) {
             onClick={() => setSent(true)}
             className="rounded-full bg-[#e4e9f2] px-5 py-1.5 font-mono text-[12px] font-medium tracking-[0.1em] text-[#14161a] uppercase transition-transform hover:scale-[1.04]"
           >
-            Copy Email ↗
+            Send ↗
           </button>
         </div>
 
@@ -130,14 +130,9 @@ export function ContactCompose({ onClose }: PortalProps) {
               >
                 ✓
               </motion.span>
-              <div className="text-center">
-                <p className="font-mono text-[11px] tracking-[0.2em] text-[#8f96a3] uppercase">
-                  email copied to clipboard
-                </p>
-                <p className="mt-2 font-mono text-[9px] tracking-[0.1em] text-[#5d6470] uppercase">
-                  ready to paste in your mail client
-                </p>
-              </div>
+              <p className="font-mono text-[11px] tracking-[0.2em] text-[#8f96a3] uppercase">
+                opening your mail app
+              </p>
             </motion.div>
           )}
         </AnimatePresence>

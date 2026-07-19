@@ -13,6 +13,7 @@ import { Lighting } from "@/components/lighting/Lighting";
 import { CameraRig } from "@/components/camera/CameraRig";
 import { Effects } from "@/components/effects/Effects";
 import { ReadyProbe } from "./ReadyProbe";
+import { getQuality } from "@/lib/gpuTier";
 
 /**
  * Canvas entry point. Everything inside is lazy: the page shell renders
@@ -23,14 +24,16 @@ import { ReadyProbe } from "./ReadyProbe";
  */
 export function SceneCanvas() {
   const home = CAMERA_VIEWS[DEFAULT_VIEW];
+  const q = getQuality();
+  const dpr: [number, number] = q === "high" ? [1, 1.75] : q === "medium" ? [1, 1.25] : [0.75, 1];
 
   return (
     <Canvas
       shadows
-      dpr={[1, 1.75]}
+      dpr={dpr}
       camera={{ position: home.position, fov: home.fov, near: 0.1, far: 60 }}
       gl={{
-        antialias: true,
+        antialias: q !== "low",
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.15,
         powerPreference: "high-performance",
