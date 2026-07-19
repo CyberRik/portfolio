@@ -809,34 +809,117 @@ function KeyboardWindow({ onClose }: { onClose: () => void }) {
 
 /* ===== MUSIC ===== */
 /**
- * Plays for real now — "Forgotten Path" by johndekale, CC0, a calm
- * looping chiptune. Named honestly rather than folded into the OS's
- * fake-filename joke: CC0 waives the attribution requirement, but
- * crediting a human whose work is on the page costs nothing.
+ * A real playlist, playing real files.
  *
- * Two things are deliberate:
- *   - preload="none". The 338KB is not fetched until someone presses
- *     play, so opening the room never pays for audio nobody asked for.
- *   - No autoplay, ever. It starts on a click and only a click, which
- *     is both the browser's rule and the courteous one.
+ * The artist line is not decoration — two of these are CC-BY, which
+ * requires visible credit, and rendering it per track is how that
+ * obligation is met. Do not reduce this to filenames.
+ *
+ * Ordered calm-first so the default press of play suits the room; the
+ * livelier track is there but has to be chosen.
+ *
+ * Deliberate:
+ *   - preload="none" on the single <audio> element. ~1.5MB of audio sits
+ *     in public/ and none of it is fetched until someone presses play.
+ *   - No autoplay, ever. Starts on a click and only a click.
  */
-const TRACK = {
-  src: "/audio/forgotten-path.mp3",
-  name: "forgotten_path.mp3",
-  artist: "johndekale · CC0",
-};
+const TRACKS = [
+  {
+    src: "/audio/forgotten-path.mp3",
+    name: "forgotten_path.mp3",
+    artist: "johndekale · CC0",
+  },
+  {
+    src: "/audio/menu-theme.mp3",
+    name: "menu_theme.mp3",
+    artist: "CodeManu · CC-BY 3.0",
+  },
+  {
+    src: "/audio/chip-drive.mp3",
+    name: "chip_drive.mp3",
+    artist: "CodeManu · CC-BY 3.0",
+  },
+];
 
 const clock = (s: number) =>
   `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
+/**
+ * Speaker / speaker-muted, drawn rather than typed. The mono UI font has
+ * gaps in its symbol coverage — a missing glyph renders as a tofu box,
+ * which is worse than no icon at all — and an inline SVG also inherits
+ * `currentColor`, so the state change is one style prop.
+ */
+function SpeakerIcon({ muted, size = 12 }: { muted: boolean; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2.6 6.2h2.5L8.7 3.3v9.4L5.1 9.8H2.6z" fill="currentColor" />
+      {muted ? (
+        <>
+          <path d="M11.3 6.3l3.3 3.4" />
+          <path d="M14.6 6.3l-3.3 3.4" />
+        </>
+      ) : (
+        <>
+          <path d="M11 6.2a3 3 0 010 3.6" />
+          <path d="M13.1 4.4a6 6 0 010 7.2" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 function MusicWindow({ onClose }: { onClose: () => void }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [idx, setIdx] = useState(0);
   const [at, setAt] = useState(0);
   const [len, setLen] = useState(0);
+  const track = TRACKS[idx];
 
   // closing the window stops the music — the window IS the player
   useEffect(() => () => audio.current?.pause(), []);
+
+  /**
+   * Changing `src` resets the media element, so a switch made while
+   * playing has to explicitly resume — otherwise picking a track mid-
+   * listen silently stops the music, which reads as a broken button.
+   * Skipped on first mount so nothing ever plays unasked.
+   */
+  const first = useRef(true);
+  useEffect(() => {
+    const a = audio.current;
+    if (!a) return;
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    setAt(0);
+    setLen(0);
+    if (playing) a.play().catch(() => setPlaying(false));
+    // `playing` intentionally omitted — this must run on track change only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx]);
+
+  const step = (d: 1 | -1) => setIdx((i) => (i + d + TRACKS.length) % TRACKS.length);
+
+  const toggleMute = () => {
+    const a = audio.current;
+    if (!a) return;
+    a.muted = !a.muted;
+    setMuted(a.muted);
+  };
 
   const toggle = async () => {
     const a = audio.current;
@@ -871,7 +954,7 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
       <div className="px-3 py-3">
         <audio
           ref={audio}
-          src={TRACK.src}
+          src={track.src}
           loop
           preload="none"
           onLoadedMetadata={(e) => setLen(e.currentTarget.duration)}
@@ -882,10 +965,10 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
 
         {/* track info */}
         <p className="font-mono text-[10px] truncate" style={{ color: OS.txt }}>
-          {TRACK.name}
+          {track.name}
         </p>
         <p className="font-mono text-[8px] mt-0.5" style={{ color: OS.faint }}>
-          {TRACK.artist}
+          {track.artist}
         </p>
 
         {/* progress bar */}
@@ -907,12 +990,11 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
           <span>{len ? clock(len) : "--:--"}</span>
         </div>
 
-        {/* controls — one looping track, so restart + play/pause is the
-            whole honest surface; a "next" button would have nowhere to go */}
-        <div className="flex items-center justify-center gap-4 mt-2">
+        {/* controls */}
+        <div className="flex items-center justify-center gap-3.5 mt-2">
           <button
-            onClick={() => seek(0)}
-            aria-label="Restart"
+            onClick={() => step(-1)}
+            aria-label="Previous track"
             className="font-mono text-[10px] transition-colors hover:text-white"
             style={{ color: OS.dim }}
           >
@@ -930,9 +1012,39 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
           >
             {playing ? "⏸" : "▶"}
           </button>
-          <span className="font-mono text-[8px]" style={{ color: OS.faint }}>
-            loop
-          </span>
+          <button
+            onClick={() => step(1)}
+            aria-label="Next track"
+            className="font-mono text-[10px] transition-colors hover:text-white"
+            style={{ color: OS.dim }}
+          >
+            ⏭
+          </button>
+          <button
+            onClick={toggleMute}
+            aria-label={muted ? "Unmute" : "Mute"}
+            className="flex items-center transition-colors"
+            style={{ color: muted ? "#fa5d6a" : OS.dim }}
+          >
+            <SpeakerIcon muted={muted} />
+          </button>
+        </div>
+
+        {/* the playlist — switching tracks from the desktop itself */}
+        <div className="mt-2.5 border-t pt-1.5" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          {TRACKS.map((t, i) => (
+            <button
+              key={t.src}
+              onClick={() => setIdx(i)}
+              className="flex w-full items-center gap-1.5 rounded px-1 py-[3px] text-left transition-colors hover:bg-white/5"
+              style={{ color: i === idx ? OS.txt : OS.faint }}
+            >
+              <span className="font-mono text-[7px] w-2 shrink-0" style={{ color: "#fa5d6a" }}>
+                {i === idx && playing ? "▶" : ""}
+              </span>
+              <span className="font-mono text-[8px] truncate">{t.name}</span>
+            </button>
+          ))}
         </div>
       </div>
     </OSWindowChrome>

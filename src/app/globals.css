@@ -147,8 +147,8 @@ button:disabled,
    Art: "Pixel Art Cursors" by aspecsgaming (itch.io). Free for personal
    and commercial use, no attribution required — credited anyway. The
    pack ships at 3x; public/cursors/* are reduced to the native pixel
-   grid and re-upscaled at exactly 2x, because non-integer scaling is
-   what turns pixel art to mush. Hotspots below are in 2x pixels.
+   grid and re-upscaled at exactly 1x (native), because non-integer scaling is
+   what turns pixel art to mush. Hotspots below are in 1x pixels.
 
    Tailwind v4 preflight sets `button { cursor: default }`, so without
    these rules nothing inside the desktop reacts at all. Each rule keeps
@@ -160,7 +160,7 @@ button:disabled,
 .os-surface a,
 .os-surface [role="button"],
 .os-surface .cursor-pointer {
-  cursor: url("/cursors/point.png") 12 0, pointer !important;
+  cursor: url("/cursors/point.png") 6 0, pointer !important;
 }
 .os-surface textarea,
 .os-surface input,
@@ -170,15 +170,15 @@ button:disabled,
 .os-surface h3,
 .os-surface span:not(button span):not(a span),
 .os-surface .cursor-text {
-  cursor: url("/cursors/text.png") 8 22, text !important;
+  cursor: url("/cursors/text.png") 4 11, text !important;
 }
 /* window title bars are drag handles — these beat Tailwind's own
    cursor-grab / active:cursor-grabbing utilities on specificity */
 .os-surface .cursor-grab {
-  cursor: url("/cursors/grab.png") 16 16, grab !important;
+  cursor: url("/cursors/grab.png") 8 8, grab !important;
 }
 .os-surface .cursor-grab:active {
-  cursor: url("/cursors/grabbing.png") 16 16, grabbing !important;
+  cursor: url("/cursors/grabbing.png") 8 8, grabbing !important;
 }
 
 /* RM-OS window scrollbar — macOS overlay style: thin, neutral, no track */
