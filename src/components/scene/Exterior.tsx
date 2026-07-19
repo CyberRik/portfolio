@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+import { useQualitySettings } from "@/lib/gpuTier";
 
 /**
  * The world outside the diorama: a 360° night-city panorama on an
@@ -57,6 +58,7 @@ const panoramaShader = {
       float lowAmt = smoothstep(4.5, -1.5, h);
       sky += vec3(0.95, 0.42, 0.16) * sunAmt * lowAmt * 0.55;
 
+      #ifdef STARS
       // Stars — static grid on direction, gentle twinkle, upper sky only
       vec2 sGrid = vec2(u * 220.0, (h + 4.0) * 6.0);
       float star = step(0.994, hash(floor(sGrid)));
@@ -64,6 +66,7 @@ const panoramaShader = {
       float starMask = smoothstep(3.5, 7.0, h);
       // keep stars off building zone & sun glow
       sky += vec3(0.9, 0.95, 1.0) * star * tw * starMask * (1.0 - sunAmt * 0.8) * 0.5;
+      #endif
 
       // City silhouettes: y normalized over building band (-4 .. 3.2)
       float cy = clamp((h + 4.0) / 7.2, 0.0, 1.0);
@@ -74,9 +77,13 @@ const panoramaShader = {
       // keep the silhouettes from reading as flat wallpaper
       float vGrad = 0.75 + 0.5 * cy; // city-glow lightens toward rooflines
 
+      // the farthest layer is the densest (160 columns) and the least
+      // visible — it is the first thing to go when the budget is tight
+      #if CITY_LAYERS >= 3
       vec3 far = cityLayer(u + uTime * 0.00006, cy, 160.0, 0.55, 0.25, 3.0);
       col = mix(col, vec3(0.10, 0.085, 0.11) * far.z * vGrad, far.x * 0.75);
       col += vec3(0.9, 0.7, 0.42) * far.y * 0.30;
+      #endif
 
       vec3 mid = cityLayer(u + uTime * 0.00012, cy, 96.0, 0.44, 0.25, 7.0);
       col = mix(col, vec3(0.055, 0.055, 0.09) * mid.z * vGrad, mid.x * 0.92);
@@ -131,17 +138,23 @@ const groundShader = {
 };
 
 export function Exterior() {
+  const Q = useQualitySettings();
+
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
         uniforms: { uTime: { value: 0 } },
+        defines: {
+          CITY_LAYERS: Q.cityLayers,
+          ...(Q.cityStars ? { STARS: "" } : {}),
+        },
         vertexShader: panoramaShader.vertex,
         fragmentShader: panoramaShader.fragment,
         side: THREE.BackSide,
         toneMapped: false,
         fog: false,
       }),
-    [],
+    [Q.cityLayers, Q.cityStars],
   );
   const groundMat = useMemo(
     () =>
@@ -161,12 +174,20 @@ export function Exterior() {
 
   return (
     <group name="exterior">
-      {/* 360° panorama — spans y −4 .. 12 */}
-      <mesh position={[0, 4, 0]} material={mat}>
-        <cylinderGeometry args={[26, 26, 16, 96, 1, true]} />
+      {/* 360° panorama — spans y −4 .. 12.
+          renderOrder 1 so it draws AFTER the room: the walls fill the
+          depth buffer first and early-Z rejects most of this shader's
+          (expensive) fragments before they ever run. */}
+      <mesh position={[0, 4, 0]} material={mat} renderOrder={1} frustumCulled={false}>
+        <cylinderGeometry args={[26, 26, 16, Q.cityCylinderSegments, 1, true]} />
       </mesh>
       {/* City ground far below the diorama */}
-      <mesh position={[0, -4.02, 0]} rotation={[-Math.PI / 2, 0, 0]} material={groundMat}>
+      <mesh
+        position={[0, -4.02, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        material={groundMat}
+        renderOrder={1}
+      >
         <circleGeometry args={[26.5, 48]} />
       </mesh>
     </group>

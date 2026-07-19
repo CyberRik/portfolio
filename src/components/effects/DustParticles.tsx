@@ -3,19 +3,19 @@
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { useQuality } from "@/lib/gpuTier";
+import { useQualitySettings } from "@/lib/gpuTier";
 
 /**
  * Slow-drifting dust motes, densest in the sun shaft near the window.
  * One Points draw call; positions advected on the CPU.
  *
- * Adaptive: high = 140, medium = 60, low = disabled entirely.
+ * Count comes from the quality tier; 0 disables the system entirely.
  */
 export function DustParticles() {
-  const q = useQuality();
-  if (q === "low") return null;
+  const { dust } = useQualitySettings();
+  if (dust === 0) return null;
 
-  return <DustParticlesInner count={q === "high" ? 140 : 60} />;
+  return <DustParticlesInner count={dust} />;
 }
 
 function DustParticlesInner({ count }: { count: number }) {

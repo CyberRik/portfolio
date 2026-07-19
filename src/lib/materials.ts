@@ -171,22 +171,28 @@ export const materials = {
   get paper() {
     return std("paper", { color: "#eae6dd", roughness: 0.9 });
   },
+  /**
+   * Window pane. Deliberately NOT a transmissive material: any visible
+   * `transmission > 0` makes three re-render the whole scene into a
+   * transmission render target every single frame. For a flat pane with
+   * nothing refracting behind it that buys nothing — a plain transparent
+   * dielectric with a strong env highlight is visually equivalent here
+   * and costs one draw call.
+   */
   get glass() {
-    let m = materialCache.get("glass") as THREE.MeshPhysicalMaterial | undefined;
-    if (!m) {
-      m = new THREE.MeshPhysicalMaterial({
-        color: "#dceaff",
-        roughness: 0.03,
-        metalness: 0,
-        transmission: 0.94,
-        transparent: true,
-        opacity: 0.3,
-        ior: 1.5,
-        envMapIntensity: 1.3,
-      });
-      materialCache.set("glass", m);
-    }
-    return m;
+    return phys("glass", {
+      color: "#dceaff",
+      roughness: 0.05,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+      // the specular sheen is what sold the transmission version —
+      // push env intensity to keep it
+      envMapIntensity: 1.6,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.06,
+    });
   },
   /** Matte rubber for cables. */
   get rubber() {
