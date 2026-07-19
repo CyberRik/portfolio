@@ -87,7 +87,7 @@ export function SkillsTerminal({ onClose }: PortalProps) {
 
       <div
         ref={scroller}
-        className="relative h-full overflow-y-auto px-[8vw] py-14 font-mono text-[13px] leading-relaxed"
+        className="relative h-full overflow-y-auto px-6 md:px-10 lg:px-16 py-14 font-mono text-[13px] leading-relaxed"
         style={{ color: T.txt, textShadow: `0 0 8px ${T.txt}44` }}
       >
         {/* login */}

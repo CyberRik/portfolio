@@ -808,43 +808,59 @@ function KeyboardWindow({ onClose }: { onClose: () => void }) {
 }
 
 /* ===== MUSIC ===== */
-const TRACKS = [
-  { name: "gradient_descent.wav", artist: "Neural Orchestra", duration: 214 },
-  { name: "backprop_symphony.flac", artist: "Deep Ensemble", duration: 187 },
-  { name: "attention_is_all.mp3", artist: "Transformer FM", duration: 243 },
-  { name: "loss_function_blues.wav", artist: "Overfitters", duration: 196 },
-];
+/**
+ * Plays for real now — "Forgotten Path" by johndekale, CC0, a calm
+ * looping chiptune. Named honestly rather than folded into the OS's
+ * fake-filename joke: CC0 waives the attribution requirement, but
+ * crediting a human whose work is on the page costs nothing.
+ *
+ * Two things are deliberate:
+ *   - preload="none". The 338KB is not fetched until someone presses
+ *     play, so opening the room never pays for audio nobody asked for.
+ *   - No autoplay, ever. It starts on a click and only a click, which
+ *     is both the browser's rule and the courteous one.
+ */
+const TRACK = {
+  src: "/audio/forgotten-path.mp3",
+  name: "forgotten_path.mp3",
+  artist: "johndekale · CC0",
+};
+
+const clock = (s: number) =>
+  `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 function MusicWindow({ onClose }: { onClose: () => void }) {
+  const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
-  const [trackIdx, setTrackIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const track = TRACKS[trackIdx];
+  const [at, setAt] = useState(0);
+  const [len, setLen] = useState(0);
 
-  useEffect(() => {
-    if (!playing) return;
-    const id = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          // auto-advance to next track
-          setTrackIdx((i) => (i + 1) % TRACKS.length);
-          return 0;
-        }
-        return p + 100 / track.duration;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [playing, track.duration]);
+  // closing the window stops the music — the window IS the player
+  useEffect(() => () => audio.current?.pause(), []);
 
-  const skip = (dir: 1 | -1) => {
-    setTrackIdx((i) => (i + dir + TRACKS.length) % TRACKS.length);
-    setProgress(0);
+  const toggle = async () => {
+    const a = audio.current;
+    if (!a) return;
+    if (a.paused) {
+      try {
+        a.volume = 0.55;
+        await a.play();
+        setPlaying(true);
+      } catch {
+        /* blocked or file missing — leave the button in its off state */
+      }
+    } else {
+      a.pause();
+      setPlaying(false);
+    }
   };
 
-  const mm = Math.floor((track.duration * progress / 100) / 60);
-  const ss = Math.floor((track.duration * progress / 100) % 60);
-  const totalMm = Math.floor(track.duration / 60);
-  const totalSs = track.duration % 60;
+  const seek = (fraction: number) => {
+    const a = audio.current;
+    if (a && Number.isFinite(a.duration)) a.currentTime = fraction * a.duration;
+  };
+
+  const progress = len ? (at / len) * 100 : 0;
 
   return (
     <OSWindowChrome
@@ -853,12 +869,23 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
       style={{ width: 240, left: 110, bottom: 50 }}
     >
       <div className="px-3 py-3">
+        <audio
+          ref={audio}
+          src={TRACK.src}
+          loop
+          preload="none"
+          onLoadedMetadata={(e) => setLen(e.currentTarget.duration)}
+          onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
+          onPause={() => setPlaying(false)}
+          onPlay={() => setPlaying(true)}
+        />
+
         {/* track info */}
         <p className="font-mono text-[10px] truncate" style={{ color: OS.txt }}>
-          {track.name}
+          {TRACK.name}
         </p>
         <p className="font-mono text-[8px] mt-0.5" style={{ color: OS.faint }}>
-          {track.artist}
+          {TRACK.artist}
         </p>
 
         {/* progress bar */}
@@ -867,30 +894,33 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
           style={{ background: "rgba(255,255,255,0.08)" }}
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
-            setProgress(((e.clientX - rect.left) / rect.width) * 100);
+            seek((e.clientX - rect.left) / rect.width);
           }}
         >
           <div
-            className="h-full rounded-full transition-all duration-300"
+            className="h-full rounded-full"
             style={{ width: `${progress}%`, background: "#fa5d6a" }}
           />
         </div>
         <div className="flex justify-between mt-1 font-mono text-[7px]" style={{ color: OS.faint }}>
-          <span>{mm}:{String(ss).padStart(2, "0")}</span>
-          <span>{totalMm}:{String(totalSs).padStart(2, "0")}</span>
+          <span>{clock(at)}</span>
+          <span>{len ? clock(len) : "--:--"}</span>
         </div>
 
-        {/* controls */}
+        {/* controls — one looping track, so restart + play/pause is the
+            whole honest surface; a "next" button would have nowhere to go */}
         <div className="flex items-center justify-center gap-4 mt-2">
           <button
-            onClick={() => skip(-1)}
+            onClick={() => seek(0)}
+            aria-label="Restart"
             className="font-mono text-[10px] transition-colors hover:text-white"
             style={{ color: OS.dim }}
           >
             ⏮
           </button>
           <button
-            onClick={() => setPlaying(!playing)}
+            onClick={toggle}
+            aria-label={playing ? "Pause" : "Play"}
             className="flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110"
             style={{
               background: playing ? "rgba(250,93,106,0.2)" : "rgba(255,255,255,0.1)",
@@ -900,13 +930,9 @@ function MusicWindow({ onClose }: { onClose: () => void }) {
           >
             {playing ? "⏸" : "▶"}
           </button>
-          <button
-            onClick={() => skip(1)}
-            className="font-mono text-[10px] transition-colors hover:text-white"
-            style={{ color: OS.dim }}
-          >
-            ⏭
-          </button>
+          <span className="font-mono text-[8px]" style={{ color: OS.faint }}>
+            loop
+          </span>
         </div>
       </div>
     </OSWindowChrome>

@@ -154,25 +154,31 @@ button:disabled,
    these rules nothing inside the desktop reacts at all. Each rule keeps
    a native keyword as its fallback for when the PNG can't load. */
 .os-surface {
-  cursor: url("/cursors/arrow.png") 0 0, default;
+  cursor: url("/cursors/arrow.png") 0 0, auto !important;
 }
 .os-surface button,
 .os-surface a,
 .os-surface [role="button"],
 .os-surface .cursor-pointer {
-  cursor: url("/cursors/point.png") 12 0, pointer;
+  cursor: url("/cursors/point.png") 12 0, pointer !important;
 }
 .os-surface textarea,
-.os-surface input {
-  cursor: url("/cursors/text.png") 8 22, text;
+.os-surface input,
+.os-surface p,
+.os-surface h1,
+.os-surface h2,
+.os-surface h3,
+.os-surface span:not(button span):not(a span),
+.os-surface .cursor-text {
+  cursor: url("/cursors/text.png") 8 22, text !important;
 }
 /* window title bars are drag handles — these beat Tailwind's own
    cursor-grab / active:cursor-grabbing utilities on specificity */
 .os-surface .cursor-grab {
-  cursor: url("/cursors/grab.png") 16 16, grab;
+  cursor: url("/cursors/grab.png") 16 16, grab !important;
 }
 .os-surface .cursor-grab:active {
-  cursor: url("/cursors/grabbing.png") 16 16, grabbing;
+  cursor: url("/cursors/grabbing.png") 16 16, grabbing !important;
 }
 
 /* RM-OS window scrollbar — macOS overlay style: thin, neutral, no track */

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { flyToView } from "@/components/camera/cameraBus";
 import { PROFILE } from "@/content/portfolio";
 import { isExitKey } from "@/lib/keys";
+import { getPortalSection } from "@/lib/portal";
 
 // The entire 3D world and its DOM UI overlays are client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
