@@ -38,6 +38,11 @@ const ExperienceOverlay = dynamic(
   { ssr: false },
 );
 
+const OnboardingHint = dynamic(
+  () => import("@/components/ui/OnboardingHint").then((m) => m.OnboardingHint),
+  { ssr: false },
+);
+
 export default function Home() {
   // any key returns to the wide shot — the "back out" gesture. Same rule
   // as the portal worlds use, so backing out feels identical whether or
@@ -65,6 +70,7 @@ export default function Home() {
 
       <FocusCaption />
       <ExperienceOverlay />
+      <OnboardingHint />
 
       {/* Quiet identity chip */}
       <div className="pointer-events-none absolute top-6 left-6 z-40 select-none">

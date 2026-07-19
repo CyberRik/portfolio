@@ -48,6 +48,12 @@ export function ExperienceOverlay() {
   useEffect(() => {
     if (!section) return;
     const onKey = (e: KeyboardEvent) => {
+      if (section === "skills" || section === "projects") {
+        if (isExitKey(e) && (e.key === "Escape" || e.code === "Space")) {
+          closePortal();
+        }
+        return;
+      }
       if (isExitKey(e)) closePortal();
     };
     window.addEventListener("keydown", onKey, true);
