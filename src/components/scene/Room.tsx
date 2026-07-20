@@ -21,6 +21,19 @@ export const ROOM = {
   window: { width: 2.8, height: 1.5, centerY: 1.9 },
 } as const;
 
+/**
+ * Cross-section of the ceiling cove strips.
+ *
+ * These run the length of the room and are seen almost edge-on, so their
+ * projected thickness is heavily foreshortened — at 15mm most of each run
+ * landed under one pixel wide, which no amount of post-AA can resolve
+ * (SMAA reads partial coverage on a sub-pixel line as noise, not an edge,
+ * and stair-steps it). 30mm keeps them a hairline in frame while
+ * guaranteeing they always cover at least one whole pixel. Same vertex
+ * count, same draw call.
+ */
+const COVE = 0.03; // deliberately above HAIRLINE_MIN: the most grazing run in the room
+
 export function Room() {
   const { width: W, height: H, depth: D, window: win } = ROOM;
   const halfD = D / 2;
@@ -100,18 +113,18 @@ export function Room() {
       {/* Ceiling cove — warm recessed LED lines framing the ceiling,
           so the upper third reads as architecture, not dead space */}
       {([
-        [0, -halfD + 0.22, W - 0.8, 0.015] as const,
-        [0, halfD - 0.22, W - 0.8, 0.015] as const,
+        [0, -halfD + 0.22, W - 0.8] as const,
+        [0, halfD - 0.22, W - 0.8] as const,
       ]).map(([x, z, len], i) => (
-        <mesh key={`cove-z-${i}`} position={[x, H - 0.035, z]}>
-          <boxGeometry args={[len, 0.012, 0.015]} />
-          <meshStandardMaterial color="#000000" emissive="#ffb375" emissiveIntensity={1.4} />
+        <mesh key={`cove-z-${i}`} position={[x, H - 0.04, z]}>
+          <boxGeometry args={[len, COVE, COVE]} />
+          <primitive object={materials.coveGlow} attach="material" />
         </mesh>
       ))}
       {([-W / 2 + 0.22, W / 2 - 0.22] as const).map((x, i) => (
-        <mesh key={`cove-x-${i}`} position={[x, H - 0.035, 0]}>
-          <boxGeometry args={[0.015, 0.012, D - 0.8]} />
-          <meshStandardMaterial color="#000000" emissive="#ffb375" emissiveIntensity={1.4} />
+        <mesh key={`cove-x-${i}`} position={[x, H - 0.04, 0]}>
+          <boxGeometry args={[COVE, COVE, D - 0.8]} />
+          <primitive object={materials.coveGlow} attach="material" />
         </mesh>
       ))}
 

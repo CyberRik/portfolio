@@ -18,6 +18,29 @@ import {
  * satin — never glossy, never dead-matte. Roughness maps everywhere
  * it matters; flat roughness is what reads "CG".
  */
+/**
+ * Minimum cross-section for any long, thin, self-lit strip in the room.
+ *
+ * This is the one kind of jaggedness that NO post-process can repair, so
+ * it has to be solved in the geometry. A strip only a few millimetres
+ * thick projects to well under one pixel: the rasterizer then covers a
+ * pixel only where the triangle happens to contain that pixel's centre,
+ * and skips the rest. The line comes out as a row of dashes with gaps.
+ *
+ * SMAA cannot help — it blends edges that are present in the color
+ * buffer, and here there is no edge to blend, just missing coverage. MSAA
+ * would fix it by taking more samples per pixel, but that means a
+ * multisampled target and the bandwidth to resolve it every frame, which
+ * is the GPU cost we are explicitly avoiding. Making the strip wide
+ * enough to always cover a whole pixel costs nothing at all: same vertex
+ * count, same draw call, same shader.
+ *
+ * Rule of thumb: anything emissive and longer than ~20cm should be at
+ * least this thick. Short strips (device LEDs, speaker trim) are exempt —
+ * they are seen face-on and never stretch across enough pixels to dash.
+ */
+export const HAIRLINE_MIN = 0.022;
+
 const materialCache = new Map<string, THREE.Material>();
 const geometryCache = new Map<string, THREE.BufferGeometry>();
 
@@ -65,6 +88,33 @@ export const materials = {
   get ceiling() {
     return std("ceiling", { color: palette.ceiling, roughness: 1 });
   },
+  /**
+   * Ceiling cove LEDs. Basic, not standard: the strip is its own light
+   * source, so shading it is pure waste — and being untone-mapped is the
+   * whole point. The previous emissive-standard version was tone-mapped,
+   * which put ACES between it and the framebuffer and landed it around
+   * 0.8 luminance — just under Bloom's 0.9 threshold, so the one pass
+   * that could have softened these lines never touched them.
+   *
+   * Overdriving the color past 1.0 writes a genuinely HDR value instead,
+   * which Bloom picks up and blurs perpendicular to the run. That blur is
+   * what actually kills the stair-stepping on a near-edge-on line, and it
+   * costs nothing: Bloom is already in the pipeline on medium and high.
+   * On the low tier there is no Bloom, but there the strips still read
+   * cleanly on width alone (see COVE in Room.tsx).
+   */
+  get coveGlow() {
+    let m = materialCache.get("coveGlow") as THREE.MeshBasicMaterial | undefined;
+    if (!m) {
+      m = new THREE.MeshBasicMaterial({
+        color: new THREE.Color("#ffb375").multiplyScalar(2.4),
+        toneMapped: false,
+        fog: false,
+      });
+      materialCache.set("coveGlow", m);
+    }
+    return m;
+  },
   /** Oiled solid walnut with a satin clearcoat — the hero surface. */
   get deskTop() {
     return phys("deskTop", {
@@ -108,6 +158,34 @@ export const materials = {
       roughness: 0.42,
       metalness: 0.9,
       envMapIntensity: 0.7, // thin frames sparkle (specular aliasing) above this
+    });
+  },
+  /**
+   * Window frame rails and mullion.
+   *
+   * Same anodized look as `metalDark`, but deliberately duller. These are
+   * 80mm bars seen almost edge-on from the default camera, so their lit
+   * face is compressed into two or three pixels — and at metalDark's
+   * roughness the specular lobe is narrower than that. The highlight then
+   * varies faster than the sample grid and the rail renders as a dashed
+   * line of sparkles, which reads as a broken line rather than a shiny
+   * one. SMAA cannot help: it detects edges in the color buffer, and a
+   * dashed highlight is not an edge.
+   *
+   * Widening the lobe (roughness up) and pulling the environment back
+   * makes the same highlight vary slowly enough to land on every pixel of
+   * the rail, so it resolves as one continuous soft band. Costs nothing —
+   * it is the same shader with different uniforms. `metalDark` is shared
+   * with the desk legs, HVAC and monitor bezel, where the sparkle is
+   * wanted and the geometry is thick enough to carry it, so this is a
+   * separate material rather than a detune of that one.
+   */
+  get windowFrame() {
+    return std("windowFrame", {
+      color: palette.metalDark,
+      roughness: 0.62,
+      metalness: 0.75,
+      envMapIntensity: 0.22,
     });
   },
   /** Powder-coated aluminum — soft wide highlights, no mirror. */

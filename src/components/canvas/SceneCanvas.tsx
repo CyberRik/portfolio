@@ -5,7 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { AdaptiveDpr, PerformanceMonitor, Preload } from "@react-three/drei";
 import { useSceneReady } from "@/lib/sceneReady";
 import * as THREE from "three";
-import { CAMERA_VIEWS, DEFAULT_VIEW } from "@/config/camera.config";
+import { CAMERA_VIEWS, DEFAULT_VIEW, resolveView } from "@/config/camera.config";
 import { fog } from "@/config/theme";
 import { Workspace } from "@/components/scene/Workspace";
 import { PortalBeacons } from "@/components/scene/PortalBeacons";
@@ -52,7 +52,15 @@ function dprLadder(floor: number, ceiling: number): number[] {
  * the post chain does the antialiasing instead, for less bandwidth.
  */
 export function SceneCanvas() {
-  const home = CAMERA_VIEWS[DEFAULT_VIEW];
+  // Resolved against the real viewport rather than taken raw: the Canvas
+  // renders its first frames from these numbers, before CameraRig has
+  // mounted, so on a phone the raw landscape pose would be visible as a
+  // brief wrong-framing flash behind the loading screen's fade.
+  const home = useMemo(() => {
+    const aspect =
+      typeof window === "undefined" ? 16 / 9 : window.innerWidth / window.innerHeight;
+    return resolveView(CAMERA_VIEWS[DEFAULT_VIEW], aspect);
+  }, []);
   const q = getQuality();
   const [ceiling, floor] = [QUALITY[q].dpr[1], QUALITY[q].dpr[0]];
 

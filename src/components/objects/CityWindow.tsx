@@ -18,12 +18,12 @@ export function CityWindow() {
   return (
     <SceneObject def={{ id: "window", name: "Window", cameraView: "window" }}>
       <group position={[0, win.centerY, -halfD]}>
-        <Bx position={[0, win.height / 2 + 0.04, 0]} scale={[win.width + 0.16, 0.08, 0.18]} material={materials.metalDark} />
-        <Bx position={[0, -win.height / 2 - 0.04, 0]} scale={[win.width + 0.16, 0.08, 0.18]} material={materials.metalDark} />
-        <Bx position={[-win.width / 2 - 0.04, 0, 0]} scale={[0.08, win.height + 0.16, 0.18]} material={materials.metalDark} />
-        <Bx position={[win.width / 2 + 0.04, 0, 0]} scale={[0.08, win.height + 0.16, 0.18]} material={materials.metalDark} />
+        <Bx position={[0, win.height / 2 + 0.04, 0]} scale={[win.width + 0.16, 0.08, 0.18]} material={materials.windowFrame} />
+        <Bx position={[0, -win.height / 2 - 0.04, 0]} scale={[win.width + 0.16, 0.08, 0.18]} material={materials.windowFrame} />
+        <Bx position={[-win.width / 2 - 0.04, 0, 0]} scale={[0.08, win.height + 0.16, 0.18]} material={materials.windowFrame} />
+        <Bx position={[win.width / 2 + 0.04, 0, 0]} scale={[0.08, win.height + 0.16, 0.18]} material={materials.windowFrame} />
         {/* Center mullion */}
-        <Bx position={[0, 0, 0]} scale={[0.04, win.height, 0.06]} material={materials.metalDark} />
+        <Bx position={[0, 0, 0]} scale={[0.04, win.height, 0.06]} material={materials.windowFrame} />
         {/* Sill */}
         <Bx position={[0, -win.height / 2 - 0.1, 0.12]} scale={[win.width + 0.3, 0.04, 0.3]} material={materials.woodDark} />
 

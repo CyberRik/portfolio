@@ -13,6 +13,7 @@ import {
   DEFAULT_VIEW,
   IDLE_DRIFT,
   ORBIT_LIMITS,
+  resolveView,
   type CameraViewId,
 } from "@/config/camera.config";
 import {
@@ -22,6 +23,7 @@ import {
   type FlightMeta,
 } from "./cameraBus";
 import { focusStore } from "@/lib/focus";
+import { framedFov } from "@/lib/framing";
 
 /**
  * Directed camera. Every flight is staged like a dolly move:
@@ -51,6 +53,8 @@ export function CameraRig() {
   const timeline = useRef<gsap.core.Timeline | null>(null);
   /** portal experiences dolly inside the normal orbit floor */
   const portalActive = useRef(false);
+  /** is the pose we are sitting on composed for this viewport's shape? */
+  const authoredPose = useRef(false);
 
   useEffect(() => {
     const flyTo = (
@@ -172,10 +176,17 @@ export function CameraRig() {
     };
 
     registerFlyTo((view: CameraViewId, duration = 2.2, meta?: FlightMeta) => {
-      const v = CAMERA_VIEWS[view];
+      // Resolved at departure, not at module load: the viewport shape can
+      // change between flights (orientation, window drag), and the pose
+      // that is right for the shape we are flying INTO is the one to use.
+      const v = resolveView(CAMERA_VIEWS[view], camera.aspect);
+      authoredPose.current = v.authored;
       flyTo(v.position, v.target, duration, v.fov, meta, view === DEFAULT_VIEW);
     });
     registerFlyToPose((position, target, duration = 2.0, meta) => {
+      // Poses computed from an object's bounding sphere are shape-agnostic,
+      // so they still want the fov correction.
+      authoredPose.current = false;
       flyTo(position, target, duration, undefined, meta, false);
     });
     registerPortalDepth((active) => {
@@ -325,14 +336,33 @@ export function CameraRig() {
     camera.rotateY(-p.x * CAMERA_FEEL.parallaxYaw);
     camera.rotateX(p.y * CAMERA_FEEL.parallaxPitch);
 
-    // Breathing: sub-quarter-degree fov oscillation
+    // Breathing: sub-quarter-degree fov oscillation.
+    //
+    // The aspect correction wraps the authored fov rather than replacing
+    // it: `baseFov` stays the composed, aspect-independent intent (it is
+    // what the flight timelines tween, including the mid-flight focus
+    // pull), and the lens needed to realise that intent on THIS viewport
+    // is derived here, every frame. Deriving per-frame rather than on a
+    // resize listener means an orientation change or a desktop window
+    // drag is already handled — camera.aspect is maintained by R3F.
     camera.fov =
-      baseFov.current +
+      (authoredPose.current ? baseFov.current : framedFov(baseFov.current, camera.aspect)) +
       Math.sin(t * CAMERA_FEEL.breatheSpeed * Math.PI * 2) * CAMERA_FEEL.breatheAmplitude;
     camera.updateProjectionMatrix();
   });
 
-  const home = CAMERA_VIEWS[DEFAULT_VIEW];
+  // The opening pose has to be resolved too, or a phone would sit on the
+  // landscape reveal until the first dock tap flew it somewhere authored.
+  // Assigned in an effect rather than in the render body: the ref tracks
+  // the pose we are CURRENTLY on, which flights reassign, so writing it
+  // every render would clobber a flight's value on the next re-render.
+  const home = resolveView(CAMERA_VIEWS[DEFAULT_VIEW], camera.aspect);
+  const homeAuthored = home.authored;
+  useEffect(() => {
+    authoredPose.current = homeAuthored;
+    // mount only — later changes belong to whichever flight caused them
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <OrbitControls

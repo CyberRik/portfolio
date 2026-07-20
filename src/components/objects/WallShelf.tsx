@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import { materials, emissive } from "@/lib/materials";
+import { materials, emissive, HAIRLINE_MIN } from "@/lib/materials";
 import { Bx } from "./primitives";
 import { SceneObject } from "@/lib/interactive/SceneObject";
 
@@ -18,8 +18,11 @@ export function WallShelf() {
       {[1.6, 2.1].map((y, i) => (
         <group key={y} position={[0, y, 0]}>
           <Bx position={[0, 0, 0.14]} scale={[1.1, 0.035, 0.24]} material={materials.woodLight} />
-          {/* Under-shelf warm LED strip */}
-          <Bx position={[0, -0.024, 0.2]} scale={[1.0, 0.006, 0.01]} material={emissive("#ffb375", 0.65)} castShadow={false} />
+          {/* Under-shelf warm LED strip. Thickness is HAIRLINE_MIN, not a
+              chosen look: at its old 6mm this 1m run rasterized to under a
+              pixel and came out as a dashed line. Sits low enough that the
+              taller housing still tucks under the shelf lip. */}
+          <Bx position={[0, -0.029, 0.2]} scale={[1.0, HAIRLINE_MIN, 0.014]} material={emissive("#ffb375", 0.65)} castShadow={false} />
           {i === 0 ? (
             <>
               {/* small books */}
