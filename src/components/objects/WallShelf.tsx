@@ -122,7 +122,16 @@ function D20({ position }: { position: [number, number, number] }) {
   const crit = face === 20;
 
   return (
-    <group position={position}>
+    // stopPropagation on the group is the critical fix: R3F bubbles click
+    // events up through the fiber tree to ancestor groups, so the mesh's
+    // own stopPropagation wasn't enough to prevent SceneObject.focus() from
+    // firing and flying the camera to an unexpected location.
+    <group
+      position={position}
+      onClick={(e) => e.stopPropagation()}
+      onPointerOver={(e) => e.stopPropagation()}
+      onPointerOut={(e) => e.stopPropagation()}
+    >
       <mesh
         ref={ref}
         castShadow
@@ -132,7 +141,10 @@ function D20({ position }: { position: [number, number, number] }) {
           e.stopPropagation();
           setHovered(true);
         }}
-        onPointerOut={() => setHovered(false)}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setHovered(false);
+        }}
       >
         <icosahedronGeometry args={[R, 0]} />
         <primitive object={materials.metalDark} attach="material" />
