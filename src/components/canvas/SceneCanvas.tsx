@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { AdaptiveDpr, PerformanceMonitor, Preload } from "@react-three/drei";
+import { PerformanceMonitor, Preload } from "@react-three/drei";
 import { useSceneReady } from "@/lib/sceneReady";
 import * as THREE from "three";
 import { CAMERA_VIEWS, DEFAULT_VIEW, resolveView } from "@/config/camera.config";
@@ -16,8 +16,22 @@ import { Effects } from "@/components/effects/Effects";
 import { ReadyProbe } from "./ReadyProbe";
 import { dprRange, getQuality } from "@/lib/gpuTier";
 
-/** Granularity of the resolution ladder between a tier's floor and ceiling. */
-const DPR_STEP = 0.25;
+/**
+ * Minimum ratio between adjacent rungs of the resolution ladder.
+ *
+ * Changing `dpr` is not a cheap dial — it resizes every render target in
+ * the post chain (the multisampled scene target, N8AO's buffers, Bloom's
+ * mip chain, SMAA's edge and weight textures), and that reallocation
+ * costs a visible frame hitch, measured at 100-230ms. So a rung is only
+ * worth having if the resolution it saves outweighs one stall.
+ *
+ * The old fixed 0.25 step produced rungs like 1.25 and 1.3 — a 4%
+ * resolution change bought with a 200ms stall, and worse, close rungs let
+ * PerformanceMonitor oscillate between two nearly identical states,
+ * hitching every time. Requiring a real gap means the ladder is usually
+ * just [floor, ceiling]: one meaningful step, taken rarely.
+ */
+const MIN_RUNG_RATIO = 1.2;
 
 /**
  * Grace period after the scene reports ready before frame times are
@@ -29,10 +43,12 @@ const ARM_DELAY_MS = 2500;
 
 /** Ascending list of allowed pixel ratios for a tier, floor → ceiling. */
 function dprLadder(floor: number, ceiling: number): number[] {
-  const rungs: number[] = [];
-  for (let v = floor; v < ceiling - 1e-6; v += DPR_STEP) rungs.push(+v.toFixed(3));
-  rungs.push(ceiling);
-  return rungs;
+  const rungs = [ceiling];
+  for (let v = ceiling / MIN_RUNG_RATIO; v >= floor * MIN_RUNG_RATIO; v /= MIN_RUNG_RATIO) {
+    rungs.push(+v.toFixed(3));
+  }
+  if (ceiling / floor >= MIN_RUNG_RATIO) rungs.push(floor);
+  return rungs.sort((a, b) => a - b);
 }
 
 /**
@@ -45,7 +61,7 @@ function dprLadder(floor: number, ceiling: number): number[] {
  *   - PerformanceMonitor, which walks that ceiling up and down a rung at
  *     a time once the scene has settled — the detection heuristics can't
  *     know about a laptop on battery, a 4K panel, or a busy machine
- *   - AdaptiveDpr, which drops resolution during camera flights only
+ *   - and nothing else: AdaptiveDpr was removed, see below
  *
  * The CANVAS `antialias` flag stays off: EffectComposer renders into its
  * own target, so a multisampled default framebuffer would be allocated and
@@ -146,6 +162,18 @@ export function SceneCanvas() {
           need to wrap the scene. */}
       {armed && (
         <PerformanceMonitor
+          // Sample slowly and decide late: ~6s of sustained evidence
+          // before touching the resolution.
+          //
+          // At the stock 250ms x 6 the monitor reacted to a single orbit
+          // drag — dragging dips the frame rate a little, the monitor read
+          // that as a slow machine, and the resulting rung change cost a
+          // ~110ms reallocation of the entire post chain. So the act of
+          // moving the camera caused the stutter you'd only notice while
+          // moving the camera. It has to be slower than the interactions
+          // it is meant to be measuring around.
+          ms={600}
+          iterations={10}
           // One rung at a time, in both directions. The old code slammed
           // straight from ceiling to floor on a single decline, so one
           // stutter cost the whole session its resolution — a jump that
@@ -159,8 +187,19 @@ export function SceneCanvas() {
           onFallback={() => setRung(Math.max(0, top - 1))}
         />
       )}
-      <AdaptiveDpr pixelated={false} />
-      {/* NO <AdaptiveEvents/> here, deliberately. It is implemented as
+      {/* NO <AdaptiveDpr/> here, and this is the one that mattered for
+          smoothness. It lowers dpr whenever the render loop "regresses",
+          and OrbitControls regresses on every change — so it fired at the
+          start of every drag and again when the drag stopped. Each of
+          those is a full resize of the post chain, i.e. exactly the
+          100-230ms hitch that made orbiting feel laggy. It was paying a
+          stall to save resolution during the moment the user is most
+          likely to notice a stall. With the pixel budget now keeping the
+          frame well inside 60fps on its own, there is nothing left for it
+          to rescue.
+
+          NO <AdaptiveEvents/> either, for a separate reason. It is
+          implemented as
           `setEvents({ enabled: performance.current === 1 })`, i.e. it
           disables ALL raycasting whenever performance is regressed — so
           hovering an object stops highlighting it, the pointer cursor
