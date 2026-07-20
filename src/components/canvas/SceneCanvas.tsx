@@ -14,7 +14,7 @@ import { Lighting } from "@/components/lighting/Lighting";
 import { CameraRig } from "@/components/camera/CameraRig";
 import { Effects } from "@/components/effects/Effects";
 import { ReadyProbe } from "./ReadyProbe";
-import { getQuality, QUALITY } from "@/lib/gpuTier";
+import { dprRange, getQuality } from "@/lib/gpuTier";
 
 /** Granularity of the resolution ladder between a tier's floor and ceiling. */
 const DPR_STEP = 0.25;
@@ -40,16 +40,18 @@ function dprLadder(floor: number, ceiling: number): number[] {
  * instantly, the world streams in behind the loading screen.
  *
  * Resolution is governed in three layers, cheapest first:
- *   - the tier's static dpr ceiling (GPU class)
+ *   - the tier's supersample target, resolved against THIS display's
+ *     devicePixelRatio and capped by a pixel budget (see dprRange)
  *   - PerformanceMonitor, which walks that ceiling up and down a rung at
  *     a time once the scene has settled — the detection heuristics can't
  *     know about a laptop on battery, a 4K panel, or a busy machine
  *   - AdaptiveDpr, which drops resolution during camera flights only
  *
- * MSAA is off deliberately: EffectComposer renders the scene into its own
- * non-multisampled target, so a multisampled default framebuffer would be
- * allocated and then never used for anything but the final blit. SMAA in
- * the post chain does the antialiasing instead, for less bandwidth.
+ * The CANVAS `antialias` flag stays off: EffectComposer renders into its
+ * own target, so a multisampled default framebuffer would be allocated and
+ * never used for anything but the final blit. That is not the same thing
+ * as "no MSAA" — the composer's own target IS multisampled (see Effects),
+ * which is what actually resolves geometric edges here.
  */
 export function SceneCanvas() {
   // Resolved against the real viewport rather than taken raw: the Canvas
@@ -62,7 +64,21 @@ export function SceneCanvas() {
     return resolveView(CAMERA_VIEWS[DEFAULT_VIEW], aspect);
   }, []);
   const q = getQuality();
-  const [ceiling, floor] = [QUALITY[q].dpr[1], QUALITY[q].dpr[0]];
+
+  /**
+   * Resolved once, against the real display and viewport.
+   *
+   * Lazy useState rather than a bare call on purpose: `dprRange` reads
+   * `window.devicePixelRatio`, which does not exist during prerender, and
+   * the range must keep a stable identity for the life of the session —
+   * recomputing it on a later render would rebuild the ladder and reset
+   * whatever rung PerformanceMonitor had settled on.
+   */
+  const [[floor, ceiling]] = useState<[number, number]>(() =>
+    typeof window === "undefined"
+      ? [1, 1]
+      : dprRange(q, window.innerWidth, window.innerHeight),
+  );
 
   const ladder = useMemo(() => dprLadder(floor, ceiling), [floor, ceiling]);
   const top = ladder.length - 1;

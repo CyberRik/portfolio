@@ -132,8 +132,28 @@ export function useQuality(): QualityTier {
 /* ------------------------------- settings -------------------------------- */
 
 export type QualitySettings = {
-  /** [min, max] device pixel ratio handed to the Canvas */
-  dpr: [number, number];
+  /**
+   * How many framebuffer pixels to render per PHYSICAL display pixel.
+   *
+   * Deliberately not an absolute pixel ratio. R3F's `dpr` is measured
+   * against CSS pixels, so a fixed ceiling means something completely
+   * different on every display: the old hard 1.75 was 1.75x supersampling
+   * on a 1x monitor, but only 1.17x at 150% Windows scaling, and 0.875x —
+   * i.e. rendering BELOW native and upscaling — on a 2x panel. Same build,
+   * same tier, wildly different edge quality, and the worst of it landed
+   * on exactly the high-DPI laptops most likely to be running the site.
+   *
+   * Expressing the target relative to `devicePixelRatio` makes the result
+   * display-independent: 1.3 here means 1.3x supersampling everywhere.
+   */
+  superSample: number;
+  /**
+   * Hard ceiling on framebuffer pixels per frame, before the supersample
+   * factor gets what it wants. This is what keeps a 4K panel from asking
+   * for a 13-megapixel target with 4x MSAA on top; past this point the
+   * tier gives up supersampling rather than the framerate.
+   */
+  pixelBudget: number;
   /** shadow map edge for the key light / the desk spot */
   sunShadowMap: number;
   spotShadowMap: number;
@@ -163,7 +183,8 @@ export type QualitySettings = {
 
 export const QUALITY: Record<QualityTier, QualitySettings> = {
   high: {
-    dpr: [1, 1.75],
+    superSample: 1.3,
+    pixelBudget: 8.5e6,
     sunShadowMap: 2048,
     spotShadowMap: 1024,
     // 15 Hz. The sun drifts at 0.026 rad/s and the only moving caster is
@@ -181,7 +202,8 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     cityCylinderSegments: 96,
   },
   medium: {
-    dpr: [1, 1.25],
+    superSample: 1.0,
+    pixelBudget: 4.5e6,
     sunShadowMap: 1024,
     spotShadowMap: 512,
     shadowInterval: 1 / 8,
@@ -198,7 +220,8 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     cityCylinderSegments: 64,
   },
   low: {
-    dpr: [0.75, 1],
+    superSample: 0.8,
+    pixelBudget: 2.5e6,
     sunShadowMap: 512,
     spotShadowMap: 256,
     // bake once at mount and never again
@@ -218,4 +241,29 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
 /** The settings for the detected tier. */
 export function useQualitySettings(): QualitySettings {
   return QUALITY[getQuality()];
+}
+
+/**
+ * Resolve a tier's supersample target into the [floor, ceiling] pixel
+ * ratios the Canvas ladder walks, for THIS display and viewport.
+ *
+ * Order matters: take what the tier wants relative to native, then let the
+ * pixel budget veto it. The floor is native resolution wherever the
+ * ceiling allows it — dropping below native is the one thing that always
+ * looks broken no matter how good the antialiasing is, so the performance
+ * monitor gets room to back off but not room to undersample.
+ */
+export function dprRange(q: QualityTier, cssW: number, cssH: number): [number, number] {
+  const s = QUALITY[q];
+  // cap what we treat as "native": 3x+ panels are already past the point
+  // where another sample per pixel is visible
+  const native = Math.min(typeof window === "undefined" ? 1 : window.devicePixelRatio || 1, 3);
+  const budgetCap = Math.sqrt(s.pixelBudget / Math.max(1, cssW * cssH));
+  const ceiling = clamp(Math.min(native * s.superSample, budgetCap), 0.75, 3);
+  const floor = clamp(Math.min(native, ceiling), 0.75, ceiling);
+  return [floor, ceiling];
+}
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
 }
