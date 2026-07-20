@@ -77,11 +77,25 @@ function SceneSMAA() {
  * exists: no new render target and no extra bandwidth, which is why this
  * is worth spending before MSAA or DPR.
  *
- * SMAA runs on every tier because MSAA is disabled on the canvas (see
- * SceneCanvas): EffectComposer renders into its own non-multisampled
- * target, which made the context's `antialias` flag pure wasted
- * bandwidth. SMAA is the cheaper replacement, and the tier is fixed at
- * load, so each branch is a stable composer tree.
+ * SMAA runs on every tier because the CANVAS `antialias` flag stays off
+ * (see SceneCanvas): the composer renders into its own target, so a
+ * multisampled default framebuffer would be allocated and never used.
+ * That is still true — but it is a statement about the canvas, not about
+ * MSAA in general, and for a while it was read as "MSAA is off, period".
+ *
+ * `multisampling` here is the other thing entirely: it makes the
+ * composer's own scene target multisampled, which is the supported way to
+ * get real MSAA in this pipeline. It is worth having because SMAA has a
+ * hard ceiling that no amount of tuning gets past — it reconstructs edges
+ * from the finished color buffer, so where a pixel's true coverage was
+ * never sampled it can only guess. Every remaining staircase in the room
+ * (the window mullion is the clearest) is that limit, not a setting.
+ *
+ * Unlike the rest of the fixes in this file, this one is NOT free: the
+ * target costs 4x the samples and has to be resolved every frame. It is
+ * gated by tier accordingly, and it is still much cheaper than the naive
+ * alternative of raising DPR, which scales every pass in the chain
+ * quadratically instead of just this one.
  */
 export function Effects() {
   const q = useQuality();
@@ -97,7 +111,7 @@ export function Effects() {
 
   if (q === "medium") {
     return (
-      <EffectComposer multisampling={0} autoClear={false}>
+      <EffectComposer multisampling={2} autoClear={false}>
         <Bloom mipmapBlur intensity={0.25} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
         <SceneSMAA />
         <Noise premultiply opacity={0.2} />
@@ -107,7 +121,7 @@ export function Effects() {
   }
 
   return (
-    <EffectComposer multisampling={0} autoClear={false}>
+    <EffectComposer multisampling={4} autoClear={false}>
       <N8AO aoRadius={0.35} distanceFalloff={0.5} intensity={2.6} quality="performance" halfRes />
       <Bloom mipmapBlur intensity={0.42} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
       <SceneSMAA />
