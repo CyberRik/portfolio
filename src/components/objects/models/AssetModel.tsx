@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { Clone, useGLTF } from "@react-three/drei";
 import type { ThreeElements } from "@react-three/fiber";
+import { stylizeAssetMaterials } from "@/lib/materials";
 
 /**
  * Shared wrapper for downloaded GLTF assets (Poly Haven CC0 + Khronos
@@ -19,6 +21,9 @@ const DRACO_PATH = "/draco/";
 
 export function AssetModel({ url, ...groupProps }: AssetModelProps) {
   const { scene } = useGLTF(url, DRACO_PATH);
+  // Runs once per cached scene, before the first render rather than in an
+  // effect after it — an effect would let one photoreal frame through.
+  useMemo(() => stylizeAssetMaterials(scene), [scene]);
   return (
     <group {...groupProps}>
       <Clone object={scene} castShadow receiveShadow />

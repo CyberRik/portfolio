@@ -21,7 +21,19 @@ import { useQualitySettings } from "@/lib/gpuTier";
  *            under-shelf strips. Everything else falls into shadow —
  *            contrast is the composition.
  *
- * No ambient light. Darkness is allowed to exist.
+ * AMBIENT— a flat cool base that puts a floor under the whole image.
+ *
+ * That ambient term is a deliberate reversal: this rig used to run with
+ * none at all, on the principle that darkness is allowed to exist. It is,
+ * in a photoreal scene being viewed in the dark. It is not in a portfolio,
+ * which gets opened on a work laptop at half brightness in a lit room and
+ * has about five seconds to show that there is a room here and that the
+ * labels are things you can click. Most of the frame was resolving to
+ * near-black, and the beacons were carrying navigation on their own.
+ *
+ * The contrast that made the shot work still lives in the KEY and the
+ * practicals — those are untouched. What changed is only the bottom of the
+ * range: shadow now bottoms out as a lit dark surface rather than a hole.
  *
  * PERF: the sun moves every frame, which would make three re-render both
  * shadow maps every frame — two full scene depth passes over ~45 casters.
@@ -170,8 +182,17 @@ export function Lighting() {
         </>
       )}
 
-      {/* Faint cool skylight so ceiling/far corners don't clip to black */}
-      <hemisphereLight args={["#4a5b7a", "#2b2016", 0.32]} />
+      {/* AMBIENT — the floor under the image. Flat and directionless on
+          purpose: it is not pretending to be bounce light, it is the
+          stylization saying no surface goes fully dark. Slightly cool so
+          it reads as room fill against the warm key rather than muddying
+          it toward grey. */}
+      <ambientLight intensity={0.55} color="#7d8aa6" />
+
+      {/* Cool skylight, now doing gradient rather than rescue: it gives
+          ceiling and far corners a direction-of-light, while the ambient
+          above handles never-clip-to-black. */}
+      <hemisphereLight args={["#5e719a", "#3d3428", 0.5]} />
 
       {/* HERO SUPPORT — warm pool from the pendant lamp over the desk */}
       <spotLight

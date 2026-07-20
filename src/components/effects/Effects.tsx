@@ -104,7 +104,7 @@ export function Effects() {
     return (
       <EffectComposer multisampling={0} autoClear={false}>
         <SceneSMAA />
-        <Vignette eskil={false} offset={0.22} darkness={0.68} />
+        <Vignette eskil={false} offset={0.3} darkness={0.4} />
       </EffectComposer>
     );
   }
@@ -114,19 +114,19 @@ export function Effects() {
       <EffectComposer multisampling={2} autoClear={false}>
         <Bloom mipmapBlur intensity={0.25} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
         <SceneSMAA />
-        <Noise premultiply opacity={0.2} />
-        <Vignette eskil={false} offset={0.22} darkness={0.68} />
+        <Noise premultiply opacity={0.1} />
+        <Vignette eskil={false} offset={0.3} darkness={0.4} />
       </EffectComposer>
     );
   }
 
   return (
     <EffectComposer multisampling={4} autoClear={false}>
-      <N8AO aoRadius={0.35} distanceFalloff={0.5} intensity={2.6} quality="performance" halfRes />
+      <N8AO aoRadius={0.3} distanceFalloff={0.6} intensity={1.0} quality="performance" halfRes />
       <Bloom mipmapBlur intensity={0.42} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
       <SceneSMAA />
-      <Noise premultiply opacity={0.4} />
-      <Vignette eskil={false} offset={0.22} darkness={0.68} />
+      <Noise premultiply opacity={0.14} />
+      <Vignette eskil={false} offset={0.3} darkness={0.4} />
     </EffectComposer>
   );
 }

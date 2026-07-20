@@ -14,9 +14,15 @@ import {
  * Every object pulls from here so the whole room resolves to a handful
  * of GPU programs and draw-call-friendly shared resources.
  *
- * Grading intent: warm practicals on cool devices (teal-orange),
- * satin — never glossy, never dead-matte. Roughness maps everywhere
- * it matters; flat roughness is what reads "CG".
+ * Grading intent: warm practicals on cool devices (teal-orange), and
+ * deliberately FLAT. Metalness and clearcoat are the two strongest
+ * photoreal cues in this renderer — a sharp specular lobe is the thing
+ * that makes a viewer read a surface as a photograph and start grading it
+ * against one. Every metal here is therefore barely metallic and quite
+ * rough, and the environment contributes a hint rather than a mirror.
+ *
+ * Roughness maps still earn their place: flat roughness reads as "CG", and
+ * stylized is not the same as careless.
  */
 /**
  * Minimum cross-section for any long, thin, self-lit strip in the room.
@@ -115,25 +121,25 @@ export const materials = {
     }
     return m;
   },
-  /** Oiled solid walnut with a satin clearcoat — the hero surface. */
+  /** Oiled solid walnut — the hero surface. Clearcoat removed: a second
+      specular lobe on the largest object in frame was the single loudest
+      "this is a render" signal in the room. */
   get deskTop() {
     return phys("deskTop", {
       color: "#a3805c", // deep tint — reads as oiled walnut, not raw pine
       map: walnutAlbedo(),
       roughnessMap: walnutRoughness(),
-      roughness: 0.62,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.45,
-      envMapIntensity: 0.9,
+      roughness: 0.85,
+      envMapIntensity: 0.3,
     });
   },
-  /** Matte black powder-coated steel. */
+  /** Powder-coated steel, closer to charcoal than black. */
   get deskLeg() {
     return std("deskLeg", {
-      color: "#161617",
-      roughness: 0.58,
-      metalness: 0.82,
-      envMapIntensity: 0.7,
+      color: palette.deskLeg,
+      roughness: 0.82,
+      metalness: 0.2,
+      envMapIntensity: 0.22,
     });
   },
   // Near-white tints: the walnut map already carries the color —
@@ -155,9 +161,9 @@ export const materials = {
   get metalDark() {
     return std("metalDark", {
       color: palette.metalDark,
-      roughness: 0.42,
-      metalness: 0.9,
-      envMapIntensity: 0.7, // thin frames sparkle (specular aliasing) above this
+      roughness: 0.72,
+      metalness: 0.25,
+      envMapIntensity: 0.22,
     });
   },
   /**
@@ -183,34 +189,34 @@ export const materials = {
   get windowFrame() {
     return std("windowFrame", {
       color: palette.metalDark,
-      roughness: 0.62,
-      metalness: 0.75,
-      envMapIntensity: 0.22,
+      roughness: 0.78,
+      metalness: 0.2,
+      envMapIntensity: 0.18,
     });
   },
   /** Powder-coated aluminum — soft wide highlights, no mirror. */
   get metalMid() {
     return std("metalMid", {
       color: palette.metalMid,
-      roughness: 0.52,
-      metalness: 0.75,
-      envMapIntensity: 0.9,
+      roughness: 0.76,
+      metalness: 0.2,
+      envMapIntensity: 0.24,
     });
   },
   /** Anodized device shells (monitor, laptop, keyboard case). */
   get deviceBody() {
     return std("deviceBody", {
       color: palette.deviceBody,
-      roughness: 0.42,
-      metalness: 0.55,
-      envMapIntensity: 1.05,
+      roughness: 0.72,
+      metalness: 0.12,
+      envMapIntensity: 0.28,
     });
   },
   get keycap() {
     return std("keycap", {
       color: palette.keycap,
-      roughness: 0.38,
-      envMapIntensity: 0.8,
+      roughness: 0.74,
+      envMapIntensity: 0.22,
     });
   },
   get fabric() {
@@ -228,22 +234,20 @@ export const materials = {
   get plantPot() {
     return std("plantPot", { color: palette.plantPot, roughness: 0.88 });
   },
-  /** Glazed ceramic. */
+  /** Unglazed matte ceramic — the glaze was a mirror at desk scale. */
   get mug() {
     return phys("mug", {
       color: palette.mug,
-      roughness: 0.18,
-      clearcoat: 0.6,
-      clearcoatRoughness: 0.25,
-      envMapIntensity: 1.1,
+      roughness: 0.62,
+      envMapIntensity: 0.28,
     });
   },
   get whiteboard() {
     return std("whiteboard", {
       color: "#efece4",
-      roughness: 0.12,
-      metalness: 0.02,
-      envMapIntensity: 0.9,
+      roughness: 0.58,
+      metalness: 0,
+      envMapIntensity: 0.25,
     });
   },
   get paper() {
@@ -267,9 +271,9 @@ export const materials = {
       depthWrite: false,
       // the specular sheen is what sold the transmission version —
       // push env intensity to keep it
-      envMapIntensity: 1.6,
-      clearcoat: 0.5,
-      clearcoatRoughness: 0.06,
+      envMapIntensity: 0.7,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.15,
     });
   },
   /** Matte rubber for cables. */
@@ -284,7 +288,7 @@ export const materials = {
       color: "#0e0c0a",
       roughness: 0.96,
       metalness: 0,
-      envMapIntensity: 0.12,
+      envMapIntensity: 0.08,
     });
   },
   /** Rooftop membrane with panel seams. */
@@ -323,5 +327,61 @@ export function emissive(color: string, intensity = 1): THREE.MeshStandardMateri
     emissive: color,
     emissiveIntensity: intensity,
     roughness: 1,
+  });
+}
+
+/* --------------------------- imported assets ----------------------------- */
+
+/**
+ * Materials already flattened. GLTF scenes are cached and cloned by drei,
+ * so each material instance is shared across every placement — mutating it
+ * once is both correct and enough, and the set makes that idempotent.
+ */
+const stylized = new WeakSet<THREE.Material>();
+
+/**
+ * Bring downloaded GLTF assets into the room's stylized grade.
+ *
+ * The Poly Haven models are photoscans, which makes them the most
+ * physically-accurate things in the scene by a wide margin — and after the
+ * hand-authored materials were flattened, that stopped being a virtue. A
+ * scanned leather chair rendering with a tight specular lobe next to a
+ * deliberately matte desk does not read as a nicer chair, it reads as two
+ * different rooms composited together.
+ *
+ * Only the light RESPONSE is touched, never the maps: the albedo and
+ * normal detail are what make these assets worth shipping, and the scans
+ * carry their own colour far better than anything retyped by hand. What
+ * changes is metalness, gloss and how much environment they reflect, which
+ * is exactly the set of properties the rest of the room just gave up.
+ *
+ * Clamps rather than assignments, so an asset that is already matte is
+ * left where it is instead of being dragged up to a uniform finish.
+ */
+export function stylizeAssetMaterials(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.material) return;
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of list) {
+      if (stylized.has(mat)) continue;
+      stylized.add(mat);
+
+      const std = mat as THREE.MeshStandardMaterial;
+      if (!std.isMeshStandardMaterial) continue;
+      std.metalness = Math.min(std.metalness, 0.2);
+      std.roughness = Math.max(std.roughness, 0.68);
+      std.envMapIntensity = 0.28;
+
+      // A clearcoat is a second specular lobe on top of the first — the
+      // single most "rendered" thing a surface can do, and nothing in this
+      // room is wet or lacquered enough to justify one. Sheen is left
+      // alone: it is broad and matte, and it is the whole point of the
+      // fabric chair.
+      const phys = mat as THREE.MeshPhysicalMaterial;
+      if (phys.isMeshPhysicalMaterial) phys.clearcoat = 0;
+
+      std.needsUpdate = true;
+    }
   });
 }
