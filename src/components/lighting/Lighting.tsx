@@ -10,8 +10,8 @@ import { useQualitySettings } from "@/lib/gpuTier";
 /**
  * Cinematic lighting rig — one story, told in light:
  *
- *   KEY    — low dusk sun raking through the window. Warm, long shadows,
- *            slowly drifting. This is the A24 shot.
+ *   KEY    — low dusk sun raking through the window. Warm, long shadows.
+ *            Static: see the bake note below. This is the A24 shot.
  *   FILL   — a cool rect area light in the window plane: soft blue-hour
  *            gradient washing the room, complementary to the sun.
  *   HERO   — the monitor's own glow (lives in Monitor.tsx) pulls the eye;
@@ -35,11 +35,17 @@ import { useQualitySettings } from "@/lib/gpuTier";
  * practicals — those are untouched. What changed is only the bottom of the
  * range: shadow now bottoms out as a lit dark surface rather than a hole.
  *
- * PERF: the sun moves every frame, which would make three re-render both
- * shadow maps every frame — two full scene depth passes over ~45 casters.
- * Both lights run with `shadow.autoUpdate = false` and are re-baked on a
- * timer instead (see the shadow throttle in useFrame). The sun drifts at
- * 0.026 rad/s, so nothing about this is perceptible.
+ * PERF: a moving light means a stale shadow map, which meant two full
+ * scene depth passes over ~45 casters, forever, at 15Hz. Both lights run
+ * with `shadow.autoUpdate = false` and now bake exactly once at mount —
+ * possible only because the sun stopped drifting.
+ *
+ * This rig also no longer uses PCSS or a rectAreaLight on any tier. An
+ * ablation over a 200-step orbit found no single feature responsible for
+ * the frame spikes: removing any one of the reflector, PCSS, the area
+ * light, AO or the shadow drift changed almost nothing, while removing
+ * all of them took the worst frame from 276ms to 23ms and dropped frames
+ * from 5 to 0. The cost is cumulative, so the fix had to be too.
  */
 let rectAreaInit = false;
 
@@ -48,6 +54,7 @@ export function Lighting() {
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const spotRef = useRef<THREE.SpotLight>(null);
   const sinceBake = useRef(0);
+  const baked = useRef(false);
 
   // Light targets must live in the scene graph for their matrices to update
   const sunTarget = useMemo(() => {
@@ -102,26 +109,28 @@ export function Lighting() {
     }
   }, []);
 
-  useFrame((state, delta) => {
-    const sun = sunRef.current;
-    if (!sun) return;
-    const t = state.clock.elapsedTime;
-    // Sun drifts across the window over a ~4 min arc — noticeable only
-    // if you stay, which is the point.
-    const sway = Math.sin(t * 0.026);
-    // steep enough that the beam actually lands mid-room after
-    // clearing the window sill — the raking pool IS the shot
-    sun.position.set(2.0 + sway * 0.7, 4.2 + sway * 0.35, -6.5);
-    const warmth = 0.5 + 0.5 * Math.sin(t * 0.019);
-    sun.color.setHSL(0.062 + warmth * 0.014, 0.82, 0.58);
-    sun.intensity = 2.9 + warmth * 0.4;
-
-    // --- shadow throttle: the whole point of the rig above ---
+  /**
+   * Shadow bake, once.
+   *
+   * The sun used to drift across a ~4 minute arc, which was lovely and
+   * cost more than it looked like: a moving directional light means its
+   * shadow map is stale every frame, so the rig re-baked two full scene
+   * depth passes over ~45 casters at 15Hz forever. Freezing the sun turns
+   * that into a single bake at mount.
+   *
+   * The drift was genuinely a nice touch and this is the trade that buys
+   * it back if the frame budget ever allows: restore the useFrame body
+   * and set shadowInterval to a finite value.
+   */
+  useFrame((_, delta) => {
+    if (baked.current) return;
     sinceBake.current += delta;
-    if (sinceBake.current >= Q.shadowInterval) {
-      sinceBake.current = 0;
-      sun.shadow.needsUpdate = true;
+    // give the scene a couple of frames to finish streaming in, then bake
+    if (sinceBake.current > 0.1) {
+      const sun = sunRef.current;
+      if (sun) sun.shadow.needsUpdate = true;
       if (spotRef.current) spotRef.current.shadow.needsUpdate = true;
+      baked.current = true;
     }
   });
 

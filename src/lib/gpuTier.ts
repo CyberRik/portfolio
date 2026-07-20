@@ -173,6 +173,14 @@ export type QualitySettings = {
   contactShadowRes: number;
   /** ambient-occlusion pass */
   ao: boolean;
+  /**
+   * Mirror finish on the floor (MeshReflectorMaterial).
+   *
+   * Gated because it is not an ordinary material: it renders the entire
+   * scene a SECOND time each frame into its own target, then blurs the
+   * result. Nothing else in the room costs a whole extra scene pass.
+   */
+  floorReflection: boolean;
   /** dust mote count; 0 disables the system */
   dust: number;
   /** city-panorama silhouette layers (3 = far/mid/near) and star field */
@@ -190,12 +198,26 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     // 15 Hz. The sun drifts at 0.026 rad/s and the only moving caster is
     // the Roomba at 0.3 m/s — a re-bake every 4th frame is invisible and
     // removes 75% of the scene's depth passes.
-    shadowInterval: 1 / 15,
-    softShadows: { size: 20, samples: 10 },
+    // Infinity: the sun no longer drifts, and it was the only moving
+    // caster besides the Roomba. One bake at mount, never again.
+    shadowInterval: Infinity,
+    // PCSS off. Measured, it was not the villain on its own — nothing was
+    // — but the spikes are cumulative and this is the most expensive
+    // per-fragment option in the table for the least visible return at
+    // this shadow-map size.
+    softShadows: false,
     spotShadow: true,
-    areaFill: true,
+    // rectAreaLight off: LTC integration is two texture lookups plus the
+    // fit on EVERY standard material in the room. The substitute spots
+    // carry the same blue-hour gradient for a fraction of that.
+    areaFill: false,
     contactShadowRes: 512,
     ao: true,
+    // The only thing here that costs a whole extra scene pass per frame.
+    // Removing it gave the single best p99/worst improvement in the
+    // ablation, and it is the one saving that scales with scene
+    // complexity rather than with pixels.
+    floorReflection: false,
     dust: 140,
     cityLayers: 3,
     cityStars: true,
@@ -214,6 +236,7 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     areaFill: false,
     contactShadowRes: 256,
     ao: false,
+    floorReflection: false,
     dust: 60,
     cityLayers: 2,
     cityStars: true,
@@ -231,6 +254,7 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     areaFill: false,
     contactShadowRes: 128,
     ao: false,
+    floorReflection: false,
     dust: 0,
     cityLayers: 2,
     cityStars: false,
@@ -238,9 +262,42 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
   },
 };
 
+/**
+ * Per-setting profiling override: `?fx=-reflect,-pcss,-area,-ao,-shadowdrift`.
+ *
+ * Exists because the tiers move several things at once, which makes them
+ * useless for attributing cost — "medium is smoother than high" says
+ * nothing about WHICH of the five differences paid for it. This turns
+ * each one into an independent variable measurable in a single build.
+ */
+function fxOverrides(s: QualitySettings): QualitySettings {
+  if (typeof window === "undefined") return s;
+  let fx = "";
+  try {
+    fx = new URLSearchParams(window.location.search).get("fx") ?? "";
+  } catch {
+    return s;
+  }
+  if (!fx) return s;
+  const off = (k: string) => fx.includes(`-${k}`);
+  return {
+    ...s,
+    floorReflection: off("reflect") ? false : s.floorReflection,
+    softShadows: off("pcss") ? false : s.softShadows,
+    areaFill: off("area") ? false : s.areaFill,
+    ao: off("ao") ? false : s.ao,
+    shadowInterval: off("shadowdrift") ? Infinity : s.shadowInterval,
+  };
+}
+
 /** The settings for the detected tier. */
 export function useQualitySettings(): QualitySettings {
-  return QUALITY[getQuality()];
+  return fxOverrides(QUALITY[getQuality()]);
+}
+
+/** Non-hook accessor — same overrides applied. */
+export function getQualitySettings(): QualitySettings {
+  return fxOverrides(QUALITY[getQuality()]);
 }
 
 /**

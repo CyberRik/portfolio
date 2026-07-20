@@ -2,6 +2,7 @@
 
 import { MeshReflectorMaterial } from "@react-three/drei";
 import { materials } from "@/lib/materials";
+import { useQualitySettings } from "@/lib/gpuTier";
 import { plankAlbedo, plankRoughness } from "@/lib/textures";
 import { Bx } from "@/components/objects/primitives";
 
@@ -35,6 +36,7 @@ export const ROOM = {
 const COVE = 0.03; // deliberately above HAIRLINE_MIN: the most grazing run in the room
 
 export function Room() {
+  const Q = useQualitySettings();
   const { width: W, height: H, depth: D, window: win } = ROOM;
   const halfD = D / 2;
   const winBottom = win.centerY - win.height / 2;
@@ -43,24 +45,39 @@ export function Room() {
 
   return (
     <group name="room">
-      {/* Floor — reflective oak */}
+      {/* Floor — reflective oak on the top tier only.
+          MeshReflectorMaterial re-renders the whole scene into its own
+          target every frame; it is the only thing in the room that costs
+          a second scene pass, so it is the first thing a weaker machine
+          should lose. The fallback keeps the plank maps and just drops
+          the mirror. */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[W, D]} />
-        <MeshReflectorMaterial
-          map={plankAlbedo()}
-          roughnessMap={plankRoughness()}
-          roughness={0.85}
-          metalness={0}
-          resolution={512}
-          mixBlur={6}
-          mixStrength={2.2}
-          blur={[280, 90]}
-          mirror={0.42}
-          depthScale={0.6}
-          minDepthThreshold={0.7}
-          maxDepthThreshold={1.6}
-          color="#ffffff"
-        />
+        {Q.floorReflection ? (
+          <MeshReflectorMaterial
+            map={plankAlbedo()}
+            roughnessMap={plankRoughness()}
+            roughness={0.85}
+            metalness={0}
+            resolution={512}
+            mixBlur={6}
+            mixStrength={2.2}
+            blur={[280, 90]}
+            mirror={0.42}
+            depthScale={0.6}
+            minDepthThreshold={0.7}
+            maxDepthThreshold={1.6}
+            color="#ffffff"
+          />
+        ) : (
+          <meshStandardMaterial
+            map={plankAlbedo()}
+            roughnessMap={plankRoughness()}
+            roughness={0.82}
+            metalness={0}
+            envMapIntensity={0.25}
+          />
+        )}
       </mesh>
 
       {/* Ceiling */}
