@@ -68,9 +68,13 @@ export function CameraRig() {
       const controls = controlsRef.current;
       if (!controls) return;
 
-      timeline.current?.kill();
+      if (timeline.current) {
+        timeline.current.kill();
+        flying.current = false; // kill() doesn't fire onComplete, so reset manually
+      }
       gsap.killTweensOf(camera.position);
       gsap.killTweensOf(controls.target);
+      gsap.killTweensOf(baseFov.current);
       flying.current = true;
       manualTaken.current = false; // a flight re-establishes an authored pose
 
