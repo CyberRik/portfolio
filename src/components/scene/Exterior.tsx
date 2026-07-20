@@ -26,19 +26,51 @@ const panoramaShader = {
 
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
+    /**
+     * Antialiased step — same idea as the one in Monitor.tsx. w is half the
+     * change in x across one pixel, so the transition is one pixel wide at
+     * any distance.
+     *
+     * This matters more out here than anywhere else in the scene, because
+     * the city is the furthest thing from the camera and its detail is the
+     * densest. The window grid runs 8 cells per building column across a
+     * panorama cylinder: by the time it reaches the screen those cells are
+     * near or below pixel size, and a hard step there does not merely look
+     * jagged, it crawls — the pattern re-samples differently every frame
+     * the camera moves, which is the shimmer through the window.
+     *
+     * Antialiasing degrades it gracefully instead: once a cell drops under
+     * a pixel the smoothstep saturates and the grid fades toward its own
+     * average, which is exactly what a real distant facade does.
+     */
+    float aastep(float edge, float x, float w) {
+      return smoothstep(edge - w, edge + w, x);
+    }
+
     // returns: x = building mask, y = lit-window mask, z = per-building tint
     vec3 cityLayer(float u, float y, float cells, float baseH, float varH, float seed) {
       float col = floor(u * cells);
       float h = baseH + varH * hash(vec2(col, seed));
-      float building = step(y, h);
+      // Rooftop line. Horizontal within a column, so the vertical
+      // derivative is the right one; the vertical sides between columns
+      // come from h changing discontinuously and are left alone (they are
+      // one column apart and read as silhouette, not as stair-stepping).
+      float yw = fwidth(y) * 0.5;
+      float building = 1.0 - aastep(h, y, yw);
       // window grid with window-like aspect (taller than wide cells)
       float wx = fract(u * cells) * 8.0;
       float wy = y * 24.0;
+      // derivatives from the unwrapped coordinates — fwidth(fract(x))
+      // spikes at every wrap and would draw a seam down each cell edge
+      float dwx = fwidth(wx) * 0.5;
+      float dwy = fwidth(wy) * 0.5;
       vec2 grid = vec2(floor(wx), floor(wy));
       float lit = step(0.72, hash(grid + vec2(col * 13.0, seed)));
       float flick = step(0.03, hash(grid + floor(uTime * vec2(0.2, 0.13)) + seed));
-      float inWin = step(0.3, fract(wx)) * step(fract(wx), 0.7)
-                  * step(0.25, fract(wy)) * step(fract(wy), 0.8);
+      float fx = fract(wx);
+      float fy = fract(wy);
+      float inWin = aastep(0.3, fx, dwx) * (1.0 - aastep(0.7, fx, dwx))
+                  * aastep(0.25, fy, dwy) * (1.0 - aastep(0.8, fy, dwy));
       float tint = 0.75 + 0.5 * hash(vec2(col, seed + 31.0));
       return vec3(building, building * lit * flick * inWin, tint);
     }

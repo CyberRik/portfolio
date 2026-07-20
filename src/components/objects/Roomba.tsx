@@ -43,6 +43,41 @@ const SPEED = 0.3; // m/s cruise
 const BODY_R = 0.155;
 const BODY_H = 0.048;
 
+/**
+ * Longest simulation step the bot will integrate in one frame.
+ *
+ * `useFrame`'s delta is wall-clock, so it is unbounded: a backgrounded
+ * tab, a shader compile, or one of the 100ms+ hitches this scene can
+ * still throw will hand back a delta of hundreds of milliseconds or
+ * whole seconds. Integrating that in one step teleports the bot far past
+ * its waypoint — and because arrival is a proximity test, it sails
+ * straight through the 0.06m capture radius without ever registering,
+ * keeps the same target, and drives off across the room. That is the bot
+ * "escaping": not a pathfinding failure, a variable-timestep failure.
+ */
+const MAX_DELTA = 1 / 30;
+
+/**
+ * Hard containment, derived from the waypoint graph rather than written
+ * by hand so it cannot drift out of sync when waypoints are edited.
+ * Purely a backstop — with the timestep clamped the bot should never
+ * reach it, but a bot loose in the city panorama is a bad enough failure
+ * to be worth two Math.min calls per frame.
+ */
+const BOUNDS = (() => {
+  const xs = WAYPOINTS.map((w) => w[0]);
+  const zs = WAYPOINTS.map((w) => w[1]);
+  const margin = 0.3;
+  return {
+    minX: Math.min(...xs) - margin,
+    maxX: Math.max(...xs) + margin,
+    minZ: Math.min(...zs) - margin,
+    maxZ: Math.max(...zs) + margin,
+  };
+})();
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
 export function Roomba() {
   const body = useRef<THREE.Group>(null);
   const led = useRef<THREE.MeshStandardMaterial>(null);
@@ -95,6 +130,9 @@ export function Roomba() {
     const g = body.current;
     if (!g) return;
 
+    // Never integrate a step longer than the bot can steer through.
+    const dt = Math.min(delta, MAX_DELTA);
+
     if (s.driving) {
       const [tx, tz] = WAYPOINTS[s.targetWp];
       const dx = tx - s.pos.x;
@@ -111,14 +149,20 @@ export function Roomba() {
         const want = Math.atan2(dx, dz);
         let diff = want - s.heading;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        s.heading += diff * Math.min(1, 4.5 * delta);
+        s.heading += diff * Math.min(1, 4.5 * dt);
 
         // ease in on departure, ease out on approach
         const speed = Math.min(SPEED, 0.12 + dist * 0.8);
         // only advance while roughly facing the goal — it turns in place first
         const facing = Math.max(0, Math.cos(diff));
-        s.pos.x += Math.sin(s.heading) * speed * facing * delta;
-        s.pos.y += Math.cos(s.heading) * speed * facing * delta;
+        // Never step past the target. Proximity alone decides arrival, so
+        // a step that overshoots would leave the bot beyond the capture
+        // radius still chasing the same waypoint, circling to get back.
+        const step = Math.min(speed * facing * dt, dist);
+        s.pos.x += Math.sin(s.heading) * step;
+        s.pos.y += Math.cos(s.heading) * step;
+        s.pos.x = clamp(s.pos.x, BOUNDS.minX, BOUNDS.maxX);
+        s.pos.y = clamp(s.pos.y, BOUNDS.minZ, BOUNDS.maxZ);
       }
     } else if (t > s.pauseUntil) {
       const options = NEXT[s.wp];

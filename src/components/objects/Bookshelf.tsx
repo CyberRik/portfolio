@@ -82,11 +82,13 @@ export function Bookshelf() {
       rotation={[0, Math.PI / 2, 0]}
     >
       {/* Carcass */}
-      <Bx position={[0, 1.05, -0.1]} scale={[1.4, 2.1, 0.03]} material={materials.woodDark} />
-      <Bx position={[-0.69, 1.05, 0]} scale={[0.03, 2.1, 0.24]} material={materials.woodDark} />
-      <Bx position={[0.69, 1.05, 0]} scale={[0.03, 2.1, 0.24]} material={materials.woodDark} />
-      <Bx position={[0, 2.11, 0]} scale={[1.4, 0.03, 0.24]} material={materials.woodDark} />
-      <Bx position={[0, 0.015, 0]} scale={[1.4, 0.03, 0.24]} material={materials.woodDark} />
+      {/* woodPanel, not woodDark: these are the big flat faces where the
+          walnut map magnifies into blotches — see materials.woodPanel */}
+      <Bx position={[0, 1.05, -0.1]} scale={[1.4, 2.1, 0.03]} material={materials.woodPanel} />
+      <Bx position={[-0.69, 1.05, 0]} scale={[0.03, 2.1, 0.24]} material={materials.woodPanel} />
+      <Bx position={[0.69, 1.05, 0]} scale={[0.03, 2.1, 0.24]} material={materials.woodPanel} />
+      <Bx position={[0, 2.11, 0]} scale={[1.4, 0.03, 0.24]} material={materials.woodPanel} />
+      <Bx position={[0, 0.015, 0]} scale={[1.4, 0.03, 0.24]} material={materials.woodPanel} />
       {SHELF_YS.map((y) => (
         <Bx key={y} position={[0, y, 0]} scale={[1.36, 0.025, 0.22]} material={materials.woodLight} />
       ))}

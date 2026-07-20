@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
-import { materials, emissive, HAIRLINE_MIN } from "@/lib/materials";
+import { materials, HAIRLINE_MIN } from "@/lib/materials";
 import { Bx } from "./primitives";
 import { SceneObject } from "@/lib/interactive/SceneObject";
 
@@ -22,7 +22,7 @@ export function WallShelf() {
               chosen look: at its old 6mm this 1m run rasterized to under a
               pixel and came out as a dashed line. Sits low enough that the
               taller housing still tucks under the shelf lip. */}
-          <Bx position={[0, -0.029, 0.2]} scale={[1.0, HAIRLINE_MIN, 0.014]} material={emissive("#ffb375", 0.65)} castShadow={false} />
+          <Bx position={[0, -0.029, 0.2]} scale={[1.0, HAIRLINE_MIN, 0.014]} material={materials.ledStrip} castShadow={false} />
           {i === 0 ? (
             <>
               {/* small books */}

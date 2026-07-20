@@ -31,18 +31,39 @@ const screenShader = {
 
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
+    /**
+     * Antialiased step. 'w' is half the width of the value's change across
+     * one pixel, so the transition is always exactly one pixel wide no
+     * matter how far away the screen is.
+     *
+     * A plain step() is a hard 0/1 flip, and this is shading INSIDE a
+     * surface rather than a silhouette — MSAA never sees it, because MSAA
+     * multisamples geometry coverage and still shades once per pixel. So
+     * the code rows aliased no matter what the post chain did, and got
+     * worse with distance as each row shrank below a pixel.
+     */
+    float aastep(float edge, float x, float w) {
+      return smoothstep(edge - w, edge + w, x);
+    }
+
     void main() {
       vec3 bg = vec3(0.035, 0.042, 0.066);
       vec3 col = bg;
 
       // Editor line blocks: rows of "code" with randomized indent + width
       float rows = 22.0;
-      float row = floor(vUv.y * rows);
-      float inRow = fract(vUv.y * rows);
+      // derivatives taken on the UNWRAPPED row coordinate: fwidth(fract(x))
+      // spikes at every wrap, which would draw a bright seam along each row
+      float ry = vUv.y * rows;
+      float rw = fwidth(ry) * 0.5;
+      float xw = fwidth(vUv.x) * 0.5;
+      float row = floor(ry);
+      float inRow = fract(ry);
       float indent = 0.04 + 0.08 * floor(mod(hash(vec2(row, 1.0)) * 4.0, 4.0));
       float len = 0.15 + 0.55 * hash(vec2(row, 7.0));
-      float band = step(0.3, inRow) * step(inRow, 0.62);
-      float inLine = step(indent, vUv.x) * step(vUv.x, indent + len) * band;
+      float band = aastep(0.3, inRow, rw) * (1.0 - aastep(0.62, inRow, rw));
+      float inLine = aastep(indent, vUv.x, xw)
+                   * (1.0 - aastep(indent + len, vUv.x, xw)) * band;
       float hue = hash(vec2(row, 13.0));
       vec3 lineCol = mix(vec3(0.30, 0.45, 0.64), vec3(0.60, 0.48, 0.30), step(0.72, hue));
       lineCol = mix(lineCol, vec3(0.32, 0.55, 0.44), step(0.45, hue) * step(hue, 0.72));
@@ -52,8 +73,13 @@ const screenShader = {
       float cursorRow = 8.0;
       float blink = step(0.5, fract(uTime * 0.9));
       float cx = 0.42;
-      float cursor = step(cx, vUv.x) * step(vUv.x, cx + 0.006)
-                   * step(cursorRow / rows, vUv.y) * step(vUv.y, (cursorRow + 0.6) / rows);
+      float yw = fwidth(vUv.y) * 0.5;
+      // the cursor is only 6 thousandths of the panel wide, so at any
+      // distance it is the first thing to fall under a pixel and start
+      // flickering; antialiasing lets it fade out instead
+      float cursor = aastep(cx, vUv.x, xw) * (1.0 - aastep(cx + 0.006, vUv.x, xw))
+                   * aastep(cursorRow / rows, vUv.y, yw)
+                   * (1.0 - aastep((cursorRow + 0.6) / rows, vUv.y, yw));
       col += vec3(0.8, 0.95, 1.15) * cursor * blink;
 
       // Vertical glow falloff + vignette

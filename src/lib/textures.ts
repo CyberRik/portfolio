@@ -98,7 +98,13 @@ function generate(
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   if (opts.srgb) tex.colorSpace = THREE.SRGBColorSpace;
   if (opts.repeat) tex.repeat.set(...opts.repeat);
-  tex.anisotropy = 8;
+  // 16 is the cap on essentially every desktop GPU and costs nothing at
+  // this texture count. It is what keeps the floor planks and wall plaster
+  // from shimmering where they run away from the camera at a grazing
+  // angle — the one form of aliasing that gets WORSE with distance, and
+  // that neither MSAA nor SMAA touches, because it is a sampling problem
+  // in the texture rather than at a geometric edge.
+  tex.anisotropy = 16;
   cache.set(key, tex);
   return tex;
 }

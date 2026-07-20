@@ -109,6 +109,51 @@ export const materials = {
    * On the low tier there is no Bloom, but there the strips still read
    * cleanly on width alone (see COVE in Room.tsx).
    */
+  /**
+   * Long emissive strips that are NOT the ceiling cove — currently the
+   * under-shelf LEDs.
+   *
+   * Same trick as coveGlow, dimmer. These are geometry, so the one lever
+   * that actually softens their edges for free is Bloom: an HDR value
+   * gets picked up by a pass that is already running, and the blur spreads
+   * perpendicular to the run, which is exactly where the stair-steps are.
+   * A tone-mapped emissive lands under Bloom's threshold and gets nothing,
+   * which is why these strips stayed crisp-edged while the cove did not.
+   *
+   * Kept well below the cove's 2.4 so it reads as a soft accent under a
+   * shelf rather than a second architectural light.
+   */
+  get ledStrip() {
+    let m = materialCache.get("ledStrip") as THREE.MeshBasicMaterial | undefined;
+    if (!m) {
+      m = new THREE.MeshBasicMaterial({
+        color: new THREE.Color("#ffb375").multiplyScalar(1.35),
+        toneMapped: false,
+        fog: false,
+      });
+      materialCache.set("ledStrip", m);
+    }
+    return m;
+  },
+  /**
+   * Ceiling cove LEDs. Basic and unlit: the strip is its own light
+   * source, so shading it is pure waste — and being untone-mapped is the
+   * whole point. A tone-mapped emissive lands under Bloom's threshold and
+   * gets nothing; overdriving the colour past 1.0 writes a genuinely HDR
+   * value that Bloom picks up and blurs perpendicular to the run, which
+   * is what softens a near-edge-on line for free.
+   *
+   * Its bottom edge is still a hard silhouette against the dark ceiling,
+   * and at ~2px wide that edge is not perfectly smooth. A soft-edged
+   * variant was tried — brightness falling to zero across the strip's
+   * cross-section, so the visible boundary became shading rather than
+   * geometry, the same reasoning as the aastep() work elsewhere. It is
+   * the right idea and it looked worse: at this grazing angle the falloff
+   * compresses below a pixel and aliases into regularly spaced beads,
+   * which reads as a defect where a slightly hard edge just reads as a
+   * light. Reverted deliberately — do not re-attempt without also raising
+   * the strip's on-screen thickness enough to hold the gradient.
+   */
   get coveGlow() {
     let m = materialCache.get("coveGlow") as THREE.MeshBasicMaterial | undefined;
     if (!m) {
@@ -149,6 +194,32 @@ export const materials = {
       color: "#b09a86",
       map: walnutAlbedo(),
       roughness: 0.72,
+    });
+  },
+  /**
+   * Large flat carcass panels — bookshelf back and sides.
+   *
+   * Deliberately unmapped, unlike every other wood in the room. `Bx` maps
+   * UV 0-1 across a whole box, so the walnut albedo gets stretched over
+   * the full 1.4 x 2.1m back panel: a texture authored at desk scale,
+   * magnified about three times. The grain stops reading as grain and
+   * turns into high-contrast blotches — closer to camouflage than timber,
+   * and with the specular now flattened there is no highlight left to
+   * break it up.
+   *
+   * A panel this size and this deep in shadow is doing no storytelling
+   * anyway; it is the surface the books sit against. Flat colour reads as
+   * "dark wood" at every distance and never dissolves into noise.
+   */
+  get woodPanel() {
+    return std("woodPanel", {
+      // Reads against palette.wall (#403830), not just against the books.
+      // At #5a4433 the carcass sat within a few points of the wall value
+      // and the whole unit dissolved into the background; darker and more
+      // saturated separates it as an object without making it a hole.
+      color: "#3a2b1e",
+      roughness: 0.82,
+      envMapIntensity: 0.15,
     });
   },
   get woodLight() {
