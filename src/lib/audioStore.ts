@@ -13,18 +13,8 @@ export const TRACKS: Track[] = [
     artist: "lukrembo - marshmallow",
   },
   {
-    src: "/audio/forgotten-path.mp3",
-    name: "forgotten_path.mp3",
-    artist: "johndekale · CC0",
-  },
-  {
     src: "/audio/menu-theme.mp3",
     name: "menu_theme.mp3",
-    artist: "CodeManu · CC-BY 3.0",
-  },
-  {
-    src: "/audio/chip-drive.mp3",
-    name: "chip_drive.mp3",
     artist: "CodeManu · CC-BY 3.0",
   },
 ];
