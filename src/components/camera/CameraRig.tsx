@@ -74,7 +74,7 @@ export function CameraRig() {
       }
       gsap.killTweensOf(camera.position);
       gsap.killTweensOf(controls.target);
-      gsap.killTweensOf(baseFov.current);
+      gsap.killTweensOf(baseFov);
       flying.current = true;
       manualTaken.current = false; // a flight re-establishes an authored pose
 
