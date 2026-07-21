@@ -14,6 +14,7 @@ import { Lighting } from "@/components/lighting/Lighting";
 import { CameraRig } from "@/components/camera/CameraRig";
 import { Effects } from "@/components/effects/Effects";
 import { ReadyProbe } from "./ReadyProbe";
+import { PortalSuspend } from "./PortalSuspend";
 import { dprRange, getQuality } from "@/lib/gpuTier";
 
 /**
@@ -149,6 +150,7 @@ export function SceneCanvas() {
         <CameraRig />
         <Preload all />
         <ReadyProbe />
+        <PortalSuspend />
       </Suspense>
 
       {/* Mounted as a childless leaf, and only once armed. Gating the

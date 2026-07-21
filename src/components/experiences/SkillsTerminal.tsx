@@ -215,28 +215,57 @@ export function SkillsTerminal({ onClose }: PortalProps) {
   );
 }
 
-/** nvidia-smi style block with live, fluctuating utilization bars */
+/** nvidia-smi style block with live, fluctuating utilization bars.
+ *
+ * Performance: updates are driven by rAF and written directly to the DOM
+ * via refs — zero React re-renders after mount. The old setInterval +
+ * setState path pushed ~6 renders/sec through reconciliation, which on
+ * its own isn't expensive, but stacked on top of the paused-canvas
+ * resume cost it caused visible jank.
+ */
 function GpuMeters({ instant = false, onSettled }: { instant?: boolean; onSettled: () => void }) {
-  const [util, setUtil] = useState(() => (instant ? [87, 62, 94, 41] : [0, 0, 0, 0]));
+  const rowRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const pctRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const util = useRef(instant ? [87, 62, 94, 41] : [0, 0, 0, 0]);
   const targets = useRef([87, 62, 94, 41]);
   const settled = useRef(false);
+  const rafId = useRef(0);
+  const lastTime = useRef(0);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setUtil((u) =>
-        u.map((v, i) => {
+    const TICK_MS = 160; // visual update interval
+
+    const tick = (now: number) => {
+      if (now - lastTime.current >= TICK_MS) {
+        lastTime.current = now;
+        const u = util.current;
+        for (let i = 0; i < 4; i++) {
           const t = targets.current[i];
-          const nextV = v + (t - v) * 0.18 + (Math.random() - 0.5) * 2.2;
-          return Math.max(2, Math.min(99, nextV));
-        }),
-      );
-      // wander the targets so the machine never sits still
-      if (Math.random() < 0.06) {
-        targets.current = targets.current.map((t) =>
-          Math.max(20, Math.min(97, t + (Math.random() - 0.5) * 26)),
-        );
+          const nextV = u[i] + (t - u[i]) * 0.18 + (Math.random() - 0.5) * 2.2;
+          u[i] = Math.max(2, Math.min(99, nextV));
+
+          // direct DOM write — no React
+          const cells = 26;
+          const on = Math.round((u[i] / 100) * cells);
+          const bar = rowRefs.current[i];
+          if (bar) {
+            bar.textContent = "█".repeat(on) + "░".repeat(cells - on);
+            bar.style.color = u[i] > 85 ? T.warn : T.hot;
+          }
+          const pct = pctRefs.current[i];
+          if (pct) pct.textContent = ` ${String(Math.round(u[i])).padStart(3)}%`;
+        }
+        // wander the targets so the machine never sits still
+        if (Math.random() < 0.06) {
+          targets.current = targets.current.map((t) =>
+            Math.max(20, Math.min(97, t + (Math.random() - 0.5) * 26)),
+          );
+        }
       }
-    }, 160);
+      rafId.current = requestAnimationFrame(tick);
+    };
+
+    rafId.current = requestAnimationFrame(tick);
 
     if (instant) {
       settled.current = true;
@@ -249,33 +278,46 @@ function GpuMeters({ instant = false, onSettled }: { instant?: boolean; onSettle
         }
       }, 1400);
       return () => {
-        clearInterval(id);
+        cancelAnimationFrame(rafId.current);
         clearTimeout(done);
       };
     }
 
     return () => {
-      clearInterval(id);
+      cancelAnimationFrame(rafId.current);
     };
   }, [onSettled, instant]);
 
-  const bar = (v: number) => {
+  const initBar = (v: number) => {
     const cells = 26;
     const on = Math.round((v / 100) * cells);
     return "█".repeat(on) + "░".repeat(cells - on);
   };
 
+  const initUtil = util.current;
+
   return (
     <div className="mt-1 whitespace-pre">
       <p style={{ color: T.dim }}>GPU  NAME              UTIL                          MEM</p>
-      {util.map((v, i) => (
+      {[0, 1, 2, 3].map((i) => (
         <p key={i}>
           <span style={{ color: T.dim }}>{String(i).padEnd(5)}</span>
-          <span>{["A100-80G", "A100-80G", "A100-80G", "A100-80G"][i].padEnd(18)}</span>
-          <span style={{ color: v > 85 ? T.warn : T.hot }}>{bar(v)}</span>
-          <span style={{ color: T.dim }}> {String(Math.round(v)).padStart(3)}%</span>
+          <span>{"A100-80G".padEnd(18)}</span>
+          <span
+            ref={(el) => { rowRefs.current[i] = el; }}
+            style={{ color: initUtil[i] > 85 ? T.warn : T.hot }}
+          >
+            {initBar(initUtil[i])}
+          </span>
+          <span
+            ref={(el) => { pctRefs.current[i] = el; }}
+            style={{ color: T.dim }}
+          >
+            {` ${String(Math.round(initUtil[i])).padStart(3)}%`}
+          </span>
         </p>
       ))}
     </div>
   );
 }
+
