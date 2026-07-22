@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, useDragControls } from "framer-motion";
 import { DUR, EASE } from "@/lib/design";
 import { OS } from "./theme";
+import { useOSDesktop } from "@/components/objects/MonitorScreen";
 
 /**
  * Shared window chrome for every RM-OS app — draggable, opaque,
@@ -37,6 +38,11 @@ export function OSWindow({
 }) {
   const dragControls = useDragControls();
   const [maximized, setMaximized] = useState(defaultMaximized);
+  const { isPoppedOut } = useOSDesktop();
+
+  const dotClass = isPoppedOut
+    ? "flex h-3 w-3 items-center justify-center rounded-full text-[8px] leading-none font-bold text-black/50"
+    : "flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50";
 
   return (
     <motion.div
@@ -48,7 +54,7 @@ export function OSWindow({
         boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
         zIndex: maximized ? 50 : (style?.zIndex ?? 10),
         ...(maximized
-          ? { top: 0, left: 0, right: 0, bottom: 44, width: "auto", height: "auto", borderRadius: 0, transform: "none" }
+          ? { top: 0, left: 0, right: 0, bottom: isPoppedOut ? 60 : 44, width: "auto", height: "auto", borderRadius: 0, transform: "none" }
           : style),
       }}
       drag={!maximized}
@@ -63,7 +69,9 @@ export function OSWindow({
     >
       {/* title bar — drag handle */}
       <div
-        className="group/tb flex shrink-0 cursor-grab items-center gap-1.5 border-b px-3 py-1.5 select-none active:cursor-grabbing"
+        className={`group/tb flex shrink-0 cursor-grab items-center border-b select-none active:cursor-grabbing ${
+          isPoppedOut ? "gap-2 px-4 py-2" : "gap-1.5 px-3 py-1.5"
+        }`}
         style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}
         onPointerDown={(e) => {
           if (!maximized) dragControls.start(e);
@@ -74,7 +82,7 @@ export function OSWindow({
         <button
           onClick={onClose}
           aria-label="Close window"
-          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
+          className={dotClass}
           style={{ background: "#ff5f57" }}
         >
           <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">✕</span>
@@ -83,7 +91,7 @@ export function OSWindow({
         <button
           onClick={onMinimize ?? onClose}
           aria-label="Minimize window"
-          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
+          className={dotClass}
           style={{ background: "#febc2e" }}
         >
           <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">−</span>
@@ -92,12 +100,12 @@ export function OSWindow({
         <button
           onClick={() => setMaximized((m) => !m)}
           aria-label={maximized ? "Restore window" : "Maximize window"}
-          className="flex h-[9px] w-[9px] items-center justify-center rounded-full text-[6px] leading-none font-bold text-black/50"
+          className={dotClass}
           style={{ background: "#28c840" }}
         >
           <span className="opacity-0 transition-opacity group-hover/tb:opacity-100">{maximized ? "↙" : "↗"}</span>
         </button>
-        <span className="ml-2 font-mono text-[9px] tracking-wide" style={{ color: OS.dim }}>
+        <span className={`ml-2 font-mono tracking-wide ${isPoppedOut ? "text-[12px]" : "text-[9px]"}`} style={{ color: OS.dim }}>
           {title}
         </span>
       </div>

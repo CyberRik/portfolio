@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Html } from "@react-three/drei";
 import { PROFILE } from "@/content/portfolio";
@@ -14,7 +14,7 @@ import {
   type ProjectId,
 } from "@/content/work";
 import { TodoNote } from "@/components/os/TodoNote";
-import { closePortal, usePortalSection } from "@/lib/portal";
+import { closePortal, togglePopOut, usePopOut, usePortalSection } from "@/lib/portal";
 import { DUR, EASE } from "@/lib/design";
 import { audioPlayer, useAudioPlayer, TRACKS } from "@/lib/audioStore";
 import { OSWindow } from "@/components/os/OSWindow";
@@ -22,6 +22,12 @@ import { OSRouterContext, type OSRoutes } from "@/components/os/OSRouter";
 import { ProjectsApp } from "@/components/os/ProjectsApp";
 import { TimelineApp } from "@/components/os/TimelineApp";
 import { APP_TINTS, OS } from "@/components/os/theme";
+
+export const OSDesktopContext = createContext<{ isPoppedOut: boolean }>({ isPoppedOut: false });
+
+export function useOSDesktop() {
+  return useContext(OSDesktopContext);
+}
 
 /**
  * PROJECTS — RM-OS, rendered ON the monitor's physical panel.
@@ -64,6 +70,7 @@ const DESKTOP_ICONS = FEATURED;
 
 export function MonitorScreen() {
   const active = usePortalSection() === "projects";
+  const poppedOut = usePopOut();
 
   if (!active) return null;
   return (
@@ -74,7 +81,23 @@ export function MonitorScreen() {
       zIndexRange={[35, 0]}
       style={{ width: CSS_W, height: CSS_H }}
     >
-      <Desktop />
+      {poppedOut ? (
+        <div
+          className="flex h-full w-full flex-col items-center justify-center bg-black/90 font-mono text-[11px]"
+          style={{ color: OS.dim }}
+        >
+          <span className="text-[16px] font-semibold text-[#ffd9a8]">RM-OS</span>
+          <span className="mt-1">Active on full screen display</span>
+          <button
+            onClick={togglePopOut}
+            className="mt-3 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] text-[#ffd9a8] transition-colors hover:bg-white/20"
+          >
+            ⤓ Dock back to Desk
+          </button>
+        </div>
+      ) : (
+        <Desktop />
+      )}
     </Html>
   );
 }
@@ -89,7 +112,7 @@ function useClock() {
   return now;
 }
 
-function Desktop() {
+export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
   const [awake, setAwake] = useState(false);
   /** which case study the Projects app is showing; null = the tab list */
   const [project, setProject] = useState<ProjectId | null>(null);
@@ -158,12 +181,13 @@ function Desktop() {
   }, []);
 
   return (
+    <OSDesktopContext.Provider value={{ isPoppedOut }}>
     <OSRouterContext.Provider value={routes}>
     <motion.div
       // os-surface swaps the room's cursor for RM-OS's own for as long
       // as the pointer is on the glass (see globals.css)
       className="os-surface relative overflow-hidden bg-black"
-      style={{ width: CSS_W, height: CSS_H }}
+      style={isPoppedOut ? { width: "100%", height: "100%" } : { width: CSS_W, height: CSS_H }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: DUR.ui, ease: EASE.inOut }}
@@ -185,7 +209,9 @@ function Desktop() {
           >
             {/* menu bar — translucent, vibrancy-blurred, macOS proportions */}
             <div
-              className="flex items-center justify-between px-4 py-1 font-mono text-[10px] backdrop-blur-xl"
+              className={`flex items-center justify-between font-mono backdrop-blur-xl select-none ${
+                isPoppedOut ? "px-6 py-2 text-[12px] md:text-[13px]" : "px-4 py-1.5 text-[10px] md:text-[11px]"
+              }`}
               style={{
                 background: "rgba(255,255,255,0.05)",
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
@@ -193,7 +219,7 @@ function Desktop() {
               }}
             >
               <div className="flex items-center gap-3.5">
-                <span className="text-[11px] leading-none" style={{ color: OS.txt }}>
+                <span className={isPoppedOut ? "text-[14px] leading-none" : "text-[11px] leading-none"} style={{ color: OS.txt }}>
                   ⌘
                 </span>
                 <span className="font-semibold" style={{ color: OS.txt }}>
@@ -210,9 +236,21 @@ function Desktop() {
                   {mm}
                 </span>
                 <button
+                  onClick={togglePopOut}
+                  className={`flex items-center gap-1 rounded font-mono transition-colors hover:bg-white/10 ${
+                    isPoppedOut ? "px-2 py-0.5 text-[11px]" : "px-1.5 py-0.5 text-[9.5px]"
+                  }`}
+                  style={{ color: isPoppedOut ? OS.accent : OS.dim }}
+                  title={isPoppedOut ? "Dock back to 3D Desk" : "Pop Out to Fullscreen"}
+                >
+                  <span>{isPoppedOut ? "⤓" : "⤢"}</span>
+                  <span>{isPoppedOut ? "Dock to Desk" : "Pop Out"}</span>
+                </button>
+                <button
                   onClick={closePortal}
                   className="rounded px-1.5 py-0.5 transition-colors hover:bg-white/10"
                   style={{ color: OS.dim }}
+                  title="Power off / Close"
                   onMouseEnter={(e) => (e.currentTarget.style.color = OS.txt)}
                   onMouseLeave={(e) => (e.currentTarget.style.color = OS.dim)}
                 >
@@ -473,6 +511,7 @@ function Desktop() {
       </AnimatePresence>
     </motion.div>
     </OSRouterContext.Provider>
+    </OSDesktopContext.Provider>
   );
 }
 

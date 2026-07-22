@@ -22,6 +22,10 @@ import { APP_TINTS, OS } from "./theme";
  * like an OS.
  */
 
+import { useOSDesktop } from "@/components/objects/MonitorScreen";
+
+// ...
+
 export function ProjectsApp({
   onClose,
   onFocus,
@@ -37,6 +41,7 @@ export function ProjectsApp({
   onSelect: (id: ProjectId | null) => void;
 }) {
   const [tab, setTab] = useState<"featured" | "archive">("featured");
+  const { isPoppedOut } = useOSDesktop();
 
   // opening a project from elsewhere in the OS should land you on the
   // tab it actually lives in
@@ -52,7 +57,7 @@ export function ProjectsApp({
       onClose={onClose}
       onFocus={onFocus}
       defaultMaximized
-      style={{ width: 720, left: 150, top: 20, zIndex }}
+      style={{ width: isPoppedOut ? "min(92vw, 1280px)" : 720, left: isPoppedOut ? "50%" : 150, transform: isPoppedOut ? "translateX(-50%)" : undefined, top: isPoppedOut ? 30 : 20, zIndex }}
     >
       {selected ? (
         <>
@@ -60,6 +65,7 @@ export function ProjectsApp({
             tier={PROJECT_DOCS[selected].tier}
             title={PROJECT_DOCS[selected].title}
             onBack={() => onSelect(null)}
+            isPoppedOut={isPoppedOut}
           />
           <ProjectWorkspace id={selected} />
         </>
@@ -67,26 +73,26 @@ export function ProjectsApp({
         <>
           {/* tabs */}
           <div
-            className="flex shrink-0 items-center gap-1 border-b px-3 py-1.5"
+            className={`flex shrink-0 items-center gap-1.5 border-b ${isPoppedOut ? "px-4 py-2" : "px-3 py-1.5"}`}
             style={{ borderColor: OS.lineSoft }}
           >
-            <Tab label="Featured" on={tab === "featured"} onClick={() => setTab("featured")} />
-            <Tab label="Archive" on={tab === "archive"} onClick={() => setTab("archive")} />
-            <span className="ml-auto font-mono text-[8px]" style={{ color: OS.faint }}>
+            <Tab label="Featured" on={tab === "featured"} onClick={() => setTab("featured")} isPoppedOut={isPoppedOut} />
+            <Tab label="Archive" on={tab === "archive"} onClick={() => setTab("archive")} isPoppedOut={isPoppedOut} />
+            <span className={`ml-auto font-mono ${isPoppedOut ? "text-[11px]" : "text-[8px]"}`} style={{ color: OS.faint }}>
               {ids.length} projects
             </span>
           </div>
 
-          <div className="os-scroll min-h-0 flex-1 overflow-y-auto px-3 py-2.5">
+          <div className={`os-scroll min-h-0 flex-1 overflow-y-auto ${isPoppedOut ? "px-12 py-10" : "px-3 py-2.5"}`}>
             <motion.div
               key={tab}
-              className="flex flex-col gap-1"
+              className={isPoppedOut ? "mx-auto flex max-w-4xl flex-col gap-3" : "flex flex-col gap-1"}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: DUR.ui, ease: EASE.out }}
             >
               {ids.map((id, i) => (
-                <ProjectRow key={id} id={id} index={i} onOpen={() => onSelect(id)} />
+                <ProjectRow key={id} id={id} index={i} onOpen={() => onSelect(id)} isPoppedOut={isPoppedOut} />
               ))}
             </motion.div>
           </div>
@@ -96,11 +102,11 @@ export function ProjectsApp({
   );
 }
 
-function Tab({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
+function Tab({ label, on, onClick, isPoppedOut = false }: { label: string; on: boolean; onClick: () => void; isPoppedOut?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-md px-2 py-[3px] text-[10px] transition-colors"
+      className={`rounded-md transition-colors ${isPoppedOut ? "px-3 py-1 text-[12px]" : "px-2 py-[3px] text-[10px]"}`}
       style={{
         background: on ? "rgba(255,255,255,0.08)" : "transparent",
         color: on ? OS.txt : OS.dim,
@@ -111,10 +117,10 @@ function Tab({ label, on, onClick }: { label: string; on: boolean; onClick: () =
   );
 }
 
-function Breadcrumb({ tier, title, onBack }: { tier: string; title: string; onBack: () => void }) {
+function Breadcrumb({ tier, title, onBack, isPoppedOut = false }: { tier: string; title: string; onBack: () => void; isPoppedOut?: boolean }) {
   return (
     <div
-      className="flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 font-mono text-[9px]"
+      className={`flex shrink-0 items-center gap-2 border-b font-mono ${isPoppedOut ? "px-4 py-2.5 text-[11px]" : "px-3 py-1.5 text-[9px]"}`}
       style={{ borderColor: OS.lineSoft }}
     >
       <button onClick={onBack} className="transition-colors hover:text-white" style={{ color: OS.dim }}>
@@ -126,16 +132,20 @@ function Breadcrumb({ tier, title, onBack }: { tier: string; title: string; onBa
   );
 }
 
-function ProjectRow({ id, index, onOpen }: { id: ProjectId; index: number; onOpen: () => void }) {
+function ProjectRow({ id, index, onOpen, isPoppedOut = false }: { id: ProjectId; index: number; onOpen: () => void; isPoppedOut?: boolean }) {
   const doc = PROJECT_DOCS[id];
   const tint = APP_TINTS[index % APP_TINTS.length];
   return (
     <button
       onClick={onOpen}
-      className="group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-white/[0.06]"
+      className={`group flex items-center gap-3 rounded-md text-left transition-colors hover:bg-white/[0.06] ${
+        isPoppedOut ? "px-3 py-2.5" : "px-2 py-1.5"
+      }`}
     >
       <span
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-[9px] font-semibold"
+        className={`flex shrink-0 items-center justify-center rounded-lg font-mono font-semibold ${
+          isPoppedOut ? "h-9 w-9 text-[11px]" : "h-7 w-7 text-[9px]"
+        }`}
         style={{
           background: `linear-gradient(160deg, ${tint}, ${tint}88)`,
           color: "rgba(0,0,0,0.62)",
@@ -146,23 +156,23 @@ function ProjectRow({ id, index, onOpen }: { id: ProjectId; index: number; onOpe
         {doc.title.replace(/[^A-Za-z]/g, "").slice(0, 2)}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-baseline gap-1.5">
-          <span className="text-[11px] font-medium" style={{ color: OS.txt }}>
+        <span className="flex items-baseline gap-2">
+          <span className={`font-medium ${isPoppedOut ? "text-[14px]" : "text-[11px]"}`} style={{ color: OS.txt }}>
             {doc.title}
           </span>
-          <span className="truncate font-mono text-[8px]" style={{ color: OS.faint }}>
+          <span className={`truncate font-mono ${isPoppedOut ? "text-[10px]" : "text-[8px]"}`} style={{ color: OS.faint }}>
             {doc.context}
           </span>
         </span>
-        <span className="mt-0.5 block truncate text-[10px]" style={{ color: OS.dim }}>
+        <span className={`block truncate ${isPoppedOut ? "mt-0.5 text-[12px]" : "mt-0.5 text-[10px]"}`} style={{ color: OS.dim }}>
           {doc.tagline}
         </span>
       </span>
-      <span className="shrink-0 font-mono text-[8px]" style={{ color: OS.faint }}>
+      <span className={`shrink-0 font-mono ${isPoppedOut ? "text-[10px]" : "text-[8px]"}`} style={{ color: OS.faint }}>
         {doc.period}
       </span>
       <span
-        className="shrink-0 text-[10px] opacity-0 transition-opacity group-hover:opacity-100"
+        className={`shrink-0 opacity-0 transition-opacity group-hover:opacity-100 ${isPoppedOut ? "text-[12px]" : "text-[10px]"}`}
         style={{ color: OS.accent }}
       >
         →

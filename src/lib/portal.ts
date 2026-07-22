@@ -29,10 +29,9 @@ const PORTAL_PUSH: Record<SectionId, Push> = {
     view: "desk",
     k: 1,
     dur: 1.4,
-    // head-on with the panel, close enough that the 1.44m-wide ultrawide
-    // fills nearly the full frame (~95% width at fov 42) — text is large
-    // and legible, the room sits quietly in the periphery
-    pose: { position: [0, 1.20, -1.35], target: [0, 1.20, -2.13] },
+    // head-on with the panel, perfectly framed so the 1.44m-wide ultrawide
+    // fits comfortably inside the viewport (~90% width at fov 42) with no clipping
+    pose: { position: [0, 1.17, -0.95], target: [0, 1.17, -2.13] },
   },
   experience: { view: "whiteboard", k: 0.52, dur: 1.6 },
   skills: { view: "server", k: 0.5, dur: 1.6 },
@@ -42,12 +41,41 @@ const PORTAL_PUSH: Record<SectionId, Push> = {
 };
 
 let section: SectionId | null = null;
+let popOut = false;
+
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
+
+export function togglePopOut() {
+  popOut = !popOut;
+  emit();
+}
+
+export function setPopOut(val: boolean) {
+  if (popOut === val) return;
+  popOut = val;
+  emit();
+}
+
+export function getPopOut(): boolean {
+  return popOut;
+}
+
+export function usePopOut(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    () => popOut,
+    () => popOut,
+  );
+}
 
 export function openPortal(s: SectionId) {
   if (section === s) return;
   section = s;
+  popOut = false;
   emit();
   setPortalDepth(true);
   const p = PORTAL_PUSH[s];
@@ -70,6 +98,7 @@ export function openPortal(s: SectionId) {
 export function closePortal() {
   if (!section) return;
   section = null;
+  popOut = false;
   emit();
   setPortalDepth(false);
   flyToView("overview");

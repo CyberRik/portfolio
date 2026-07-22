@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useFocusState } from "@/lib/focus";
-import { closePortal, openPortal, usePortalSection } from "@/lib/portal";
+import { closePortal, getPopOut, openPortal, setPopOut, togglePopOut, usePopOut, usePortalSection } from "@/lib/portal";
 import { OBJECT_SECTION } from "@/content/portfolio";
 import { isExitKey } from "@/lib/keys";
+import { DUR, EASE, WORLD_FADE } from "@/lib/design";
+import { Desktop } from "@/components/objects/MonitorScreen";
 import { ExperienceBoard } from "./ExperienceBoard";
 import { SkillsTerminal } from "./SkillsTerminal";
 import { AchievementsBook } from "./AchievementsBook";
@@ -19,6 +21,7 @@ import { ContactCompose } from "./ContactCompose";
  *
  *   monitor    → RM-OS renders ON the physical screen (in-scene,
  *                MonitorScreen.tsx — the room never leaves the frame)
+ *                or in Fullscreen Pop Out mode on demand.
  *   whiteboard → a career diagram draws itself in marker
  *   server     → an SSH session onto the rack
  *   bookshelf  → a book opens, chapters turn
@@ -32,6 +35,7 @@ import { ContactCompose } from "./ContactCompose";
 export function ExperienceOverlay() {
   const focus = useFocusState();
   const section = usePortalSection();
+  const popOut = usePopOut();
 
   // arrival at a section anchor opens its portal (after a short beat
   // so the arrival overshoot finishes before the world starts turning)
@@ -48,6 +52,13 @@ export function ExperienceOverlay() {
   useEffect(() => {
     if (!section) return;
     const onKey = (e: KeyboardEvent) => {
+      if (section === "projects" && getPopOut()) {
+        if (isExitKey(e)) {
+          e.stopPropagation();
+          setPopOut(false);
+          return;
+        }
+      }
       if (section === "skills" || section === "projects") {
         if (isExitKey(e) && (e.key === "Escape" || e.code === "Space")) {
           closePortal();
@@ -62,9 +73,31 @@ export function ExperienceOverlay() {
 
   return (
     // wrapper never eats input; each portal root opts back in.
-    // "projects" has no DOM world here — it lives on the monitor.
     <div className="pointer-events-none absolute inset-0 z-50 [&>*]:pointer-events-auto">
       <AnimatePresence>
+        {section === "projects" && popOut && (
+          <motion.div
+            key="projects-popout"
+            className="fixed inset-0 z-50 overflow-hidden bg-black"
+            {...WORLD_FADE}
+          >
+            <Desktop isPoppedOut={true} />
+          </motion.div>
+        )}
+        {section === "projects" && !popOut && (
+          <motion.button
+            key="popout-pill"
+            onClick={togglePopOut}
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ delay: 0.8, duration: DUR.ui, ease: EASE.out }}
+            className="absolute top-5 right-6 z-40 flex items-center gap-2 rounded-full border border-white/15 bg-black/60 px-3.5 py-1.5 font-mono text-[11px] text-[#ffd9a8] backdrop-blur-md transition-all hover:scale-105 hover:bg-black/80 hover:text-white"
+          >
+            <span>⤢</span>
+            <span className="tracking-wide">Pop Out Fullscreen</span>
+          </motion.button>
+        )}
         {section === "experience" && <ExperienceBoard key="experience" onClose={closePortal} />}
         {section === "skills" && <SkillsTerminal key="skills" onClose={closePortal} />}
         {section === "achievements" && <AchievementsBook key="achievements" onClose={closePortal} />}

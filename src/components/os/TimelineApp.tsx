@@ -7,6 +7,7 @@ import {
   MILESTONES,
   PROJECT_DOCS,
   todoHint,
+  TRAINING_LOG,
   type MilestoneId,
   type ProjectId,
 } from "@/content/work";
@@ -15,6 +16,7 @@ import { useOSRouter } from "./OSRouter";
 import { OSWindow } from "./OSWindow";
 import { OS } from "./theme";
 import { Prose, TodoNote } from "./TodoNote";
+import { useOSDesktop } from "@/components/objects/MonitorScreen";
 
 /**
  * TIMELINE — the career as chapters, not dates.
@@ -45,6 +47,7 @@ export function TimelineApp({
   onExpand: (id: MilestoneId | null) => void;
 }) {
   const paneRef = useRef<HTMLDivElement>(null);
+  const { isPoppedOut } = useOSDesktop();
 
   // Clicking a chapter here must not move the page under your cursor —
   // only arriving from a project's "chapter" link should scroll.
@@ -80,62 +83,72 @@ export function TimelineApp({
 
   return (
     <OSWindow
-      title="Timeline"
+      title="Timeline — The Story"
       onClose={onClose}
       onFocus={onFocus}
       defaultMaximized
-      style={{ width: 660, left: 180, top: 24, zIndex }}
+      style={{ width: isPoppedOut ? "min(92vw, 1280px)" : 760, left: isPoppedOut ? "50%" : 120, transform: isPoppedOut ? "translateX(-50%)" : undefined, top: isPoppedOut ? 30 : 20, zIndex }}
     >
-      <header className="shrink-0 border-b px-4 py-2" style={{ borderColor: OS.lineSoft }}>
-        <h1 className="text-[12px] font-medium tracking-tight" style={{ color: OS.txt }}>
-          How I got here
-        </h1>
-        <p className="mt-0.5 text-[10px]" style={{ color: OS.dim }}>
-          Seven chapters. Each one answers what I became after it.
-        </p>
-      </header>
+      <div ref={paneRef} className={`os-scroll flex-1 overflow-y-auto ${isPoppedOut ? "px-12 py-10" : "px-4 py-3"}`}>
+        <div className={isPoppedOut ? "mx-auto max-w-4xl" : ""}>
+          <header className="mb-4">
+            <h1 className={`font-medium tracking-tight ${isPoppedOut ? "text-[18px] md:text-[20px]" : "text-[12px]"}`} style={{ color: OS.txt }}>
+              Timeline
+            </h1>
+            <p className={`mt-0.5 ${isPoppedOut ? "text-[13.5px] mt-1" : "text-[10px]"}`} style={{ color: OS.dim }}>
+              {TRAINING_LOG.provenance}
+            </p>
+          </header>
 
-      <div ref={paneRef} className="os-scroll min-h-0 flex-1 overflow-y-auto px-3 py-2">
-        <div className="flex flex-col">
-          {MILESTONES.map((m, i) => (
-            <Chapter
-              key={m.id}
-              milestone={m}
-              index={i}
-              last={i === MILESTONES.length - 1}
-              open={expanded === m.id}
-              onToggle={() => toggle(expanded === m.id ? null : m.id)}
-            />
-          ))}
+          <ol className="flex flex-col">
+            {MILESTONES.map((m, i) => (
+              <MilestoneRow
+                key={m.id}
+                m={m}
+                index={i}
+                last={i === MILESTONES.length - 1}
+                open={expanded === m.id}
+                onToggle={() => toggle(expanded === m.id ? null : m.id)}
+                isPoppedOut={isPoppedOut}
+              />
+            ))}
+          </ol>
+
+          <footer className={`mt-6 border-t pt-3 border-white/5`}>
+            <p className={`font-mono uppercase ${isPoppedOut ? "text-[10px] tracking-[0.24em] mb-1.5" : "text-[7.5px] tracking-[0.22em]"}`} style={{ color: OS.faint }}>
+              Provenance
+            </p>
+            <p className={isPoppedOut ? "text-[12.5px] leading-relaxed" : "text-[10px] leading-relaxed"} style={{ color: OS.dim }}>
+              Every entry maps to a public repo, a recorded run, or a domain shipped for a client. Nothing is generated at render time.
+            </p>
+          </footer>
         </div>
       </div>
     </OSWindow>
   );
 }
 
-function Chapter({
-  milestone: m,
+function MilestoneRow({
+  m,
   index,
   last,
   open,
   onToggle,
+  isPoppedOut,
 }: {
-  milestone: (typeof MILESTONES)[number];
+  m: (typeof MILESTONES)[number];
   index: number;
   last: boolean;
   open: boolean;
   onToggle: () => void;
+  isPoppedOut: boolean;
 }) {
   return (
-    <div data-chapter={m.id} className="relative flex gap-2.5">
-      {/* the spine — one continuous line through every chapter */}
-      <div className="relative flex w-[18px] shrink-0 flex-col items-center pt-[13px]">
+    <li data-chapter={m.id} className="flex gap-3">
+      <div className="flex flex-col items-center">
         <span
-          className="z-10 h-[7px] w-[7px] rounded-full transition-colors"
-          style={{
-            background: open ? OS.accent : OS.faint,
-            boxShadow: open ? `0 0 0 3px rgba(255,179,97,0.15)` : "none",
-          }}
+          className={`rounded-full transition-colors ${isPoppedOut ? "mt-2.5 h-3.5 w-3.5" : "mt-2 h-2.5 w-2.5"}`}
+          style={{ background: open ? OS.accent : OS.dim, border: `2px solid #1a1816` }}
         />
         {!last && <span className="w-px flex-1" style={{ background: OS.line }} />}
       </div>
@@ -150,31 +163,30 @@ function Chapter({
         >
           <div className="flex items-baseline gap-2">
             <span
-              className="font-mono text-[9px] tabular-nums"
+              className={`font-mono tabular-nums ${isPoppedOut ? "text-[12px]" : "text-[9px]"}`}
               style={{ color: open ? OS.accent : OS.faint }}
             >
               {m.glyph}
             </span>
-            <span className="text-[11.5px] font-medium" style={{ color: OS.txt }}>
+            <span className={`font-medium ${isPoppedOut ? "text-[15px] md:text-[16px]" : "text-[11.5px]"}`} style={{ color: OS.txt }}>
               {m.chapter}
             </span>
-            <span className="font-mono text-[8.5px]" style={{ color: OS.faint }}>
+            <span className={`font-mono ${isPoppedOut ? "text-[11px]" : "text-[8.5px]"}`} style={{ color: OS.faint }}>
               {m.period}
             </span>
             <span
-              className="ml-auto text-[9px] transition-transform"
+              className={`ml-auto transition-transform ${isPoppedOut ? "text-[12px]" : "text-[9px]"}`}
               style={{ color: OS.faint, transform: open ? "rotate(90deg)" : "none" }}
             >
               ›
             </span>
           </div>
-          {/* the headline: what this chapter made me */}
           {isTodo(m.became) ? (
             <div className="mt-1.5">
               <TodoNote hint={todoHint(m.became)} />
             </div>
           ) : (
-            <p className="mt-1 text-[10.5px] leading-snug" style={{ color: open ? OS.accent : OS.dim }}>
+            <p className={`mt-1 leading-snug ${isPoppedOut ? "text-[13.5px] md:text-[14px]" : "text-[10.5px]"}`} style={{ color: open ? OS.accent : OS.dim }}>
               {m.became}
             </p>
           )}
@@ -194,7 +206,7 @@ function Chapter({
                 <Prose text={m.summary} />
 
                 {m.projects.length > 0 && (
-                  <Block label="Projects completed">
+                  <Block label="Projects completed" isPoppedOut={isPoppedOut}>
                     <div className="flex flex-wrap gap-1.5">
                       {m.projects.map((p) => (
                         <ProjectLink key={p} id={p} />
@@ -204,7 +216,7 @@ function Chapter({
                 )}
 
                 {m.alsoShipped.length > 0 && (
-                  <Block label="Also in this chapter">
+                  <Block label="Also in this chapter" isPoppedOut={isPoppedOut}>
                     <ul className="flex flex-col gap-1">
                       {m.alsoShipped.map((s) =>
                         isTodo(s) ? (
@@ -214,7 +226,7 @@ function Chapter({
                         ) : (
                           <li
                             key={s}
-                            className="flex gap-2 text-[10.5px] leading-relaxed"
+                            className={`flex gap-2 leading-relaxed ${isPoppedOut ? "text-[13px] md:text-[14px]" : "text-[10.5px]"}`}
                             style={{ color: OS.dim }}
                           >
                             <span
@@ -229,12 +241,12 @@ function Chapter({
                   </Block>
                 )}
 
-                <Block label="Technologies">
+                <Block label="Technologies" isPoppedOut={isPoppedOut}>
                   <div className="flex flex-wrap gap-1">
                     {m.tech.map((t) => (
                       <span
                         key={t}
-                        className="rounded px-1.5 py-0.5 font-mono text-[8.5px]"
+                        className={`rounded font-mono ${isPoppedOut ? "px-2 py-0.5 text-[11px]" : "px-1.5 py-0.5 text-[8.5px]"}`}
                         style={{ background: OS.raised, border: `1px solid ${OS.line}`, color: OS.dim }}
                       >
                         {t}
@@ -244,12 +256,12 @@ function Chapter({
                 </Block>
 
                 {m.lessons.length > 0 && (
-                  <Block label="Engineering lessons">
+                  <Block label="Engineering lessons" isPoppedOut={isPoppedOut}>
                     <ul className="flex flex-col gap-1">
                       {m.lessons.map((l) => (
                         <li
                           key={l}
-                          className="flex gap-2 text-[10.5px] leading-relaxed"
+                          className={`flex gap-2 leading-relaxed ${isPoppedOut ? "text-[13px] md:text-[14px]" : "text-[10.5px]"}`}
                           style={{ color: OS.txt }}
                         >
                           <span
@@ -262,27 +274,19 @@ function Chapter({
                     </ul>
                   </Block>
                 )}
-
-                <Block label="Impact">
-                  <Prose text={m.impact} />
-                </Block>
-
-                {m.projects.length > 0 && (
-                  <OpenCaseStudy id={m.projects[0]} />
-                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </li>
   );
 }
 
-function Block({ label, children }: { label: string; children: React.ReactNode }) {
+function Block({ label, children, isPoppedOut = false }: { label: string; children: React.ReactNode; isPoppedOut?: boolean }) {
   return (
-    <div className="mt-2.5">
-      <p className="mb-1 font-mono text-[7.5px] tracking-[0.22em] uppercase" style={{ color: OS.faint }}>
+    <div className="mt-3">
+      <p className={`mb-1 font-mono uppercase ${isPoppedOut ? "text-[10px] tracking-[0.24em]" : "text-[7.5px] tracking-[0.22em]"}`} style={{ color: OS.faint }}>
         {label}
       </p>
       {children}
@@ -290,7 +294,6 @@ function Block({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-/** a chapter's project — opens its case study in the Projects app */
 function ProjectLink({ id }: { id: ProjectId }) {
   const { openProject } = useOSRouter();
   const doc = PROJECT_DOCS[id];

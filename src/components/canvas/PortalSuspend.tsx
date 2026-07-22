@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
-import { usePortalSection } from "@/lib/portal";
+import { usePopOut, usePortalSection } from "@/lib/portal";
 
 /**
  * Pause the R3F render loop when a portal is active.
@@ -48,15 +48,16 @@ const PROJECTS_FREEZE_DELAY = 2200;
 
 export function PortalSuspend() {
   const section = usePortalSection();
+  const popOut = usePopOut();
   const set = useThree((s) => s.set);
   const invalidate = useThree((s) => s.invalidate);
   const paused = useRef(false);
 
   useEffect(() => {
-    const isDom = section !== null && DOM_PORTALS.has(section);
-    const isProjects = section === "projects";
+    const isDom = (section !== null && DOM_PORTALS.has(section)) || popOut;
+    const isProjects = section === "projects" && !popOut;
 
-    // --- DOM portals: freeze immediately (opaque overlay hides canvas) ---
+    // --- DOM portals or PopOut mode: freeze immediately ---
     if (isDom && !paused.current) {
       set({ frameloop: "never" });
       paused.current = true;
