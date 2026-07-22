@@ -29,10 +29,10 @@ const PORTAL_PUSH: Record<SectionId, Push> = {
     view: "desk",
     k: 1,
     dur: 1.4,
-    // head-on with the panel, far enough that the 1.44m-wide ultrawide
-    // fits the frame (~90% width at fov 42) with desk + lamp visible
-    // at the edges — you sit down at the machine
-    pose: { position: [0, 1.17, -0.95], target: [0, 1.17, -2.13] },
+    // head-on with the panel, close enough that the 1.44m-wide ultrawide
+    // fills nearly the full frame (~95% width at fov 42) — text is large
+    // and legible, the room sits quietly in the periphery
+    pose: { position: [0, 1.20, -1.35], target: [0, 1.20, -2.13] },
   },
   experience: { view: "whiteboard", k: 0.52, dur: 1.6 },
   skills: { view: "server", k: 0.5, dur: 1.6 },
