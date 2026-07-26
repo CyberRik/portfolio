@@ -60,6 +60,7 @@ export interface ArchDiagram {
 /* projects                                                           */
 
 export type ProjectId =
+  | "ancora"
   | "senpai"
   | "toolcalllm"
   | "gravton"
@@ -104,6 +105,130 @@ export interface ProjectDoc {
 }
 
 export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
+  /* ---------------------------------------------------------------- */
+  ancora: {
+    id: "ancora",
+    title: "Ancora",
+    tier: "featured",
+    role: "Solo Developer",
+    period: "Jul 2026 – Present",
+    context: "Personal project · open source",
+    tagline: "A fault-tolerant runtime for durable AI workflows — kill any worker mid-run and prove nothing was lost",
+    milestone: "current",
+
+    overview:
+      "A durable execution runtime for AI workflows, built on Temporal for event-sourced durability and Ray for distributed compute. Every side-effecting step is recorded as an immutable event, so if a worker dies mid-run the workflow replays to exact state and continues where it stopped. Ancora is not an agent framework — it's the runtime that belongs underneath one.",
+    problem:
+      "AI pipelines lose work for boring reasons: an LLM call 500s, a GPU worker OOMs, a provider rate-limits, a pod is evicted — and a multi-step, multi-dollar computation vanishes with no way to resume it. Durable execution solves that in principle, but 'kill a worker and the run survives' is easy to claim and hard to prove, and the interesting failure is never the crash itself. It's whether the side effects that were half-committed when the process died fire again on recovery.",
+    architecture: {
+      summary:
+        "A FastAPI control plane starts workflows on Temporal; deterministic workflow workers decide what to schedule and a pool of activity workers execute nodes, dispatching heavy work to Ray with async completion so a dispatcher slot is never held by a long compute. An admission scheduler decides whether running a node now is wise. Workers emit lifecycle events to Redis Streams; a consumer projects them into Postgres and the dashboard animates the run's DAG live over WebSocket, while a reconciler heals the projections from Temporal history — the only source of truth.",
+      diagram: {
+        caption: "Ancora — durability core, compute, and the observability plane",
+        nodes: [
+          { id: "api", label: "API Gateway", sub: "REST · WebSocket", col: 0, row: 1, kind: "input" },
+          { id: "temporal", label: "Temporal", sub: "event-sourced history", col: 1, row: 1, kind: "store" },
+          { id: "ww", label: "Workflow Workers", sub: "deterministic", col: 2, row: 0, kind: "core" },
+          { id: "aw", label: "Activity Workers", sub: "×3 replicas", col: 2, row: 2, kind: "core" },
+          { id: "sched", label: "Scheduler", sub: "admission control", col: 3, row: 3, kind: "core" },
+          { id: "ray", label: "Ray", sub: "async completion", col: 3, row: 2, kind: "model" },
+          { id: "bus", label: "Redis Streams", sub: "event bus", col: 3, row: 1, kind: "core" },
+          { id: "consumer", label: "Event Consumer", sub: "+ reconciler", col: 4, row: 1, kind: "core" },
+          { id: "pg", label: "Postgres", sub: "projections", col: 5, row: 1, kind: "store" },
+          { id: "dash", label: "Live DAG · Chaos Lab", col: 6, row: 1, kind: "output" },
+        ],
+        edges: [
+          { from: "api", to: "temporal", label: "start · signal" },
+          { from: "temporal", to: "ww" },
+          { from: "temporal", to: "aw", label: "poll · heartbeat" },
+          { from: "ww", to: "temporal", dashed: true, label: "schedule" },
+          { from: "aw", to: "ray" },
+          { from: "aw", to: "sched", dashed: true, label: "admit?" },
+          { from: "aw", to: "bus", dashed: true },
+          { from: "ww", to: "bus", dashed: true },
+          { from: "bus", to: "consumer" },
+          { from: "consumer", to: "pg" },
+          { from: "consumer", to: "temporal", dashed: true, label: "reconcile" },
+          { from: "pg", to: "dash" },
+        ],
+      },
+    },
+    challenges: [
+      {
+        title: "Chaos experiments that assert instead of demonstrate",
+        body:
+          "A demo that kills a worker and ends with a green checkmark proves nothing — someone has to squint at the UI and agree. So the chaos engine is a test: it starts a run, SIGKILLs a real activity-worker container mid-flight, waits out the actual recovery, then machine-checks three invariants from Temporal's own history — no lost state, no re-executed activities, exactly-once effects — and measures recovery time against an SLO. The same invariant checkers run as pure unit tests in CI against synthetic post-kill histories, so the correctness properties are pinned without a live cluster.",
+      },
+      {
+        title: "Reconstructing a run's DAG without a single timing heuristic",
+        body:
+          "Workflows here are ordinary Python deciding step by step what to schedule, so the DAG is emergent — fan-out width comes from the input. The naive way to draw \"these ran in parallel\" is to compare timestamps, and it's a flattering lie: a fan-out drawn as a chain looks perfectly reasonable to anyone who hasn't read the code. Ancora reads Temporal's own causality instead — every ActivityTaskScheduled event names the workflow task that commanded it, so activities sharing that id were genuinely decided together. The columns are exact, and no layout library is involved, so the graph never drifts between polls.",
+      },
+      {
+        title: "Temporal writes ActivityTaskStarted lazily",
+        body:
+          "The event for an attempt is only written once it reaches a terminal state — so the attempt running right now, including one stranded on a just-killed worker, is absent from history entirely. Reading history alone draws it as \"still queued,\" which is exactly backwards. The recovery view folds in describe().pending_activities to see the present, and separates three waits that look identical from outside: queued (no capacity yet), detecting (an attempt stranded on a dead process), and backoff (retry policy).",
+      },
+      {
+        title: "Proving exactly-once survives a crash mid-effect",
+        body:
+          "A unique key structurally forbids two rows per effect, so the double-write direction was never the real risk. The one a kill actually introduces is the opposite: an effect that began — row written pending — but whose worker died before committing the result, leaving a stale pending that a retry could re-fire. The chaos engine asserts every guarded effect reached done, so a half-committed side effect fails the experiment rather than silently double-firing in production.",
+      },
+      {
+        title: "Durability is not liveness",
+        body:
+          "Temporal guarantees state survives any worker death; it cannot manufacture progress out of no capacity. A stranded activity only finishes if some worker polls its queue, so fault tolerance had to become redundancy — a pool of activity workers, where killing one lets survivors recover automatically. A quieter consequence of SIGKILL: it skips graceful deregistration, orphaning worker-registry rows, so the fleet view claimed capacity that no longer existed. A reaper prunes them.",
+      },
+      {
+        title: "Fast failover — detection versus the timeout",
+        body:
+          "Without heartbeats a killed worker's activity is only noticed at start_to_close, up to 60 seconds, which turns the whole demo into an awkward wait. Emitting a heartbeat every 2s under a ~6s heartbeat timeout cuts detection to ~6 seconds — 9.5× — while still never mistaking a slow worker for a dead one. It also surfaced a latent bug: a policy declared a 30s heartbeat timeout while nothing ever emitted heartbeats, so any genuinely long node would have falsely timed out.",
+      },
+      {
+        title: "Keeping one trace unbroken across the Ray boundary",
+        body:
+          "Temporal's OTel interceptor carries context across the workflow-to-activity hop, but a compute function is pickled and shipped to another process, and OTel's ambient context doesn't travel with it — the compute span orphans into its own root trace. The fix is to inject the W3C traceparent into a plain dict, send it as data alongside the function, and re-extract it inside the worker. Contextvars don't cross a thread-pool boundary either, so this is required for the local backend too.",
+      },
+    ],
+    stack: [
+      { group: "Durability", items: ["Temporal", "Event sourcing", "Deterministic replay", "Idempotency inbox"] },
+      { group: "Compute", items: ["Ray", "Async activity completion", "Heartbeat checkpointing"] },
+      { group: "Services", items: ["Python 3.11", "FastAPI", "Pydantic v2", "SQLAlchemy", "Postgres", "Redis Streams"] },
+      { group: "Observability", items: ["OpenTelemetry", "Jaeger", "Prometheus", "Grafana"] },
+      { group: "Web", items: ["Next.js 14", "React Flow", "WebSocket live tail"] },
+      { group: "Quality", items: ["pytest", "mypy --strict", "ruff", "Playwright", "Docker Compose"] },
+    ],
+    results: [
+      "Chaos experiments that SIGKILL a live worker container mid-run and machine-check three durability invariants from Temporal history — no lost state, no re-executed activities, exactly-once effects — with recovery time measured against an SLO.",
+      "Kill-detection cut from ~60s to ~6s (9.5×) by heartbeating activities under a short heartbeat timeout.",
+      "Run DAGs reconstructed from event causality rather than timestamps — exact fan-out, live per-node state, retries collapsed, critical path highlighted.",
+      "284 passing tests, mypy --strict and ruff clean across the workspace; every subsystem ships a replay test and, where it touches failure, a chaos assertion.",
+      "One unbroken OTel trace from API through workflow and activity to the compute call, across the Ray process boundary.",
+      "Full stack — Temporal, Postgres, Redis, 3 worker replicas, scheduler, Jaeger, Prometheus, Grafana, dashboard — behind a single make up.",
+    ],
+    lessons: [
+      "A durability claim is worth nothing until something asserts it. Turning the demo into a test that verifies invariants from history is the entire difference between a screenshot and a guarantee.",
+      "Durability and liveness are separate properties, and conflating them is the beginner's mistake with Temporal. Your state is safe from any crash; progress still requires a worker alive to poll the queue.",
+      "Read the event log's semantics before building on it. ActivityTaskStarted being written lazily means history alone renders a stranded attempt as queued — the failure case the view existed to explain was the one it got wrong.",
+      "The dangerous half of exactly-once is the half-committed effect, not the duplicate one. A unique constraint handles duplicates for free; a worker that died between beginning and committing is what an idempotency guard has to actually survive.",
+      "Distributed tracing breaks precisely where the process boundary is invisible. Ambient context is not data, and anything that gets pickled and shipped needs its trace context passed explicitly.",
+    ],
+    timeline: [
+      { when: "21 Jul 2026", what: "Monorepo scaffold, Compose stack, API gateway and dashboard shell." },
+      { when: "22 Jul 2026", what: "Durable core and SDK; activity workers with Ray dispatch and async completion; first worker-crash durability test." },
+      { when: "23 Jul 2026", what: "Admission scheduler, built-in node library, idempotency inbox; Chaos Lab and the recovery view." },
+      { when: "26 Jul 2026", what: "Event-sourced observability — projections, live DAG over WebSocket, OTel tracing, Prometheus/Grafana, replay and critical path." },
+      { when: "27 Jul 2026", what: "Asserting chaos experiments and fast failover via heartbeats." },
+      { when: "Next", what: "Kubernetes (Helm/KubeRay/KEDA), OIDC/RBAC and tenant isolation, signed third-party plugins." },
+    ],
+    links: [
+      { label: "GitHub", href: "https://github.com/CyberRik/Ancora" },
+      { label: "RFC-0001", href: "https://github.com/CyberRik/Ancora/blob/main/docs/RFC-0001-durable-ai-runtime.md" },
+      { label: "Implementation plan", href: "https://github.com/CyberRik/Ancora/blob/main/docs/IMPLEMENTATION-PLAN.md" },
+    ],
+    related: ["senpai", "gravton"],
+  },
+
   /* ---------------------------------------------------------------- */
   senpai: {
     id: "senpai",
@@ -205,7 +330,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Jul 2026", what: "Throughput work landed: 11 → 55 tok/s." },
     ],
     links: [{ label: "Resume", href: "/resume.pdf" }],
-    related: ["toolcalllm", "gravton"],
+    related: ["toolcalllm", "gravton", "ancora"],
   },
 
   /* ---------------------------------------------------------------- */
@@ -771,7 +896,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
   },
 };
 
-export const FEATURED: ProjectId[] = ["senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
+export const FEATURED: ProjectId[] = ["ancora", "senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
 export const ARCHIVE: ProjectId[] = ["medproqa", "smartfan", "rrt"];
 
 /* ------------------------------------------------------------------ */
@@ -910,17 +1035,20 @@ export const MILESTONES: Milestone[] = [
     period: "2026 – 2027",
     became: todo("What are you becoming next? One line, in your own words."),
     summary:
-      "Placement preparation alongside continued work on AI systems — distributed systems, open source, and production AI infrastructure.",
-    projects: [],
+      "Placement preparation alongside continued work on AI systems. Ancora is where that goes — a durable execution runtime for AI workflows, built to make losing a multi-step computation to a dead worker structurally impossible, and to prove it with chaos experiments that assert rather than demonstrate.",
+    projects: ["ancora"],
     alsoShipped: [
+      "Ancora — fault-tolerant runtime for durable AI workflows (Temporal + Ray), open source",
       "Placement preparation",
       "AI systems and distributed systems",
-      "Open source",
-      todo("Anything specific you're building or contributing to right now?"),
     ],
-    tech: ["Distributed Systems", "AI Systems", "Production AI"],
-    lessons: [],
-    impact: "B.Tech completes 2027.",
+    tech: ["Temporal", "Ray", "Distributed Systems", "OpenTelemetry", "Chaos Engineering", "Production AI"],
+    lessons: [
+      "Durability and liveness are different guarantees. Temporal keeps your state through any crash; only spare capacity turns that into progress.",
+      "A fault-tolerance claim needs a test that asserts it, not a demo that shows it once.",
+    ],
+    impact:
+      "Ancora: three durability invariants machine-checked from Temporal history after a real SIGKILL, kill-detection cut 9.5× to ~6s, 284 tests green. B.Tech completes 2027.",
   },
 ];
 
