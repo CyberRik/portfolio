@@ -61,6 +61,7 @@ export interface ArchDiagram {
 
 export type ProjectId =
   | "ancora"
+  | "tinyserve"
   | "senpai"
   | "toolcalllm"
   | "gravton"
@@ -226,7 +227,114 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { label: "RFC-0001", href: "https://github.com/CyberRik/Ancora/blob/main/docs/RFC-0001-durable-ai-runtime.md" },
       { label: "Implementation plan", href: "https://github.com/CyberRik/Ancora/blob/main/docs/IMPLEMENTATION-PLAN.md" },
     ],
-    related: ["senpai", "gravton"],
+    related: ["tinyserve", "senpai", "gravton"],
+  },
+
+  /* ---------------------------------------------------------------- */
+  tinyserve: {
+    id: "tinyserve",
+    title: "TinyServe",
+    tier: "featured",
+    role: "Solo Developer",
+    period: "Aug 2026 – Present",
+    context: "Personal project · open source",
+    tagline: "A from-scratch LLM inference runtime on llama.cpp — continuous batching, KV-cache accounting, and fair scheduling, built to be fully explainable",
+    milestone: "current",
+
+    overview:
+      "A small, fully-understood inference runtime built on top of llama.cpp: continuous batching, block-based KV-cache accounting, admission control, and pluggable fair scheduling (FIFO / priority / WFQ), implemented from scratch in async Python. llama.cpp does the matrix multiplication; everything above that line — what runs next, whose tokens go in this batch, when a request gets rejected, how backpressure reaches the client — is TinyServe's own code, small enough to hold in your head and benchmarked to prove every claim.",
+    problem:
+      "The scheduling ideas behind vLLM and SGLang — continuous batching, paged KV-cache memory, fairness-aware admission control — are usually learned by reading about them, because the real implementations live inside codebases too large to trace end-to-end in a sitting. The goal wasn't to beat those systems on throughput; it was to build the same ideas at a scale where any latency number can be traced back to a specific scheduling decision in the code, backed by a real metric, not a guess.",
+    architecture: {
+      summary:
+        "One background asyncio task (the batch loop) owns every call into llama.cpp, which sidesteps needing locks around its state. Each tick: the Admission Controller fail-fast-rejects on queue depth or KV budget; the Scheduler asks the active policy which waiting requests claim a newly-free concurrency slot; the Batch Builder merges chunked-prefill slices and decode steps into one llama.cpp batch call; the KV Cache Manager reserves/releases logical blocks over llama.cpp's own per-sequence KV API; and the Stream Manager detokenizes incrementally and pushes tokens over SSE.",
+      diagram: {
+        caption: "TinyServe — one request, one shared batch loop",
+        nodes: [
+          { id: "client", label: "Client", sub: "POST /generate", col: 0, row: 1, kind: "input" },
+          { id: "admission", label: "Admission Controller", sub: "queue depth + KV budget", col: 1, row: 1, kind: "core" },
+          { id: "queue", label: "Request Queue", sub: "reorderable pool", col: 2, row: 1, kind: "core" },
+          { id: "sched", label: "Scheduler", sub: "FIFO · Priority · WFQ", col: 3, row: 0, kind: "core" },
+          { id: "batch", label: "Batch Builder", sub: "chunked prefill", col: 3, row: 2, kind: "core" },
+          { id: "kv", label: "KV Cache Manager", sub: "block accounting", col: 4, row: 1, kind: "store" },
+          { id: "runtime", label: "Runtime", sub: "llama_decode()", col: 5, row: 1, kind: "model" },
+          { id: "stream", label: "Stream Manager", sub: "SSE", col: 6, row: 1, kind: "output" },
+        ],
+        edges: [
+          { from: "client", to: "admission" },
+          { from: "admission", to: "client", dashed: true, label: "503 reject" },
+          { from: "admission", to: "queue" },
+          { from: "queue", to: "sched" },
+          { from: "sched", to: "batch" },
+          { from: "batch", to: "kv" },
+          { from: "kv", to: "runtime" },
+          { from: "runtime", to: "stream" },
+          { from: "stream", to: "client", dashed: true, label: "SSE tokens" },
+        ],
+      },
+    },
+    challenges: [
+      {
+        title: "Validating the riskiest bet before building around it",
+        body:
+          "Real multi-sequence continuous batching — one llama_decode() call advancing several independent requests together — was the whole point of the project and the part most likely not to work with llama-cpp-python's high-level API. It was proven with a standalone script first: two prompts, one decode call, two coherent independent continuations. Only after that worked did the queue, scheduler and admission layers get built on top of the assumption.",
+      },
+      {
+        title: "What a scheduling policy actually controls once batching is continuous",
+        body:
+          "Every active sequence advances one decode step per tick regardless of policy — that part isn't negotiable. The one honest lever left is which waiting request claims a free concurrency slot next. FIFO, strict Priority and WFQ are three benchmarked answers to exactly that question, not three different execution strategies pretending otherwise.",
+      },
+      {
+        title: "A benchmark that argued against its own hypothesis",
+        body:
+          "Chunked prefill was expected to visibly protect short requests' tail latency from a long prompt's prefill. It didn't, measurably, at the scale tested — because the batch builder already sorts sequences by ascending pending-token count each tick, so short requests get packed in before a long prefill regardless of chunk size. The mechanism was traced and reported as a negative result, not tuned until a difference appeared.",
+      },
+      {
+        title: "A pre-release audit found a real gap in the admission controller",
+        body:
+          "A self-audit against the original design doc, run deliberately before tagging a v1.0, found the admission controller was only checking KV-cache budget — missing the queue-depth backpressure check the design called for, so a burst of many small-footprint requests could grow the wait queue unboundedly. Fixed and verified live: with a deliberately small queue cap, exactly the expected split of requests came back accepted vs. rejected with a distinct queue_full reason.",
+      },
+      {
+        title: "Cross-checking a profiler against your own metric",
+        body:
+          "A real py-spy sampling session found 97.2% of wall time inside llama_decode(). Rather than trust that number in isolation, it was checked quantitatively against the server's own decode_step_duration_seconds histogram from the same window — independent agreement between a profiler and a self-emitted metric, not a single unverified reading.",
+      },
+      {
+        title: "Catching an overclaim in the project's own benchmark doc",
+        body:
+          "A sustained-load benchmark's write-up originally claimed 'no drift or leak' from a 15-second run — nowhere near long enough to support that phrase in the sense it usually means. The same audit that found the admission-control gap caught this too, and the claim was walked back to exactly what a 15-second window can honestly demonstrate.",
+      },
+    ],
+    stack: [
+      { group: "Runtime", items: ["llama.cpp", "Python 3.11", "AsyncIO", "ctypes bindings"] },
+      { group: "Scheduling", items: ["Continuous batching", "Chunked prefill", "FIFO / Priority / WFQ"] },
+      { group: "Serving", items: ["FastAPI", "SSE streaming"] },
+      { group: "Observability", items: ["Prometheus", "Grafana", "OpenTelemetry", "py-spy"] },
+      { group: "Quality", items: ["pytest", "mypy --strict", "ruff", "Docker Compose"] },
+    ],
+    results: [
+      "Real multi-sequence continuous batching validated with a standalone proof-of-concept before the surrounding scheduler was built — one llama_decode() call advancing independent sequences together.",
+      "Admission control verified live under burst load: 42/64 requests accepted at exactly the KV-budget boundary, the remainder rejected with a distinct reason rather than queued indefinitely.",
+      "WFQ bounds unfairness at 2.54× against strict Priority's 3.87×, while FIFO ignores priority entirely (0.45×) — measured head-to-head, not asserted.",
+      "py-spy profiling found 97.2% of wall time inside llama_decode(), cross-checked quantitatively against the server's own decode_step_duration_seconds metric.",
+      "A pre-release engineering audit against the original design doc found and fixed a real gap — the admission controller was missing its queue-depth backpressure check — before shipping.",
+      "8 benchmark scripts, a Prometheus + Grafana dashboard stack, and full architecture documentation, including every place the shipped code intentionally diverges from the design doc.",
+    ],
+    lessons: [
+      "Validate the riskiest architectural bet with a throwaway proof-of-concept before building the system around the assumption it depends on.",
+      "Once continuous batching is running, a scheduling policy has exactly one lever left — which requests claim a free slot — and pretending otherwise would misrepresent what the code actually does.",
+      "A benchmark that fails to show the effect you expected is still a result if you can name the mechanism. Chunked prefill's 'no measurable difference' finding came with a specific reason, not a shrug.",
+      "Audit your own claims before publishing them. A 15-second sustained-load run doesn't support a 'no memory leak' claim, and catching that before it shipped was the actual point of the self-audit.",
+    ],
+    timeline: [
+      { when: "Aug 2026", what: "Phases 0-1: bare execution loop against llama.cpp, then SSE streaming and a FIFO queue." },
+      { when: "Aug 2026", what: "Phase 2: real multi-sequence continuous batching and the KV Cache Manager, validated by a standalone POC first." },
+      { when: "Aug 2026", what: "Phase 3: chunked prefill, FIFO/Priority/WFQ scheduling policies, cancellation and timeouts." },
+      { when: "Aug 2026", what: "Phase 4: Prometheus metrics, OpenTelemetry tracing, a real Grafana dashboard, and a py-spy profiling session." },
+      { when: "Aug 2026", what: "Benchmark suite (8 scripts) and full architecture docs; a pre-release self-audit found and fixed a real gap in admission control." },
+    ],
+    links: [{ label: "GitHub", href: "https://github.com/CyberRik/tinyserve" }],
+    related: ["ancora", "toolcalllm"],
   },
 
   /* ---------------------------------------------------------------- */
@@ -307,8 +415,8 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       },
     ],
     stack: [
-      { group: "Orchestration", items: ["Planner", "Adaptive Scheduler", "Capability graphs", "DAG execution"] },
-      { group: "Retrieval", items: ["GraphRAG", "CRM retrieval", "EvidenceBundle"] },
+      { group: "Orchestration", items: ["Capability graphs", "DAG execution", "Adaptive scheduling"] },
+      { group: "Retrieval", items: ["GraphRAG", "CRM retrieval"] },
       { group: "Serving", items: ["Prefix caching", "Persistent context caching", "Parallel execution"] },
     ],
     results: [
@@ -404,7 +512,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { group: "Model", items: ["Qwen3-8B", "QLoRA", "LoRA", "PEFT"] },
       { group: "Hardware", items: ["NVIDIA DGX Spark"] },
       { group: "Data", items: ["Synthetic generation", "Schema normalisation"] },
-      { group: "Evaluation", items: ["BFCL", "Automated eval harness"] },
+      { group: "Evaluation", items: ["BFCL"] },
     ],
     results: [
       "97% BFCL accuracy on single-turn function calling with the fine-tuned Qwen3-8B.",
@@ -431,16 +539,16 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
   /* ---------------------------------------------------------------- */
   gravton: {
     id: "gravton",
-    title: "Gravton — Crawler & Citation Engine",
+    title: "Gravton — Crawler, Citations & Social Pipelines",
     tier: "featured",
     role: "AI Engineer",
-    period: "Feb 2026 – May 2026",
+    period: "Feb 2026 – Jun 2026",
     context: "Gravton Labs · Ontario, Canada (remote)",
-    tagline: "The crawl and attribution layer under a GEO visibility platform",
+    tagline: "The crawl, attribution and ingestion layer under a GEO visibility platform",
     milestone: "ai-infra",
 
     overview:
-      "Gravton is an AI-search-visibility platform: it tells a brand how it shows up inside answers from ChatGPT, Perplexity, Claude and Google AI Overviews. I built the two systems underneath that — the crawler that decides which pages are worth fetching, and the citation engine that turns raw citations into the brand-level metrics the product reports.",
+      "Gravton is an AI-search-visibility platform: it tells a brand how it shows up inside answers from ChatGPT, Perplexity, Claude and Google AI Overviews. I built the data layer underneath it — the crawler that decides which pages are worth fetching, the citation engine that turns raw citations into the brand-level metrics the product reports, and the Reddit, Quora and YouTube pipelines that bring community signal in. Later I moved the whole orchestration layer onto Airflow and took it to production.",
     problem:
       "Both halves are selection problems disguised as data problems. A crawler with a page budget spends it on whatever URL order it happened to receive, so it drowns in blog posts and misses pricing and comparison pages — exactly the commercial-intent content that drives AI answers. And a citation is only useful once it's attributed to a brand; do that against a global brand list and every row matches something, which is worse than matching nothing.",
     architecture: {
@@ -490,33 +598,51 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
           "Citation share can't be a raw count. It aggregates per (brand, prompt, model) over K generations, then per model with prompt weights, then cross-model with model weights — and the synthetic unattributed brand has to be excluded from the share denominator or every brand's number quietly shrinks. Rank uses competition ranking, so ties share a rank and the next rank skips by the tie-block size.",
       },
       {
+        title: "Three social platforms, one authority contract",
+        body:
+          "Reddit, Quora and YouTube disagree about everything — what a \"post\" is, what engagement means, whether subscribers exist. The temptation is three bespoke pipelines, and then nothing downstream can compare them. Each became a Django app behind its own Airflow DAG, but all three converge on the same two contracts: a deterministic authority score over five weighted signals summing to 1.0, and entity-mention answer units exposed read-only to downstream DAGs. The weights differ per platform because the signals genuinely differ — Reddit has no subscriber-dominant signal like a YouTube channel does, so engagement and content quality carry more there — but the shape is identical, and every component score is explainable rather than a model output nobody can defend.",
+      },
+      {
+        title: "Sizing the browser pool by auditing it, not guessing",
+        body:
+          "The crawler pool started at 2 browsers, 100 contexts (50 per browser) and 250 pages (5 per context) — sized for throughput on paper. Production disagreed: crawls were returning zero pages with a queue_exhausted classification, and the cause wasn't obvious from either the queue or the pool in isolation. I wrote the pool audit as a read-only document first — what creates what, who drains whom, where the retry actually lives — before changing a line. The answer was that the tiers were provisioned far past what a browser could keep healthy, so contexts came down 5× to 20 and pages to 25. Writing the audit before the fix is what kept it from being a guess-and-retune loop.",
+      },
+      {
         title: "Auditing a migration instead of trusting it",
         body:
           "When the pipeline moved from the backend engine into Airflow DAGs, the execution shell and basic enrichment came across but the intelligence layer largely didn't — no discovery, no scoring, no typed budgeting. I audited it metric by metric against the original as the truth source and scored completeness at 38%, which is a far more useful number to hand someone than 'mostly migrated'. The gaps that mattered were the silent ones: dense-vs-positional rank, a 0–1 share where the old APIs returned 0–100.",
       },
     ],
     stack: [
-      { group: "Backend", items: ["FastAPI", "Railway", "Supabase", "PostgreSQL"] },
-      { group: "Pipelines", items: ["Airflow", "Apify", "SERP APIs"] },
-      { group: "Extraction", items: ["YAKE", "Markdown-first parsing", "Page-type classification"] },
-      { group: "Sources", items: ["Reddit", "Quora", "Competitor sites"] },
+      { group: "Backend", items: ["FastAPI", "Django REST", "Railway", "Supabase", "PostgreSQL"] },
+      { group: "Pipelines", items: ["Airflow", "Celery", "Apify", "Modal", "S3 artifacts"] },
+      { group: "Crawling", items: ["Playwright", "Apify", "Browser pooling"] },
+      { group: "Extraction", items: ["YAKE", "Page-type classification"] },
+      { group: "Sources", items: ["Reddit", "Quora", "YouTube"] },
+      { group: "Infra", items: ["Docker Compose", "Traefik", "Gunicorn", "nginx"] },
     ],
     results: [
-      "Built the crawler's discovery, scoring, selection and budgeting layers — sitemap and DOM discovery, an adaptive pass, canonical dedupe with locale normalisation and robots gating, and typed slot allocation.",
-      "Built the citation attribution pipeline: layered candidate construction, map-scoped support attribution, and per-row diagnostics separating no-content, weak-candidate and no-match failures.",
+      "Primary author of the citation attribution engine — 76 of 92 commits in the citations package — normalising extraction across 5 LLM provider families plus Google AI Overviews behind one registry, gated on retrieved grounding so ungrounded URLs never score.",
+      "Sole author of the Reddit, Quora and YouTube intelligence pipelines: three Django apps behind their own Airflow DAGs (YouTube alone is 17 tasks), with deterministic 5-signal authority scoring and read-only answer-unit contracts downstream.",
+      "Built the crawler's discovery, scoring, selection and budgeting layers — sitemap and DOM discovery, an adaptive pass, Apify fallback, canonical dedupe with locale normalisation and robots gating, and typed slot allocation.",
       "Implemented the citation metric set powering the Insights Engine — mass-weighted brand share, competition-ranked position, per-model availability, and domain, page and daily-trend tables.",
-      "Migrated the backend from Encore TypeScript to FastAPI microservices on Railway with Supabase, while the pipeline kept collecting.",
+      "Drove the Airflow migration and took the platform to production: containerised the Django + Celery + Airflow stack, then hardened the deploy — Gunicorn, locked-down Traefik, internal services off the host network, request-time nginx upstream DNS.",
+      "Migrated the crawler and insights services from Encore TypeScript to FastAPI on Railway with Supabase, dispatching heavy stages to Modal serverless, while the pipeline kept collecting.",
+      "Closed a cross-brand-set data leak that surfaced out-of-scope competitors in customer-facing citation results.",
     ],
     lessons: [
       "Ordering is a correctness property, not a performance one. Candidate starvation wasn't a scoring bug — the scorer was fine, it just ran before the data it needed existed.",
       "Constrain the search space before you score it. Attribution against a global brand set always finds something; attribution scoped to a candidate map can honestly return nothing, and being able to return nothing is what makes the matches worth anything.",
       "Grade a migration against the original as the truth source, metric by metric. 'It runs' and 'it agrees with what it replaced' are very different claims, and only the second one is worth making.",
+      "Write the audit before the fix. The pool was oversized 5× and the symptom was zero-page crawls; reading the system end to end on paper first turned what would have been a guess-and-retune loop into one change.",
+      "Platforms that share nothing still need to share a contract. Three bespoke social pipelines would have been easier to write and impossible to compare — the per-platform weights differ, but the five-signal shape and the answer-unit interface don't.",
     ],
     timeline: [
-      { when: "Feb 2026", what: "Joined Gravton Labs as AI Engineer intern." },
-      { when: "Feb – Mar 2026", what: "Crawler discovery, URL scoring and typed crawl budgeting." },
-      { when: "Mar – Apr 2026", what: "Citation attribution: candidate map, scoped scoring, failure taxonomy." },
-      { when: "Apr – May 2026", what: "Metric parity audit for the Airflow migration; backend move to FastAPI." },
+      { when: "Feb 2026", what: "Joined Gravton Labs as AI Engineer intern; moved the crawler in and got it running end to end." },
+      { when: "Feb – Mar 2026", what: "Crawler discovery, URL scoring, typed crawl budgeting and the pool audit." },
+      { when: "Mar – Apr 2026", what: "Citation attribution: candidate map, scoped scoring, failure taxonomy, metrics and endpoints." },
+      { when: "Apr – May 2026", what: "Airflow migration and containerisation; metric parity audit; citation and crawl DAGs to production." },
+      { when: "May – Jun 2026", what: "YouTube, Reddit and Quora intelligence pipelines; production deploy hardening." },
     ],
     links: [{ label: "Resume", href: "/resume.pdf" }],
     related: ["tax-cpa-parser", "smartfan"],
@@ -578,6 +704,16 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
           "Naive fixed-size chunking destroys the structure that makes a tax document answerable. Moving to semantic, recursive and hybrid chunking lifted long-document RAG accuracy by 20–30%.",
       },
       {
+        title: "Extending the in-house parser past the formats it was built for",
+        body:
+          "od-parse handled PDFs and images. The documents that actually arrived included spreadsheets, decks, Word files and CAD drawings, and each one routed to a stage that didn't exist. I extended it with Excel, DOCX and PPTX pipelines, embedded-image extraction and an image-enhancement preprocessing pass, behind a router that triages a PDF as vector or raster before choosing a path — the two cases want completely different extractors, and guessing wrong is silent. It shipped as a Dockerized FastAPI service so the library stopped being something each caller vendored and became one endpoint.",
+      },
+      {
+        title: "Mechanical drawings: detection is fast, verification is right",
+        body:
+          "Engineering drawings are dense with small annotations, and the two obvious approaches each fail on their own. A specialised detector is fast and finds most annotations but can't read them; a multimodal model reads them but is expensive and misses things at full-page scale. The pipeline runs three stages instead: Roboflow detects candidate annotations, Gemini verifies and parses the cropped patches, and a final full-image scan catches what detection missed entirely. The catch was rate limiting — one API call per patch on a dense drawing means 429s immediately. Batching every patch into a single verification call is what made the middle stage viable at all.",
+      },
+      {
         title: "Rate limits reshaped the chunking strategy",
         body:
           "The pipeline started returning 429s from Gemini, and the cause was upstream of the API layer: chunking was producing many small pieces, and each piece was a call. The fix inverted the usual instinct — instead of smaller, more careful chunks, enforce a hard ceiling of three chunks per document and let chunk size grow to meet it, doubling iteratively until the count fits. Chunking itself moved to local MiniLM embeddings so semantic splitting costs no API calls at all, with a minimum sentence count per chunk to stop fragmentation and a semaphore capping parallel calls. Fewer, larger chunks suit a long-context model anyway; the rate limit just forced the realisation.",
@@ -599,15 +735,17 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       },
     ],
     stack: [
-      { group: "Document AI", items: ["OCR", "CV layout detection", "Multimodal encoders", "Gemini 2.5 Flash"] },
-      { group: "Chunking", items: ["Chonkie", "Semantic chunking", "Recursive fallback", "all-MiniLM-L6-v2"] },
-      { group: "Pipeline", items: ["Prefect", "LlamaParse", "Typed metrics", "Exponential backoff"] },
-      { group: "Backend", items: ["Python", "LLM routing", "Google Cloud Storage"] },
+      { group: "Document AI", items: ["OCR", "CV layout detection", "Multimodal encoders", "Gemini 2.5 Flash", "Roboflow"] },
+      { group: "Chunking", items: ["Chonkie", "Semantic chunking", "all-MiniLM-L6-v2"] },
+      { group: "Pipeline", items: ["Prefect", "LlamaParse", "FastAPI", "Docker"] },
+      { group: "Backend", items: ["Python", "Google Cloud Storage"] },
     ],
     results: [
       "10K+ pages processed per month, end to end.",
       "Long-document RAG accuracy up 20–30% via semantic, recursive and hybrid chunking.",
       "Onboarded 10+ U.S. CPA firms, cutting manual review time by 40%+.",
+      "Extended od-parse, the in-house parser, from PDF/image to Excel, DOCX, PPTX and CAD vector formats behind an intelligent router with vector-vs-raster PDF triage — shipped as a Dockerized FastAPI service.",
+      "Built od-parse's mechanical-drawing pipeline: Roboflow detection, batched Gemini multimodal verification, and a full-image rescan recovering annotations the detector missed.",
     ],
     lessons: [
       "Fix rate limits at the layer that causes them. The 429s looked like an API problem and were a chunking-strategy problem; retry logic would have made them slower and permanent.",
@@ -680,9 +818,8 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       },
     ],
     stack: [
-      { group: "Speech & NLP", items: ["Whisper", "BART", "Spoof detection"] },
+      { group: "Speech & NLP", items: ["Whisper", "BART", "Fine-tuning"] },
       { group: "Realtime", items: ["WebSockets", "Maps API"] },
-      { group: "Team", items: ["5-member cross-functional team", "MVP delivery"] },
     ],
     results: [
       "Spoof detection at 78% precision on emergency call audio.",
@@ -755,7 +892,6 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     stack: [
       { group: "Model", items: ["Phi-3", "QLoRA", "PyTorch"] },
       { group: "Data", items: ["MedQA", "MedMCQA", "PubMedQA", "Dedup pipelines"] },
-      { group: "Evaluation", items: ["MedMCQA benchmark", "OOD hallucination rate"] },
     ],
     results: [
       "82.6% accuracy on MedMCQA.",
@@ -815,7 +951,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       },
     ],
     stack: [
-      { group: "Model", items: ["Gemini 2.5 Flash", "Multimodal tagging"] },
+      { group: "Model", items: ["Gemini 2.5 Flash"] },
       { group: "Pipelines", items: ["n8n", "Twitter API", "YouTube API", "Google APIs"] },
     ],
     results: [
@@ -877,7 +1013,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       },
     ],
     stack: [
-      { group: "Core", items: ["Python", "Algorithms", "Simulation"] },
+      { group: "Core", items: ["Python", "NumPy"] },
       { group: "Robotics", items: ["RRT variants", "Collision detection", "Path optimisation"] },
     ],
     results: [
@@ -896,7 +1032,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
   },
 };
 
-export const FEATURED: ProjectId[] = ["ancora", "senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
+export const FEATURED: ProjectId[] = ["ancora", "tinyserve", "senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
 export const ARCHIVE: ProjectId[] = ["medproqa", "smartfan", "rrt"];
 
 /* ------------------------------------------------------------------ */
@@ -1035,20 +1171,22 @@ export const MILESTONES: Milestone[] = [
     period: "2026 – 2027",
     became: todo("What are you becoming next? One line, in your own words."),
     summary:
-      "Placement preparation alongside continued work on AI systems. Ancora is where that goes — a durable execution runtime for AI workflows, built to make losing a multi-step computation to a dead worker structurally impossible, and to prove it with chaos experiments that assert rather than demonstrate.",
-    projects: ["ancora"],
+      "Placement preparation alongside continued work on AI systems, split across two personal runtimes. Ancora makes losing a multi-step computation to a dead worker structurally impossible, proven with chaos experiments that assert rather than demonstrate. TinyServe takes the same scheduling instincts — admission control, fair queuing, backpressure — and applies them to LLM inference, built from scratch on llama.cpp at a scale where every latency number traces back to a specific decision in the code.",
+    projects: ["ancora", "tinyserve"],
     alsoShipped: [
       "Ancora — fault-tolerant runtime for durable AI workflows (Temporal + Ray), open source",
+      "TinyServe — from-scratch LLM inference runtime on llama.cpp, open source",
       "Placement preparation",
       "AI systems and distributed systems",
     ],
-    tech: ["Temporal", "Ray", "Distributed Systems", "OpenTelemetry", "Chaos Engineering", "Production AI"],
+    tech: ["Temporal", "Ray", "Distributed Systems", "OpenTelemetry", "Chaos Engineering", "llama.cpp", "Continuous Batching", "Prometheus", "Grafana"],
     lessons: [
       "Durability and liveness are different guarantees. Temporal keeps your state through any crash; only spare capacity turns that into progress.",
       "A fault-tolerance claim needs a test that asserts it, not a demo that shows it once.",
+      "The same scheduling primitives — admission control, fair queuing — apply whether the resource being rationed is worker-seconds or KV-cache memory; only the substrate changes.",
     ],
     impact:
-      "Ancora: three durability invariants machine-checked from Temporal history after a real SIGKILL, kill-detection cut 9.5× to ~6s, 284 tests green. B.Tech completes 2027.",
+      "Ancora: three durability invariants machine-checked from Temporal history after a real SIGKILL, kill-detection cut 9.5× to ~6s, 284 tests green. TinyServe: WFQ bounds scheduling unfairness 2.54× vs strict Priority's 3.87×, admission control verified live under burst load, 97.2% of wall time profiled inside llama_decode(). B.Tech completes 2027.",
   },
 ];
 

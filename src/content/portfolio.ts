@@ -103,11 +103,13 @@ export const EXPERIENCE: Role[] = [
     company: "Gravton Labs",
     title: "AI Engineer Intern",
     location: "Ontario, Canada · Remote",
-    period: "Feb 2026 – May 2026",
+    period: "Feb 2026 – Jun 2026",
     bullets: [
-      "GEO retrieval pipelines across Reddit and Quora — SERP-driven discovery, Apify extraction, Airflow DAG orchestration.",
-      "Migrated backend from Encore TypeScript to FastAPI microservices on Railway with Supabase.",
-      "Citation attribution and AI-visibility metrics powering the Insights Engine for brand monitoring across LLM content.",
+      "Primary engineer on the citation attribution engine — extraction normalized across 5 LLM provider families plus Google AI Overviews, gated on retrieved grounding so ungrounded URLs never score.",
+      "Sole author of the Reddit, Quora and YouTube intelligence pipelines: three Django apps behind their own Airflow DAGs, with deterministic 5-signal community-authority scoring.",
+      "Sole engineer on the production crawler — adaptive discovery (DOM, sitemap, Apify fallback) feeding a best-first scorer over a three-tier pooled Playwright runtime.",
+      "Drove the Airflow migration and took the platform to production — containerized the Django + Celery + Airflow stack, then hardened the deploy.",
+      "Ported the crawler and insights services from Encore TypeScript to FastAPI on Railway over Supabase, dispatching heavy stages to Modal serverless.",
     ],
   },
   {
@@ -143,30 +145,30 @@ export interface SkillGroup {
 }
 
 export const SKILLS: SkillGroup[] = [
-  { label: "Languages", items: ["Python", "C++", "JavaScript", "Bash"] },
+  { label: "Languages", items: ["Python", "C++", "TypeScript", "SQL", "Bash"] },
   {
     label: "LLM & ML",
-    items: ["PyTorch", "Transformers", "QLoRA / LoRA / PEFT", "Instruction Tuning", "Tool & Function Calling"],
+    items: ["PyTorch", "Transformers", "TRL / PEFT", "QLoRA / LoRA", "Tool & Function Calling", "Evaluation"],
+  },
+  {
+    label: "GPU & Training",
+    items: ["CUDA", "DGX Spark", "Unsloth", "FlashAttention-2", "NF4 / BF16 / FP8"],
   },
   {
     label: "Retrieval",
-    items: ["LangChain", "FAISS", "ChromaDB", "Hybrid Retrieval", "Reranking", "Chunking Strategies"],
+    items: ["RAG & Hybrid Retrieval", "GraphRAG", "ChromaDB", "pgvector", "Chunking Strategies"],
   },
   {
-    label: "Document AI",
-    items: ["Multimodal AI", "OCR / PaddleOCR", "YOLOv10", "CV Layout Detection"],
+    label: "Distributed Systems",
+    items: ["Temporal", "Ray", "Airflow", "Celery", "Event Sourcing", "Exactly-Once Semantics"],
   },
   {
     label: "Backend",
-    items: ["FastAPI", "REST APIs", "AsyncIO", "PostgreSQL", "Supabase"],
+    items: ["FastAPI", "Django REST", "AsyncIO", "WebSockets", "PostgreSQL", "Redis"],
   },
   {
-    label: "Data & Pipelines",
-    items: ["Airflow", "Apify", "NumPy", "Pandas", "BeautifulSoup"],
-  },
-  {
-    label: "Cloud & Infra",
-    items: ["Docker", "GCP", "Azure", "Modal", "Railway", "CI/CD", "Linux"],
+    label: "Infra & Observability",
+    items: ["Docker", "GCP", "Modal", "CI/CD", "Linux", "OpenTelemetry", "Prometheus"],
   },
 ];
 
