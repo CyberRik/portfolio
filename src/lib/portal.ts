@@ -5,6 +5,7 @@ import type { Vector3Tuple } from "three";
 import { flyToPose, flyToView, setPortalDepth } from "@/components/camera/cameraBus";
 import { CAMERA_VIEWS, type CameraViewId } from "@/config/camera.config";
 import type { SectionId } from "@/content/portfolio";
+import { isCoarsePointer } from "@/lib/interaction";
 
 /**
  * Which portal world currently owns the frame — the single source of
@@ -72,10 +73,29 @@ export function usePopOut(): boolean {
   );
 }
 
+/**
+ * Sections rendered IN-SCENE rather than as a fullscreen DOM world.
+ *
+ * Only Projects: MonitorScreen pins a 1152x448 desktop to the monitor's
+ * screen plane, so it is bounded by how much of that plane the viewport
+ * can show. That is a great effect on a desktop and unusable on a phone
+ * — measured on an iPhone 12 the desktop rendered cropped past the left
+ * edge, with body text sliced mid-word and no way to reach it, because
+ * the plane is simply wider than the frame at any portrait framing the
+ * poses allow.
+ */
+const IN_SCENE: ReadonlySet<SectionId> = new Set(["projects"] as SectionId[]);
+
 export function openPortal(s: SectionId) {
   if (section === s) return;
   section = s;
-  popOut = false;
+  // Touch devices open the in-scene desktop already popped out. The
+  // popped-out branch renders the very same Desktop component at
+  // fullscreen, so this costs nothing but a default — and the manual
+  // "Dock to Desk" toggle still works for anyone who wants the 3D
+  // version. Deliberately keyed on pointer type, not viewport width: a
+  // narrow desktop window can still be dragged wider, a phone cannot.
+  popOut = IN_SCENE.has(s) && isCoarsePointer();
   emit();
   setPortalDepth(true);
   const p = PORTAL_PUSH[s];

@@ -72,34 +72,45 @@ export default function Home() {
       <ExperienceOverlay />
       <OnboardingHint />
 
-      {/* Quiet identity chip */}
-      <div className="pointer-events-none absolute top-6 left-6 z-40 select-none">
-        <p className="font-mono text-[11px] tracking-[0.35em] text-[#a89880] uppercase">
-          Ritankar Mondal
-        </p>
-        <p className="mt-1 font-mono text-[10px] tracking-[0.2em] text-[#6b6152]">
-          AI Engineer · IIT Madras
-        </p>
-      </div>
+      {/* Top bar: the quiet identity chip, and the 20-second answers —
+          résumé and a way to reach me, always one tap away, no exploring
+          required.
 
-      {/* The 20-second answers — résumé and a way to reach me, always
-          one click away, no exploring required */}
-      <div className="absolute top-6 right-6 z-40 flex items-center gap-5 font-mono text-[10px] tracking-[0.2em] uppercase">
-        <AmbientAudio />
-        <a
-          href={PROFILE.resumeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
-        >
-          resume ↓
-        </a>
-        <a
-          href={`mailto:${PROFILE.email}`}
-          className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
-        >
-          say hello ↗
-        </a>
+          ONE flex row rather than two independently anchored corners.
+          Anchoring them separately (top-6 left-6 / top-6 right-6) is
+          fine at desktop widths and collides on every phone: at 390px
+          the identity block and the link row are each wider than half
+          the screen, so they overlapped into unreadable mush. Laying
+          them out as a single justify-between row makes that collision
+          structurally impossible at any width instead of merely tuned
+          away at the widths someone happened to test. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
+        <div className="select-none">
+          <p className="font-mono text-[9px] tracking-[0.22em] text-[#a89880] uppercase sm:text-[11px] sm:tracking-[0.35em]">
+            Ritankar Mondal
+          </p>
+          <p className="mt-1 font-mono text-[8.5px] tracking-[0.14em] text-[#6b6152] sm:text-[10px] sm:tracking-[0.2em]">
+            AI Engineer · IIT Madras
+          </p>
+        </div>
+
+        <div className="pointer-events-auto flex shrink-0 items-center gap-3 font-mono text-[9px] tracking-[0.14em] uppercase sm:gap-5 sm:text-[10px] sm:tracking-[0.2em]">
+          <AmbientAudio />
+          <a
+            href={PROFILE.resumeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
+          >
+            resume ↓
+          </a>
+          <a
+            href={`mailto:${PROFILE.email}`}
+            className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
+          >
+            say hello ↗
+          </a>
+        </div>
       </div>
     </main>
   );

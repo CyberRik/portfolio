@@ -9,7 +9,6 @@ import { CAMERA_VIEWS, DEFAULT_VIEW, resolveView } from "@/config/camera.config"
 import { fog } from "@/config/theme";
 import { Workspace } from "@/components/scene/Workspace";
 import { PortalBeacons } from "@/components/scene/PortalBeacons";
-import { PhysicsProvider } from "@/components/scene/PhysicsProvider";
 import { Lighting } from "@/components/lighting/Lighting";
 import { CameraRig } from "@/components/camera/CameraRig";
 import { Effects } from "@/components/effects/Effects";
@@ -141,9 +140,18 @@ export function SceneCanvas() {
       }}
     >
       <Suspense fallback={null}>
-        <PhysicsProvider>
-          <Workspace />
-        </PhysicsProvider>
+        {/* NO physics world here. There was a <Physics paused> wrapper
+            with a floor and four wall colliders, kept as scaffolding for
+            dynamic props. It cost nothing per frame — it was paused, and
+            with no dynamic bodies a step could only reproduce its own
+            input — but it was never free: @react-three/rapier ships its
+            wasm inlined as base64, which is a 2.2MB chunk pulled during
+            scene load, inside this Suspense boundary and therefore on the
+            path to first render. That is a large fraction of the startup
+            budget spent on a placeholder. Reinstate it (git history has
+            PhysicsProvider.tsx intact) when the first dynamic body
+            actually lands, not before. */}
+        <Workspace />
         <PortalBeacons />
         <Lighting />
         <Effects />

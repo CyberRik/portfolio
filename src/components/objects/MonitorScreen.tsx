@@ -207,10 +207,18 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
             animate={{ opacity: 1 }}
             transition={{ duration: DUR.ui, ease: EASE.out }}
           >
-            {/* menu bar — translucent, vibrancy-blurred, macOS proportions */}
+            {/* menu bar — translucent, vibrancy-blurred, macOS proportions.
+                `whitespace-nowrap` is load-bearing on a phone: popped out
+                fullscreen at 390px this row is wider than the viewport, and
+                without it the clock broke into "Fri / 22 49 / Aug" and the
+                pop-out button stacked one word per line. The items that
+                cannot fit are dropped below `sm` instead (see below) —
+                wrapping a menu bar never reads as a menu bar. */}
             <div
-              className={`flex items-center justify-between font-mono backdrop-blur-xl select-none ${
-                isPoppedOut ? "px-6 py-2 text-[12px] md:text-[13px]" : "px-4 py-1.5 text-[10px] md:text-[11px]"
+              className={`flex items-center justify-between gap-2 font-mono whitespace-nowrap backdrop-blur-xl select-none ${
+                isPoppedOut
+                  ? "px-3 py-2 text-[11px] sm:px-6 sm:text-[12px] md:text-[13px]"
+                  : "px-4 py-1.5 text-[10px] md:text-[11px]"
               }`}
               style={{
                 background: "rgba(255,255,255,0.05)",
@@ -218,18 +226,20 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
                 color: OS.dim,
               }}
             >
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-2 sm:gap-3.5">
                 <span className={isPoppedOut ? "text-[14px] leading-none" : "text-[11px] leading-none"} style={{ color: OS.txt }}>
                   ⌘
                 </span>
                 <span className="font-semibold" style={{ color: OS.txt }}>
                   RM-OS
                 </span>
-                <span>Projects</span>
-                <span>Window</span>
+                {/* Inert menu titles — pure set dressing, and the first
+                    things to go when the bar has to fit a phone. */}
+                <span className="hidden sm:inline">Projects</span>
+                <span className="hidden sm:inline">Window</span>
               </div>
-              <div className="flex items-center gap-3.5">
-                <span>{day}</span>
+              <div className="flex items-center gap-2 sm:gap-3.5">
+                <span className="hidden sm:inline">{day}</span>
                 <span className="tabular-nums" style={{ color: OS.txt }}>
                   {hh}
                   <span className="cursor-blink">:</span>
@@ -244,7 +254,12 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
                   title={isPoppedOut ? "Dock back to 3D Desk" : "Pop Out to Fullscreen"}
                 >
                   <span>{isPoppedOut ? "⤓" : "⤢"}</span>
-                  <span>{isPoppedOut ? "Dock to Desk" : "Pop Out"}</span>
+                  {/* Icon-only on a phone. The glyph plus the title
+                      attribute carry the meaning, and this label is the
+                      single widest item in the bar. */}
+                  <span className="hidden sm:inline">
+                    {isPoppedOut ? "Dock to Desk" : "Pop Out"}
+                  </span>
                 </button>
                 <button
                   onClick={closePortal}

@@ -24,6 +24,7 @@ import {
 } from "./cameraBus";
 import { focusStore } from "@/lib/focus";
 import { framedFov } from "@/lib/framing";
+import { useCoarsePointer } from "@/lib/interaction";
 
 /**
  * Directed camera. Every flight is staged like a dolly move:
@@ -42,6 +43,13 @@ import { framedFov } from "@/lib/framing";
 export function CameraRig() {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  /**
+   * Touch-primary devices get a pure turntable: rotation only, orbiting
+   * the room's centre anchor, with no dolly and no parallax. See the
+   * OrbitControls props and the parallax block for why each half of that
+   * is a separate decision.
+   */
+  const coarse = useCoarsePointer();
   const lastInteraction = useRef(-Infinity);
   const flying = useRef(false);
   /** true once the user has orbited manually since the last flight —
@@ -333,10 +341,20 @@ export function CameraRig() {
 
     // ---- micro-motion, applied after controls resolve orientation ----
 
-    // Pointer parallax: the world leans a hair's width toward the cursor
+    // Pointer parallax: the world leans a hair's width toward the cursor.
+    //
+    // Disabled on touch, where it is not parallax at all. `state.pointer`
+    // holds the LAST pointer position, and a finger that has lifted never
+    // returns to centre — so on a phone this baked a permanent yaw/pitch
+    // offset into the camera, whose size and direction depended on where
+    // the user happened to last touch the screen. Damping to 0 rather
+    // than skipping the block keeps the transition smooth if a mouse is
+    // attached to a tablet mid-session.
     const p = parallax.current;
-    p.x = THREE.MathUtils.damp(p.x, state.pointer.x, CAMERA_FEEL.parallaxDamping, delta);
-    p.y = THREE.MathUtils.damp(p.y, state.pointer.y, CAMERA_FEEL.parallaxDamping, delta);
+    const px = coarse ? 0 : state.pointer.x;
+    const py = coarse ? 0 : state.pointer.y;
+    p.x = THREE.MathUtils.damp(p.x, px, CAMERA_FEEL.parallaxDamping, delta);
+    p.y = THREE.MathUtils.damp(p.y, py, CAMERA_FEEL.parallaxDamping, delta);
     camera.rotateY(-p.x * CAMERA_FEEL.parallaxYaw);
     camera.rotateX(p.y * CAMERA_FEEL.parallaxPitch);
 
@@ -379,7 +397,17 @@ export function CameraRig() {
       // envelope (every clamp is target-relative) — orbit + dolly
       // covers all exploration; flights handle re-targeting
       enablePan={false}
-      rotateSpeed={0.38}
+      // No dolly on touch. Pinch-zoom is the only forward/backward the
+      // rig exposes, and on a phone it is a liability: it is easy to
+      // trigger accidentally while rotating, it can park the camera at a
+      // radius the portrait poses were never composed for, and there is
+      // no cheap way back. With it off, a phone gets exactly one verb —
+      // drag to rotate — pivoting the room-centre anchor that
+      // COMFORT_WEDGE already glides the look-target to on manual
+      // takeover. Distance is then owned entirely by the dock flights,
+      // which is why the dock had to become fully reachable first.
+      enableZoom={!coarse}
+      rotateSpeed={coarse ? 0.55 : 0.38}
       zoomSpeed={0.5}
       minDistance={ORBIT_LIMITS.minDistance}
       maxDistance={ORBIT_LIMITS.maxDistance}

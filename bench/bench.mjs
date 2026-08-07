@@ -40,6 +40,14 @@
  *   node bench/bench.mjs [--url=http://localhost:3177] [--runs=3]
  *                        [--sample=10000] [--warmup=4000]
  *                        [--tiers=low,medium,high]
+ *                        [--modes=capped,uncapped]
+ *                        [--variants='base:|noao:-ao|msaa2:msaa2']
+ *
+ * VARIANTS compare `?fx=` settings within ONE build, which is the only
+ * way to attribute cost to a single knob — rebuilding between configs
+ * changes chunk hashes, cache state and shader compilation order along
+ * with the setting under test. Format is `label:fxstring`, pipe-
+ * separated, because fx strings themselves contain commas.
  */
 
 import fs from "node:fs";
@@ -59,6 +67,22 @@ const RUNS = Number(arg("runs", "3"));
 const SAMPLE_MS = Number(arg("sample", "10000"));
 const WARMUP_MS = Number(arg("warmup", "4000"));
 const TIERS = arg("tiers", "low,medium,high").split(",");
+const MODES = arg("modes", "capped,uncapped").split(",");
+/**
+ * Viewport, as `WxH`. Worth varying: at 1440x900 the high tier is not
+ * fill-rate bound on a fast GPU, so every config holds vsync and the
+ * capped numbers are all identical — the bench stops discriminating. A
+ * larger viewport is the honest stand-in for "a weaker GPU at the same
+ * resolution", since both land as more fragments per frame.
+ */
+const [VW, VH] = arg("viewport", "1440x900").split("x").map(Number);
+/** `label:fxstring` pairs; the default is a single unmodified run */
+const VARIANTS = arg("variants", "base:")
+  .split("|")
+  .map((v) => {
+    const i = v.indexOf(":");
+    return { label: v.slice(0, i), fx: v.slice(i + 1) };
+  });
 
 /** 60fps interval */
 const BUDGET_MS = 1000 / 60;
@@ -146,23 +170,28 @@ async function finishSampling(page, ms) {
 
 /** continuous orbit drag, to measure the scene while the camera moves */
 async function orbit(page, ms) {
+  // Centred on the viewport rather than on a hardcoded 1440x900, so a
+  // larger run drags the same arc through the middle of the room instead
+  // of starting off-centre and clamping against the rig's azimuth limits.
+  const cx = VW / 2;
+  const cy = VH / 2;
   const t0 = Date.now();
-  await page.mouse.move(720, 450);
+  await page.mouse.move(cx, cy);
   await page.mouse.down();
   while (Date.now() - t0 < ms) {
     const k = ((Date.now() - t0) / 900) % (Math.PI * 2);
-    await page.mouse.move(720 + Math.sin(k) * 240, 450 + Math.cos(k) * 60, { steps: 3 });
+    await page.mouse.move(cx + Math.sin(k) * 240, cy + Math.cos(k) * 60, { steps: 3 });
   }
   await page.mouse.up();
 }
 
-async function runOnce({ tier, scenario, uncapped }) {
+async function runOnce({ tier, scenario, uncapped, fx }) {
   const browser = await chromium.launch({
     args: uncapped ? [...GPU_FLAGS, ...UNCAPPED_FLAGS] : GPU_FLAGS,
   });
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await page.goto(`${URL_BASE}/?quality=${tier}`, {
+    const page = await browser.newPage({ viewport: { width: VW, height: VH } });
+    await page.goto(`${URL_BASE}/?quality=${tier}${fx ? `&fx=${fx}` : ""}`, {
       waitUntil: "networkidle",
       timeout: 120000,
     });
@@ -188,28 +217,33 @@ async function runOnce({ tier, scenario, uncapped }) {
 
 const results = [];
 
-for (const uncapped of [false, true]) {
+for (const mode of MODES) {
+  const uncapped = mode === "uncapped";
   for (const tier of TIERS) {
-    for (const scenario of ["idle", "orbit"]) {
-      const runs = [];
-      for (let i = 0; i < RUNS; i++) {
-        process.stdout.write(
-          `  ${uncapped ? "uncapped" : "capped  "} ${tier.padEnd(6)} ${scenario.padEnd(5)} run ${i + 1}/${RUNS} ... `,
-        );
-        const r = await runOnce({ tier, scenario, uncapped });
-        runs.push(r);
-        process.stdout.write(`p50 ${r.p50.toFixed(2)}ms\n`);
+    for (const variant of VARIANTS) {
+      for (const scenario of ["idle", "orbit"]) {
+        const runs = [];
+        for (let i = 0; i < RUNS; i++) {
+          process.stdout.write(
+            `  ${mode.padEnd(8)} ${tier.padEnd(6)} ${variant.label.padEnd(8)} ${scenario.padEnd(5)} run ${i + 1}/${RUNS} ... `,
+          );
+          const r = await runOnce({ tier, scenario, uncapped, fx: variant.fx });
+          runs.push(r);
+          process.stdout.write(`p50 ${r.p50.toFixed(2)}ms\n`);
+        }
+        results.push({
+          mode,
+          tier,
+          variant: variant.label,
+          fx: variant.fx,
+          scenario,
+          runs,
+          p50: acrossRuns(runs.map((r) => r.p50)),
+          p95: acrossRuns(runs.map((r) => r.p95)),
+          p99: acrossRuns(runs.map((r) => r.p99)),
+          dropped: acrossRuns(runs.map((r) => r.droppedPct)),
+        });
       }
-      results.push({
-        mode: uncapped ? "uncapped" : "capped",
-        tier,
-        scenario,
-        runs,
-        p50: acrossRuns(runs.map((r) => r.p50)),
-        p95: acrossRuns(runs.map((r) => r.p95)),
-        p99: acrossRuns(runs.map((r) => r.p99)),
-        dropped: acrossRuns(runs.map((r) => r.droppedPct)),
-      });
     }
   }
 }
@@ -226,7 +260,8 @@ const meta = {
   runs: RUNS,
   sampleMs: SAMPLE_MS,
   warmupMs: WARMUP_MS,
-  viewport: "1440x900",
+  viewport: `${VW}x${VH}`,
+  variants: VARIANTS,
 };
 
 fs.writeFileSync(
@@ -236,7 +271,7 @@ fs.writeFileSync(
 
 const f = (n) => (Number.isFinite(n) ? n.toFixed(2) : "—");
 const row = (r) =>
-  `| ${r.mode} | ${r.tier} | ${r.scenario} | ${f(r.p50.median)} | ${f(r.p95.median)} | ` +
+  `| ${r.mode} | ${r.tier} | ${r.variant} | ${r.scenario} | ${f(r.p50.median)} | ${f(r.p95.median)} | ` +
   `${f(r.p99.median)} | ${f(r.dropped.median)}% | ${f(r.p50.min)}–${f(r.p50.max)} |`;
 
 const md = [
@@ -254,8 +289,11 @@ const md = [
   `\`p50 spread\` is min–max across runs: if two configs overlap here, the`,
   `difference between them is noise.`,
   ``,
-  `| mode | tier | scenario | p50 | p95 | p99 | dropped | p50 spread |`,
-  `| --- | --- | --- | --- | --- | --- | --- | --- |`,
+  `Variants (\`?fx=\`, all within a single build):`,
+  ...VARIANTS.map((v) => `  - \`${v.label}\` = \`${v.fx || "(tier default)"}\``),
+  ``,
+  `| mode | tier | variant | scenario | p50 | p95 | p99 | dropped | p50 spread |`,
+  `| --- | --- | --- | --- | --- | --- | --- | --- | --- |`,
   ...results.map(row),
   ``,
   `Measured headless on one machine's GPU. Relative comparison only —`,

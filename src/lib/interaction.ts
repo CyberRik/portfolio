@@ -37,6 +37,44 @@ export function subscribeHover(cb: (info: HoverInfo | null) => void) {
   };
 }
 
+/**
+ * True on touch-primary devices.
+ *
+ * Exists so copy can say "tap" where there is no cursor to click with.
+ * Read through useSyncExternalStore with a `false` server snapshot
+ * rather than a useEffect flag: the hint renders inside a delayed
+ * AnimatePresence, and a post-mount state flip would swap the wording
+ * out from under a fade that is already running.
+ *
+ * Subscribed rather than sampled once because the query genuinely
+ * changes — plugging a mouse into a tablet, or Chrome devtools device
+ * emulation, both flip it live.
+ */
+const COARSE = "(pointer: coarse)";
+
+/**
+ * Non-hook form, for module-level code that runs outside React (the
+ * portal store decides pop-out state inside a plain function call).
+ * Returns false during prerender, where there is no matchMedia.
+ */
+export function isCoarsePointer(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.(COARSE).matches ?? false;
+}
+
+export function useCoarsePointer(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      if (typeof window === "undefined" || !window.matchMedia) return () => {};
+      const mq = window.matchMedia(COARSE);
+      mq.addEventListener("change", cb);
+      return () => mq.removeEventListener("change", cb);
+    },
+    () => window.matchMedia?.(COARSE).matches ?? false,
+    () => false,
+  );
+}
+
 export function useHoveredItem(): HoverInfo | null {
   return useSyncExternalStore(
     (cb) => {

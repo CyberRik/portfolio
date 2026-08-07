@@ -174,6 +174,21 @@ export type QualitySettings = {
   /** ambient-occlusion pass */
   ao: boolean;
   /**
+   * Samples on the EffectComposer's own scene target (0 = off).
+   *
+   * Not the canvas `antialias` flag — that one stays off on every tier
+   * because the composer never renders to the default framebuffer. This
+   * is the supported way to get real MSAA in this pipeline, and it is the
+   * only antialiasing that can fix an edge SMAA cannot: SMAA reconstructs
+   * from the finished color buffer, so where a pixel's true coverage was
+   * never sampled it can only guess.
+   *
+   * It is also the only per-frame cost in this table that scales with
+   * BOTH resolution and sample count, so it lives here rather than being
+   * hardcoded — see the ablation in bench/results.
+   */
+  msaa: number;
+  /**
    * Mirror finish on the floor (MeshReflectorMaterial).
    *
    * Gated because it is not an ordinary material: it renders the entire
@@ -212,7 +227,23 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     // carry the same blue-hour gradient for a fraction of that.
     areaFill: false,
     contactShadowRes: 512,
+    // AO is the single largest contributor to HITCHING in this scene, and
+    // it is almost invisible in the p50. Measured capped at 2560x1440
+    // (bench/results, 2026-08-07): dropping it takes frames over 33ms from
+    // 2.4-4.3% to 1.25-1.53%, and the worst frame from ~800ms to ~450ms.
+    // It costs nothing at 1440x900, where the tier holds a flawless 60fps
+    // either way — so this stays ON as a deliberate visual choice, not
+    // because it is free. `?fx=-ao` now actually toggles it (it did not
+    // before; see Effects.tsx), so the trade is one flag away and
+    // re-measurable at any time.
     ao: true,
+    // 2, not 4. The composer's scene target is the one cost here that
+    // scales with resolution AND sample count, and the second doubling
+    // buys nothing visible: at 4x vs 2x the window mullion and frame
+    // edges are indistinguishable in a 2x-scale crop, while 2x vs 0
+    // is obvious (0 stairsteps the frame's top edge). 4x was ~1.2ms of
+    // p50, i.e. ~14%, for an edge nobody can see.
+    msaa: 2,
     // The only thing here that costs a whole extra scene pass per frame.
     // Removing it gave the single best p99/worst improvement in the
     // ablation, and it is the one saving that scales with scene
@@ -236,6 +267,7 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     areaFill: false,
     contactShadowRes: 256,
     ao: false,
+    msaa: 2,
     floorReflection: false,
     dust: 60,
     cityLayers: 2,
@@ -254,6 +286,7 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     areaFill: false,
     contactShadowRes: 128,
     ao: false,
+    msaa: 0,
     floorReflection: false,
     dust: 0,
     cityLayers: 2,
@@ -263,12 +296,18 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
 };
 
 /**
- * Per-setting profiling override: `?fx=-reflect,-pcss,-area,-ao,-shadowdrift`.
+ * Per-setting profiling override:
+ * `?fx=-reflect,-pcss,-area,-ao,-shadowdrift,msaa2`.
  *
  * Exists because the tiers move several things at once, which makes them
  * useless for attributing cost — "medium is smoother than high" says
  * nothing about WHICH of the five differences paid for it. This turns
  * each one into an independent variable measurable in a single build.
+ *
+ * Most knobs here are booleans and read as `-name` (absent = tier
+ * default). `msaa` is the exception: it takes a sample count, because the
+ * interesting question about it is not "on or off" but "is 4x worth
+ * double the samples of 2x", and a bare on/off flag cannot ask that.
  */
 function fxOverrides(s: QualitySettings): QualitySettings {
   if (typeof window === "undefined") return s;
@@ -280,12 +319,16 @@ function fxOverrides(s: QualitySettings): QualitySettings {
   }
   if (!fx) return s;
   const off = (k: string) => fx.includes(`-${k}`);
+  // Anchored to a token boundary so the count is read from `msaa2`, not
+  // from whatever digits happen to follow elsewhere in the string.
+  const msaa = /(?:^|,)msaa(\d+)/.exec(fx);
   return {
     ...s,
     floorReflection: off("reflect") ? false : s.floorReflection,
     softShadows: off("pcss") ? false : s.softShadows,
     areaFill: off("area") ? false : s.areaFill,
     ao: off("ao") ? false : s.ao,
+    msaa: msaa ? Number(msaa[1]) : s.msaa,
     shadowInterval: off("shadowdrift") ? Infinity : s.shadowInterval,
   };
 }

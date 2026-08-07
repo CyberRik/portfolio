@@ -9,7 +9,7 @@ import {
 } from "@react-three/postprocessing";
 import { SMAAEffect, SMAAPreset } from "postprocessing";
 import { useMemo } from "react";
-import { useQuality } from "@/lib/gpuTier";
+import { useQuality, useQualitySettings } from "@/lib/gpuTier";
 
 /**
  * How different two neighbouring pixels must be before SMAA treats them
@@ -92,17 +92,30 @@ function SceneSMAA() {
  * (the window mullion is the clearest) is that limit, not a setting.
  *
  * Unlike the rest of the fixes in this file, this one is NOT free: the
- * target costs 4x the samples and has to be resolved every frame. It is
- * gated by tier accordingly, and it is still much cheaper than the naive
- * alternative of raising DPR, which scales every pass in the chain
- * quadratically instead of just this one.
+ * target costs N times the samples and has to be resolved every frame.
+ * The count lives in the tier table (QualitySettings.msaa) rather than
+ * here, and it is still much cheaper than the naive alternative of
+ * raising DPR, which scales every pass in the chain quadratically
+ * instead of just this one.
+ *
+ * The high tier runs 2x, not the 4x it was originally written with:
+ * measured, the second doubling was ~14% of p50 for an edge that is
+ * indistinguishable in a 2x-scale crop of the mullion. 2x vs 0 is very
+ * much not indistinguishable, which is why this is a reduction and not
+ * a removal.
  */
 export function Effects() {
   const q = useQuality();
+  // The two costly knobs come from the settings table rather than being
+  // written into the JSX, so `?fx=` can move them independently in a
+  // single build. Everything else still branches on tier: Bloom and Noise
+  // ride along in the merged shader, so gating them buys nothing and
+  // would only add settings that never pay for themselves.
+  const { ao, msaa } = useQualitySettings();
 
   if (q === "low") {
     return (
-      <EffectComposer multisampling={0} autoClear={false}>
+      <EffectComposer multisampling={msaa} autoClear={false}>
         <SceneSMAA />
         <Vignette eskil={false} offset={0.3} darkness={0.4} />
       </EffectComposer>
@@ -111,7 +124,7 @@ export function Effects() {
 
   if (q === "medium") {
     return (
-      <EffectComposer multisampling={2} autoClear={false}>
+      <EffectComposer multisampling={msaa} autoClear={false}>
         <Bloom mipmapBlur intensity={0.25} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
         <SceneSMAA />
         <Noise premultiply opacity={0.1} />
@@ -121,8 +134,16 @@ export function Effects() {
   }
 
   return (
-    <EffectComposer multisampling={4} autoClear={false}>
-      <N8AO aoRadius={0.3} distanceFalloff={0.6} intensity={1.0} quality="performance" halfRes />
+    <EffectComposer multisampling={msaa} autoClear={false}>
+      {/* An empty fragment rather than `false` when AO is off:
+          EffectComposer types its children as `Element`, and it collects
+          passes by walking the instantiated group's children — so a
+          fragment contributes no node and reads the same at runtime. */}
+      {ao ? (
+        <N8AO aoRadius={0.3} distanceFalloff={0.6} intensity={1.0} quality="performance" halfRes />
+      ) : (
+        <></>
+      )}
       <Bloom mipmapBlur intensity={0.42} luminanceThreshold={0.9} luminanceSmoothing={0.25} />
       <SceneSMAA />
       <Noise premultiply opacity={0.14} />
