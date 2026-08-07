@@ -135,6 +135,29 @@ button:disabled,
   animation: loading-text-cycle 8s infinite;
 }
 
+/**
+ * Boot dossier rotation.
+ *
+ * Six lines share one slot, each revealed by the same keyframe offset by
+ * a 3s animation-delay. CSS rather than a JS interval on purpose: this
+ * runs while the main thread is compiling shaders and baking the first
+ * shadow map, and anything driven from JS stutters or stalls outright
+ * during that window — which is precisely when the screen most needs to
+ * look alive. Compositor-only properties (opacity/transform) for the
+ * same reason.
+ *
+ * Visible 2%-15% of an 18s cycle (~2.3s), fully clear by 17% so the next
+ * line never overlaps the previous one in the shared slot.
+ */
+@keyframes boot-fact {
+  0%, 100% { opacity: 0; transform: translateY(5px); }
+  2%, 15% { opacity: 1; transform: translateY(0); }
+  17%, 98% { opacity: 0; transform: translateY(-5px); }
+}
+.boot-fact {
+  animation: boot-fact 18s infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-blink,
   .star-twinkle,
@@ -143,6 +166,17 @@ button:disabled,
   .shooting-star,
   .beacon-dot {
     animation: none;
+  }
+  /* The dossier lines start at opacity 0 and are revealed BY the
+     animation, so switching it off would leave the slot permanently
+     blank. Stopping the rotation has to be paired with pinning one line
+     visible, or reduced-motion users get an empty boot screen. */
+  .boot-fact {
+    animation: none;
+    opacity: 0;
+  }
+  .boot-fact:first-child {
+    opacity: 1;
   }
 }
 

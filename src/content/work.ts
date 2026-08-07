@@ -1185,7 +1185,7 @@ export const MILESTONES: Milestone[] = [
     glyph: "07",
     chapter: "Current Focus",
     period: "2026 – 2027",
-    became: todo("What are you becoming next? One line, in your own words."),
+    became: "An engineer who builds the runtime itself — and holds it to a proof, not a demo.",
     summary:
       "Placement preparation alongside continued work on AI systems, split across two personal runtimes. Ancora makes losing a multi-step computation to a dead worker structurally impossible, proven with chaos experiments that assert rather than demonstrate. TinyServe takes the same scheduling instincts — admission control, fair queuing, backpressure — and applies them to LLM inference, built from scratch on llama.cpp at a scale where every latency number traces back to a specific decision in the code.",
     projects: ["ancora", "tinyserve"],

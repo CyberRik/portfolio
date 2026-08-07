@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { PerformanceMonitor, Preload } from "@react-three/drei";
+import { PerformanceMonitor } from "@react-three/drei";
 import { useSceneReady } from "@/lib/sceneReady";
 import * as THREE from "three";
 import { CAMERA_VIEWS, DEFAULT_VIEW, resolveView } from "@/config/camera.config";
@@ -156,7 +156,12 @@ export function SceneCanvas() {
         <Lighting />
         <Effects />
         <CameraRig />
-        <Preload all />
+        {/* NO <Preload all /> — ReadyProbe owns warmup now, and does it
+            through gl.compileAsync so the scene's 108 shader programs
+            build in parallel rather than serially on the main thread.
+            Measured cold, the synchronous drei version cost ~18s between
+            the last byte landing and the room appearing, against 1.1s of
+            actual downloading. See ReadyProbe. */}
         <ReadyProbe />
         <PortalSuspend />
       </Suspense>

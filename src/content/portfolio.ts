@@ -182,6 +182,29 @@ export const EDUCATION = {
   gpa: "7.64",
 } as const;
 
+/**
+ * What the boot screen reads out while the room streams in.
+ *
+ * A loading screen is the one moment a visitor is guaranteed to be
+ * looking at the page and unable to do anything else. Spending it on a
+ * spinner wastes it — so this is the pitch, delivered a line at a time
+ * while the assets land.
+ *
+ * Every line is a fact that already appears elsewhere in this file or in
+ * work.ts, quoted rather than restated; the authenticity rule applies
+ * here exactly as it does to the case studies. Strings only — the boot
+ * screen must not pull in a single extra byte of assets, since anything
+ * it loads is something the room is now waiting behind.
+ */
+export const BOOT_FACTS: ReadonlyArray<{ k: string; v: string }> = [
+  { k: "posted", v: "Tokyo · Otsuka Corporation" },
+  { k: "tool-calling accuracy", v: "97% BFCL single-turn" },
+  { k: "inference throughput", v: "11 → 55 tok/s · 5×" },
+  { k: "documents processed", v: "10K+ pages / month" },
+  { k: "ml pipeline, Tecnod8", v: "Top 20 nationally" },
+  { k: "selected by IITM NIRMAAN", v: "from 200+ startups" },
+] as const;
+
 export const ACHIEVEMENTS: string[] = [
   "98.61 percentile in JEE Mains among 1.2M+ candidates",
   "Top 450 in WBJEE",

@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useProgress } from "@react-three/drei";
 import { useSceneReady } from "@/lib/sceneReady";
+import { BOOT_FACTS } from "@/content/portfolio";
 
 /**
  * Boot screen. Holds until BOTH conditions are true:
@@ -10,6 +11,26 @@ import { useSceneReady } from "@/lib/sceneReady";
  *  2. the scene has rendered a run of warm frames (shader compile +
  *     shadow bake done) — signalled by ReadyProbe via sceneReady
  * So the user never sees the world assembling itself.
+ *
+ * WHY THERE IS SOMETHING TO READ HERE
+ *
+ * This screen is up for several seconds on a first visit — 4MB of models
+ * and a Draco decoder have to land before the room can exist — and a
+ * spinner gives a visitor no reason to spend those seconds rather than
+ * close the tab. So the wait carries the pitch: a rotating dossier of
+ * real, attributable numbers (BOOT_FACTS), which is the one thing a
+ * portfolio can put in dead time that is worth more than a progress bar.
+ *
+ * It costs nothing to load. No images, no fonts beyond the two already
+ * in the shell, no library — text and CSS keyframes only. Anything this
+ * screen fetched would be another thing the room waits behind, which is
+ * the opposite of the point.
+ *
+ * Every animation here is CSS. The heavy part of the wait is shader
+ * compilation and the first shadow bake, both of which block the main
+ * thread — a JS-driven ticker freezes exactly when the screen most needs
+ * to look alive. The framer-motion usage is confined to mount/exit
+ * transitions, which run before and after that window, never during it.
  */
 export function LoadingScreen() {
   const { progress } = useProgress();
@@ -64,25 +85,50 @@ export function LoadingScreen() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { delay: 0.4 } }}
               >
-                {Math.round(progress)}% — DOWNLOADING ASSETS
+                {Math.round(progress)}% — STREAMING THE ROOM
               </motion.p>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center font-mono text-[10px] tracking-[0.25em] text-[#ffb361]">
-                {/* CSS animated texts that cycle continuously without JS */}
+                {/* CSS animated texts that cycle continuously without JS.
+                    These name what is ACTUALLY happening between the last
+                    byte landing and the first warm frame — this used to
+                    claim "WAKING UP PHYSICS", which stopped being true
+                    when the Rapier world was removed. A loading screen
+                    that narrates work the app no longer does is the one
+                    kind of filler worth avoiding here. */}
                 <span className="loading-text-cycle absolute inset-0 flex items-center justify-center opacity-0" style={{ animationDelay: "0s" }}>
                   COMPILING SHADERS
                 </span>
                 <span className="loading-text-cycle absolute inset-0 flex items-center justify-center opacity-0" style={{ animationDelay: "2s" }}>
-                  BAKING ENVIRONMENT
+                  UPLOADING TEXTURES
                 </span>
                 <span className="loading-text-cycle absolute inset-0 flex items-center justify-center opacity-0" style={{ animationDelay: "4s" }}>
-                  WAKING UP PHYSICS
+                  BAKING SHADOWS
                 </span>
                 <span className="loading-text-cycle absolute inset-0 flex items-center justify-center opacity-0" style={{ animationDelay: "6s" }}>
-                  MOUNTING COMPONENTS
+                  WARMING FRAMES
                 </span>
               </div>
             )}
+          </div>
+
+          {/* The dossier. Fixed-height slot so the layout never reflows
+              as lines swap — a shifting boot screen reads as broken. */}
+          <div className="relative mt-10 h-10 w-[min(30rem,86vw)]">
+            {BOOT_FACTS.map((f, i) => (
+              <div
+                key={f.k}
+                className="boot-fact absolute inset-0 flex flex-col items-center justify-center gap-1.5 opacity-0"
+                style={{ animationDelay: `${i * 3}s` }}
+              >
+                <span className="font-mono text-[9px] tracking-[0.3em] text-[#5c5344] uppercase">
+                  {f.k}
+                </span>
+                <span className="text-center font-mono text-[13px] tracking-[0.08em] text-[#d9cdb4]">
+                  {f.v}
+                </span>
+              </div>
+            ))}
           </div>
         </motion.div>
       )}
