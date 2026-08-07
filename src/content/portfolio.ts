@@ -187,22 +187,30 @@ export const EDUCATION = {
  *
  * A loading screen is the one moment a visitor is guaranteed to be
  * looking at the page and unable to do anything else. Spending it on a
- * spinner wastes it — so this is the pitch, delivered a line at a time
- * while the assets land.
+ * spinner wastes it — so this is the wait made worth having.
  *
- * Every line is a fact that already appears elsewhere in this file or in
- * work.ts, quoted rather than restated; the authenticity rule applies
- * here exactly as it does to the case studies. Strings only — the boot
- * screen must not pull in a single extra byte of assets, since anything
- * it loads is something the room is now waiting behind.
+ * These are OPINIONS, not statistics. An earlier version rotated the
+ * headline numbers (97% BFCL, 11→55 tok/s, 10K pages/month) and it read
+ * like a billboard: impressive, immediately forgotten, and telling a
+ * visitor nothing they couldn't get from the résumé. These lines say how
+ * the work is thought about, which is the part a portfolio usually
+ * cannot get across at all — and it turns out to be the more interesting
+ * thing to read while waiting.
+ *
+ * Every line is quoted VERBATIM from a milestone's `lessons` in work.ts,
+ * or from the Achievements book. Nothing here is written for the loading
+ * screen; the authenticity rule applies exactly as it does to the case
+ * studies. Strings only — the boot screen must not pull in a single
+ * extra byte of assets, since anything it loads is one more thing the
+ * room is waiting behind.
  */
-export const BOOT_FACTS: ReadonlyArray<{ k: string; v: string }> = [
-  { k: "posted", v: "Tokyo · Otsuka Corporation" },
-  { k: "tool-calling accuracy", v: "97% BFCL single-turn" },
-  { k: "inference throughput", v: "11 → 55 tok/s · 5×" },
-  { k: "documents processed", v: "10K+ pages / month" },
-  { k: "ml pipeline, Tecnod8", v: "Top 20 nationally" },
-  { k: "selected by IITM NIRMAAN", v: "from 200+ startups" },
+export const BOOT_NOTES: readonly string[] = [
+  "Chemical engineering by degree; AI engineering by obsession.",
+  "A system that can honestly return nothing is worth more than one that always returns something.",
+  "Most pipeline bugs are ordering bugs.",
+  "Evaluation you hand-label yourself is the only evaluation you trust.",
+  "Throughput is an architecture property — not a bigger machine.",
+  "A fault-tolerance claim needs a test that asserts it, not a demo that shows it once.",
 ] as const;
 
 export const ACHIEVEMENTS: string[] = [
