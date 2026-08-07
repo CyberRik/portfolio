@@ -779,7 +779,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       "Emergency dispatch depends on a human parsing a distressed call in real time. Transcription that degrades under noise, and no automated way to flag spoofed calls, makes that pipeline both slow and abusable.",
     architecture: {
       summary:
-        "Whisper fine-tuned on noisy emergency audio produces real-time transcription; BART summarises the call for the dispatcher; a spoof-detection model flags likely false reports. Dispatch and responder tracking run over WebSockets with the Maps API under low-latency constraints.",
+        "Whisper fine-tuned on noisy emergency audio produces real-time transcription; BART summarises the call for the dispatcher; a spoof-detection model flags likely false reports. Dispatch and responder tracking run over Socket.IO/WebSockets, with live routes computed against the OSRM routing engine and rendered on Leaflet/OpenStreetMap.",
       diagram: {
         caption: "R.E.A.C.H. — call to dispatch",
         nodes: [
@@ -787,8 +787,8 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
           { id: "whisper", label: "Whisper", sub: "fine-tuned, noisy audio", col: 1, row: 1, kind: "model" },
           { id: "bart", label: "BART", sub: "summarisation", col: 2, row: 0, kind: "model" },
           { id: "spoof", label: "Spoof Detection", col: 2, row: 2, kind: "model" },
-          { id: "dispatch", label: "SOS Dispatch", sub: "WebSockets", col: 3, row: 1, kind: "core" },
-          { id: "track", label: "Responder Tracking", sub: "Maps API", col: 4, row: 1, kind: "output" },
+          { id: "dispatch", label: "SOS Dispatch", sub: "Socket.IO", col: 3, row: 1, kind: "core" },
+          { id: "track", label: "Responder Tracking", sub: "OSRM + Leaflet", col: 4, row: 1, kind: "output" },
         ],
         edges: [
           { from: "call", to: "whisper" },
@@ -809,7 +809,12 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       {
         title: "Low-latency dispatch",
         body:
-          "Real-time SOS dispatch and responder tracking over WebSockets and the Maps API, under latency constraints where a slow update is a failed feature.",
+          "Real-time SOS dispatch and responder tracking over Socket.IO, computing live driving routes against OSRM and streaming interpolated, bearing-aware position updates, under latency constraints where a slow update is a failed feature.",
+      },
+      {
+        title: "Trusting bystander-submitted media",
+        body:
+          "Photos submitted from the field need to be checked against the incident location without blocking genuine reports. Built a metadata-based filter that extracts real EXIF GPS/timestamp data and flags mismatches beyond a tolerance radius, failing open when metadata is missing or unreadable.",
       },
       {
         title: "Leading a team to MVP",
@@ -819,10 +824,12 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     ],
     stack: [
       { group: "Speech & NLP", items: ["Whisper", "BART", "Fine-tuning"] },
-      { group: "Realtime", items: ["WebSockets", "Maps API"] },
+      { group: "Realtime & Maps", items: ["Socket.IO", "OSRM", "Leaflet / OpenStreetMap", "Overpass API"] },
+      { group: "Media Verification", items: ["EXIF metadata", "Haversine geofencing"] },
     ],
     results: [
       "Spoof detection at 78% precision on emergency call audio.",
+      "Live responder tracking on real OSRM-computed routes, streamed over Socket.IO with zero paid map/routing infrastructure.",
       "Selected from 200+ startups by IITM NIRMAAN.",
       "Led a 5-member cross-functional team to MVP.",
     ],
@@ -834,9 +841,13 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     timeline: [
       { when: "Apr 2025", what: "Founded; selected into the IITM Nirmaan cohort." },
       { when: "2025", what: "Whisper fine-tuning, BART summarisation, spoof detection." },
+      { when: "2026", what: "Rebuilt the dispatch/tracking backend on a fully free stack (Socket.IO, OSRM, Overpass, Leaflet) and added EXIF-based media verification." },
       { when: "Present", what: "Ongoing." },
     ],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [
+      { label: "Resume", href: "/resume.pdf" },
+      { label: "GitHub", href: "https://github.com/CyberRik/reach-app" },
+    ],
     related: ["medproqa", "smartfan"],
   },
 

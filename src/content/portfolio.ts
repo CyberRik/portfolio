@@ -45,10 +45,11 @@ export const PROJECTS: Project[] = [
     context: "AI-powered emergency response platform · IITM Nirmaan cohort",
     bullets: [
       "Fine-tuned Whisper on noisy emergency calls for real-time transcription; BART summarization + spoof detection at 78% precision.",
-      "Real-time SOS dispatch and responder tracking over WebSockets and Maps API under low-latency constraints.",
+      "Built real-time SOS dispatch and responder tracking on Socket.IO, OSRM routing and Leaflet/OpenStreetMap - zero paid map infrastructure.",
+      "Added a metadata-based fake-report filter validating EXIF GPS/timestamp against claimed incident locations.",
       "Selected from 200+ startups by IITM NIRMAAN; led a 5-member cross-functional team to MVP.",
     ],
-    tags: ["Whisper", "BART", "WebSockets", "Leadership"],
+    tags: ["Whisper", "BART", "Socket.IO", "OSRM", "Leadership"],
   },
   {
     title: "SmartFan",
