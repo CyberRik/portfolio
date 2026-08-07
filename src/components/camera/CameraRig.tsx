@@ -63,6 +63,14 @@ export function CameraRig() {
   const portalActive = useRef(false);
   /** is the pose we are sitting on composed for this viewport's shape? */
   const authoredPose = useRef(false);
+  /**
+   * The radius free orbit wants to sit at — the distance of the pose we
+   * last flew to. The touch envelope pulls the camera INSIDE this when a
+   * wall is in the way and eases back out to it when the way is clear,
+   * so swinging through a corner and back returns to the framing that
+   * was authored rather than ratcheting permanently closer.
+   */
+  const restRadius = useRef(0);
 
   useEffect(() => {
     const flyTo = (
@@ -93,6 +101,10 @@ export function CameraRig() {
       const p1 = new THREE.Vector3(...position);
       const t1 = new THREE.Vector3(...target);
       const travel = camera.position.distanceTo(p1);
+      // Taken from the pose itself, not from the camera on arrival: the
+      // look-target is still easing to the anchor when the flight lands,
+      // so measuring then would bake the transient distance in.
+      restRadius.current = p1.distanceTo(t1);
 
       // Short hops skip the ceremony — no anticipation on tiny moves
       const anticipation = travel > 1.6 ? 0.26 : 0;
@@ -265,7 +277,70 @@ export function CameraRig() {
       const MAX_CAM_X = 3.4;
       const MIN_CAM_Z = -2.5;
       const horiz = dist * Math.sin(controls.getPolarAngle());
-      if (horiz > 1e-4) {
+
+      /**
+       * Touch: keep the RADIUS inside the envelope instead of the angle.
+       *
+       * The clamps below stop the azimuth dead once the camera reaches a
+       * wall plane, which measured as a hard stop at camera.x = 3.4 —
+       * ±45.7° of total sweep on a phone (±26° on desktop). On desktop
+       * that is survivable because dollying in shrinks `horiz`, and the
+       * angular limit is `asin(MAX_CAM_X / horiz)` — so zooming buys back
+       * rotation. Touch has no dolly by design, so the same stop is a
+       * dead end: the room simply refuses to turn any further.
+       *
+       * So on touch the constraint is solved for radius rather than
+       * angle. The camera slides closer to the pivot as it swings toward
+       * a wall and back out as it returns, tracing the room's envelope
+       * instead of stopping at it. Rotation stays free across the full
+       * static ±0.45π. This is not the dolly that was removed — the user
+       * cannot drive it, it is the rig staying inside the box.
+       */
+      if (coarse && horiz > 1e-4) {
+        const az = controls.getAzimuthalAngle();
+        const sinAz = Math.sin(az);
+        const cosAz = Math.cos(az);
+        const tx = controls.target.x;
+        const tz = controls.target.z;
+
+        let maxHoriz = Infinity;
+        // camera.x = tx + horiz·sin(az), bounded by both side planes
+        if (sinAz > 1e-4) maxHoriz = Math.min(maxHoriz, (MAX_CAM_X - tx) / sinAz);
+        if (sinAz < -1e-4) maxHoriz = Math.min(maxHoriz, (-MAX_CAM_X - tx) / sinAz);
+        // camera.z = tz + horiz·cos(az), bounded by the rear wall
+        if (cosAz < -1e-4) maxHoriz = Math.min(maxHoriz, (MIN_CAM_Z - tz) / cosAz);
+
+        const sinPolar = Math.sin(controls.getPolarAngle());
+        if (sinPolar > 1e-4 && restRadius.current > 0) {
+          // Never below the orbit floor: pulling closer than minDistance
+          // would put the camera inside the furniture.
+          const allowed = Number.isFinite(maxHoriz)
+            ? Math.max(maxHoriz / sinPolar, ORBIT_LIMITS.minDistance)
+            : Infinity;
+          const wanted = Math.min(restRadius.current, allowed);
+
+          // Deliberately asymmetric. Tightening is INSTANT, because it is
+          // the thing standing between the camera and the inside of a
+          // wall — a damped approach would let a fast swipe cross the
+          // plane for a few frames and show the room's backface. Easing
+          // back out is damped, because nothing is violated by being too
+          // close, and snapping the framing outward the moment a corner
+          // clears reads as a lurch.
+          let next = dist;
+          if (dist > allowed) next = allowed;
+          else if (dist < wanted - 1e-3) next = THREE.MathUtils.damp(dist, wanted, 3.5, delta);
+
+          if (next !== dist) {
+            // Written straight onto the camera rather than through the
+            // controls: OrbitControls derives its spherical from
+            // (camera.position - target) at the top of every update(),
+            // so moving the camera here is read as the new radius on the
+            // very next update — which is called a few lines below.
+            const dir = camera.position.clone().sub(controls.target).normalize();
+            camera.position.copy(controls.target).addScaledVector(dir, next);
+          }
+        }
+      } else if (horiz > 1e-4) {
         const az = controls.getAzimuthalAngle();
         const sinAzMax = (MAX_CAM_X - controls.target.x) / horiz;
         if (sinAzMax < 1 && az > Math.asin(Math.max(sinAzMax, -1))) {
@@ -382,6 +457,13 @@ export function CameraRig() {
   const homeAuthored = home.authored;
   useEffect(() => {
     authoredPose.current = homeAuthored;
+    // Seed the orbit radius from the opening pose. Without this the
+    // touch envelope has no radius to ease back out to until the first
+    // dock flight, so an initial swing to a wall would tighten the shot
+    // and stay there.
+    restRadius.current = new THREE.Vector3(...home.position).distanceTo(
+      new THREE.Vector3(...home.target),
+    );
     // mount only — later changes belong to whichever flight caused them
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
