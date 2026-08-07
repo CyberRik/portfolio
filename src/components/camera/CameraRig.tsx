@@ -40,6 +40,31 @@ import { useCoarsePointer } from "@/lib/interaction";
  * Free orbit stays available but weighted: heavy damping, slow rates,
  * and the diorama-safe envelope (roof ceiling + side-wall planes).
  */
+/**
+ * Azimuth envelope for touch, wider than the desktop wedge.
+ *
+ * The whiteboard (+X wall, z≈0.5) needs about ±84° of azimuth before it
+ * clears the frame edge: at the old ±81° static limit it sat 19.6° off
+ * axis against a 14.7° half-fov on a phone — 5° short, i.e. permanently
+ * just out of reach no matter how far you dragged. Portrait is what
+ * makes this bite; the same pose frames it comfortably on a landscape
+ * viewport, which is why it was never visible on desktop.
+ *
+ * Safe to widen only because the touch envelope now solves for radius
+ * (see the clamp in useFrame): that formulation is valid in every
+ * quadrant, unlike the desktop `asin` clamps which need |az| < π/2 to
+ * stay in branch. The room stays enclosed at these angles because the
+ * side-plane and back-plane limits still bound the radius.
+ */
+const TOUCH_AZ_LIMIT = Math.PI * 0.62;
+/**
+ * And the comfort wedge has to widen with it. Left at ±0.3π the rig
+ * spent 1.6s of quiet input dragging the user back off the very wall
+ * they had just turned to look at — measured easing −79.5° → −73.7°.
+ * Self-recovery should rescue a lost camera, not overrule an intent.
+ */
+const TOUCH_COMFORT_AZ = Math.PI * 0.55;
+
 export function CameraRig() {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
@@ -383,11 +408,12 @@ export function CameraRig() {
 
         if (idleFor > COMFORT_WEDGE.settleDelay) {
           const az = controls.getAzimuthalAngle();
-          if (Math.abs(az) > COMFORT_WEDGE.maxAzimuth) {
+          const comfortAz = coarse ? TOUCH_COMFORT_AZ : COMFORT_WEDGE.maxAzimuth;
+          if (Math.abs(az) > comfortAz) {
             controls.setAzimuthalAngle(
               THREE.MathUtils.damp(
                 az,
-                Math.sign(az) * COMFORT_WEDGE.maxAzimuth,
+                Math.sign(az) * comfortAz,
                 COMFORT_WEDGE.lambda,
                 delta,
               ),
@@ -495,8 +521,8 @@ export function CameraRig() {
       maxDistance={ORBIT_LIMITS.maxDistance}
       minPolarAngle={ORBIT_LIMITS.minPolarAngle}
       maxPolarAngle={ORBIT_LIMITS.maxPolarAngle}
-      minAzimuthAngle={ORBIT_LIMITS.minAzimuthAngle}
-      maxAzimuthAngle={ORBIT_LIMITS.maxAzimuthAngle}
+      minAzimuthAngle={coarse ? -TOUCH_AZ_LIMIT : ORBIT_LIMITS.minAzimuthAngle}
+      maxAzimuthAngle={coarse ? TOUCH_AZ_LIMIT : ORBIT_LIMITS.maxAzimuthAngle}
     />
   );
 }

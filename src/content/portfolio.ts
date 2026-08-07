@@ -179,7 +179,7 @@ export const EDUCATION = {
   school: "Indian Institute of Technology Madras",
   degree: "B.Tech in Chemical Engineering",
   period: "2023 – 2027",
-  gpa: "8.64",
+  gpa: "7.64",
 } as const;
 
 export const ACHIEVEMENTS: string[] = [

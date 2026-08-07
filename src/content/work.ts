@@ -16,6 +16,8 @@
  * Replace the markers with real content — never delete them to hide a gap.
  */
 
+import { EDUCATION } from "@/content/portfolio";
+
 /** an unwritten field — rendered as a visible gap, never as prose */
 /**
  * The marker must never collide with real prose, and must stay plain
@@ -1077,7 +1079,10 @@ export const MILESTONES: Milestone[] = [
       "IIT Madras, and the years of fundamentals underneath everything after — Python, the maths, and the first projects where an algorithm had to survive contact with a real environment.",
     projects: ["rrt"],
     alsoShipped: [
-      "B.Tech, Chemical Engineering — IIT Madras (2023 – 2027), GPA 8.64",
+      // Composed from EDUCATION rather than retyped. This line held a
+      // stale "GPA 8.64" while portfolio.ts had already been corrected —
+      // two copies of one fact is how that happens, so there is now one.
+      `B.Tech, ${EDUCATION.degree.replace(/^B\.Tech in /, "")} — IIT Madras (${EDUCATION.period}), GPA ${EDUCATION.gpa}`,
       "Deep Learning Specialization (Andrew Ng)",
       "Practical Deep Learning (fast.ai)",
       "Mathematics for ML",
