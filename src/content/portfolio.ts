@@ -12,9 +12,9 @@ export const PROFILE = {
     "AI engineer building LLM-powered applications, retrieval systems, and production backend infrastructure — tool-calling models, document intelligence, RAG pipelines, and cloud-native services, with hands-on model training, evaluation, and deployment.",
   email: "ritankarmondal123@gmail.com",
   // Built from my_resume/resume_offcampus.tex — the off-campus variant, which
-  // is the only one carrying the current CGPA (8.64, matching EDUCATION.gpa
-  // below). Every download link in the site routes through this one constant so
-  // the served file and the stated grade can never disagree again.
+  // leads with work rather than marks: no grade figures and no Achievements
+  // section. Every download link in the site routes through this one constant,
+  // so there is a single place to repoint if the served variant ever changes.
   resumeUrl: "/resume_offcampus.pdf",
 } as const;
 
@@ -179,11 +179,13 @@ export const SKILLS: SkillGroup[] = [
 
 /* ------------------------------------------------------------------ */
 
+// No `gpa` field: nothing renders a grade any more (the book and the timeline
+// milestone both dropped it, matching the résumé the site serves), and a datum
+// with no consumer is how a stale figure creeps back into the UI later.
 export const EDUCATION = {
   school: "Indian Institute of Technology Madras",
   degree: "B.Tech in Chemical Engineering",
   period: "2023 – 2027",
-  gpa: "8.64",
 } as const;
 
 /**

@@ -222,9 +222,9 @@ function EducationPage() {
     <div className="font-serif text-[#3a2f1d]">
       <DropCap>A</DropCap>
       <p className="text-[15px] leading-relaxed">
-        t the {EDUCATION.school}, pursuing a {EDUCATION.degree} ({EDUCATION.period}),
-        CGPA {EDUCATION.gpa} — while spending every spare hour on machine learning
-        systems that actually ship.
+        t the {EDUCATION.school}, pursuing a {EDUCATION.degree} ({EDUCATION.period})
+        — while spending every spare hour on machine learning systems that
+        actually ship.
       </p>
       <div className="mt-6 border-l-2 border-[#c2ae85] pl-4">
         <p className="text-[13px] text-[#8a7854] italic">

@@ -1088,10 +1088,11 @@ export const MILESTONES: Milestone[] = [
       "IIT Madras, and the years of fundamentals underneath everything after — Python, the maths, and the first projects where an algorithm had to survive contact with a real environment.",
     projects: ["rrt"],
     alsoShipped: [
-      // Composed from EDUCATION rather than retyped. This line held a
-      // stale "GPA 8.64" while portfolio.ts had already been corrected —
-      // two copies of one fact is how that happens, so there is now one.
-      `B.Tech, ${EDUCATION.degree.replace(/^B\.Tech in /, "")} — IIT Madras (${EDUCATION.period}), GPA ${EDUCATION.gpa}`,
+      // Composed from EDUCATION rather than retyped, so the degree and dates
+      // are stated once. No grade figure here: the served résumé
+      // (resume_offcampus) omits marks, and the site should not state what the
+      // document a visitor downloads does not.
+      `B.Tech, ${EDUCATION.degree.replace(/^B\.Tech in /, "")} — IIT Madras (${EDUCATION.period})`,
       "Deep Learning Specialization (Andrew Ng)",
       "Practical Deep Learning (fast.ai)",
       "Mathematics for ML",
