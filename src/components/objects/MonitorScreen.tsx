@@ -121,6 +121,8 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
   const [selectedIcons, setSelectedIcons] = useState<Set<number>>(new Set());
   const [selectionBox, setSelectionBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+  /** the icon cells, so rubber-band selection can measure them rather than guess */
+  const iconRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [toast, setToast] = useState(false);
   // the machine boots into the Timeline — the story, not a utility
   const [openApps, setOpenApps] = useState<string[]>(["timeline"]);
@@ -301,14 +303,27 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
                 const boxH = Math.abs(currentY - sy);
                 setSelectionBox({ x: boxX, y: boxY, w: boxW, h: boxH });
 
+                // Hit-test the cells where they actually are. This used to
+                // assume one column at a fixed 70px pitch; the icons now wrap
+                // into columns, and a cell's height depends on its label, so
+                // any hardcoded geometry selects the wrong icons. offsetTop /
+                // offsetLeft are layout values, unaffected by the CSS 3D
+                // transform this desktop sits inside — unlike client rects,
+                // which come back scaled (same reason offsetX is used above).
+                const root = e.currentTarget as HTMLElement;
                 const newSelected = new Set<number>();
-                for (let i = 0; i < DESKTOP_ICONS.length; i++) {
-                  const iconY = 12 + i * 70;
-                  const iconX = 12;
-                  if (boxX < iconX + 96 && boxX + boxW > iconX && boxY < iconY + 66 && boxY + boxH > iconY) {
+                iconRefs.current.forEach((el, i) => {
+                  if (!el) return;
+                  let x = 0;
+                  let y = 0;
+                  for (let n: HTMLElement | null = el; n && n !== root; n = n.offsetParent as HTMLElement | null) {
+                    x += n.offsetLeft;
+                    y += n.offsetTop;
+                  }
+                  if (boxX < x + el.offsetWidth && boxX + boxW > x && boxY < y + el.offsetHeight && boxY + boxH > y) {
                     newSelected.add(i);
                   }
-                }
+                });
                 setSelectedIcons(newSelected);
               }}
               onPointerUp={(e) => {
@@ -332,11 +347,19 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
                   }}
                 />
               )}
-              {/* desktop icons — the featured work, straight to its case study */}
-              <div className="absolute top-3 left-3 flex flex-col gap-1">
+              {/* desktop icons — the featured work, straight to its case study.
+                  Seven of these at ~78px a cell need ~550px; the desktop is 448
+                  tall, so a single column ran off the bottom edge and hid the
+                  last icons behind the dock. Column-wrap inside a bounded box is
+                  what a real desktop does: fill top-to-bottom, start a new
+                  column at the floor. `bottom-14` keeps the fold above the dock,
+                  and content-start stops the wrapped columns from spreading out
+                  to fill the width. */}
+              <div className="absolute top-3 bottom-14 left-3 flex flex-col flex-wrap content-start gap-x-1 gap-y-1">
                 {DESKTOP_ICONS.map((id, i) => (
                   <motion.button
                     key={id}
+                    ref={(el) => { iconRefs.current[i] = el; }}
                     onClick={(e) => { e.stopPropagation(); setSelectedIcons(new Set([i])); }}
                     onDoubleClick={() => routes.openProject(id)}
                     className="group flex w-[96px] flex-col items-center gap-1 rounded-md px-1.5 py-1.5 transition-colors"
@@ -351,11 +374,16 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
                       size={38}
                       radius={10}
                     />
+                    {/* Two lines, always: line-clamp caps a long name and the
+                        fixed height reserves the second line even for a short
+                        one, so every cell is the same size and the grid keeps
+                        its rhythm. `title` still carries the full name. */}
                     <span
-                      className="max-w-full text-center text-[9px] leading-tight break-words"
+                      title={PROJECT_DOCS[id].title}
+                      className="line-clamp-2 h-[22px] max-w-full text-center text-[9px] leading-[11px] break-words"
                       style={{ color: selectedIcons.has(i) ? OS.txt : OS.dim }}
                     >
-                      {PROJECT_DOCS[id].title}
+                      {PROJECT_DOCS[id].shortTitle ?? PROJECT_DOCS[id].title}
                     </span>
                   </motion.button>
                 ))}

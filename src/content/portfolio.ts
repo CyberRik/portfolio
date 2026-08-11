@@ -11,7 +11,11 @@ export const PROFILE = {
   summary:
     "AI engineer building LLM-powered applications, retrieval systems, and production backend infrastructure — tool-calling models, document intelligence, RAG pipelines, and cloud-native services, with hands-on model training, evaluation, and deployment.",
   email: "ritankarmondal123@gmail.com",
-  resumeUrl: "/resume.pdf",
+  // Built from my_resume/resume_offcampus.tex — the off-campus variant, which
+  // is the only one carrying the current CGPA (8.64, matching EDUCATION.gpa
+  // below). Every download link in the site routes through this one constant so
+  // the served file and the stated grade can never disagree again.
+  resumeUrl: "/resume_offcampus.pdf",
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -179,7 +183,7 @@ export const EDUCATION = {
   school: "Indian Institute of Technology Madras",
   degree: "B.Tech in Chemical Engineering",
   period: "2023 – 2027",
-  gpa: "7.64",
+  gpa: "8.64",
 } as const;
 
 /**

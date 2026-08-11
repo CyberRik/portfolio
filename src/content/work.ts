@@ -16,7 +16,7 @@
  * Replace the markers with real content — never delete them to hide a gap.
  */
 
-import { EDUCATION } from "@/content/portfolio";
+import { EDUCATION, PROFILE } from "@/content/portfolio";
 
 /** an unwritten field — rendered as a visible gap, never as prose */
 /**
@@ -85,6 +85,14 @@ export type MilestoneId =
 export interface ProjectDoc {
   id: ProjectId;
   title: string;
+  /**
+   * Name for places that get one short line — the desktop icon grid, where a
+   * full title like "Gravton — Crawler, Citations & Social Pipelines" wraps to
+   * three lines and dwarfs its own icon. Optional: only set it where the title
+   * is too long to sit under a 38px square. Everywhere with room (tab list,
+   * window titlebar, case study header) keeps the full `title`.
+   */
+  shortTitle?: string;
   tier: "featured" | "archive";
   role: string;
   period: string;
@@ -439,7 +447,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "May – Jul 2026", what: "Architected Senpai — planner, scheduler, GraphRAG evidence layer." },
       { when: "Jul 2026", what: "Throughput work landed: 11 → 55 tok/s." },
     ],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["toolcalllm", "gravton", "ancora"],
   },
 
@@ -534,7 +542,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Jun 2026", what: "QLoRA fine-tuning of Qwen3-8B on DGX Spark." },
       { when: "Jul 2026", what: "Automated evals — 97% BFCL single-turn accuracy." },
     ],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["senpai", "medproqa"],
   },
 
@@ -542,6 +550,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
   gravton: {
     id: "gravton",
     title: "Gravton — Crawler, Citations & Social Pipelines",
+    shortTitle: "Gravton",
     tier: "featured",
     role: "AI Engineer",
     period: "Feb 2026 – Jun 2026",
@@ -646,7 +655,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Apr – May 2026", what: "Airflow migration and containerisation; metric parity audit; citation and crawl DAGs to production." },
       { when: "May – Jun 2026", what: "YouTube, Reddit and Quora intelligence pipelines; production deploy hardening." },
     ],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["tax-cpa-parser", "smartfan"],
   },
 
@@ -760,7 +769,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Oct – Dec 2025", what: "Hybrid parsing pipeline and chunking strategies." },
       { when: "Dec 2025", what: "10+ CPA firms onboarded in production." },
     ],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["gravton", "medproqa"],
   },
 
@@ -847,7 +856,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Present", what: "Ongoing." },
     ],
     links: [
-      { label: "Resume", href: "/resume.pdf" },
+      { label: "Resume", href: PROFILE.resumeUrl },
       { label: "GitHub", href: "https://github.com/CyberRik/reach-app" },
     ],
     related: ["medproqa", "smartfan"],
@@ -917,7 +926,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       "Quantisation decided whether the project existed. 38% less memory and 24% lower cost wasn't an optimisation pass — it was the difference between training this and not.",
     ],
     timeline: [{ when: "Jul 2025", what: "Built and evaluated." }],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["toolcalllm", "reach"],
   },
 
@@ -977,7 +986,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       "This was the first version of a problem I'd get to solve properly later — the ingestion here fed the crawler at Gravton, where the missing piece turned out to be deciding what's worth fetching before fetching it.",
     ],
     timeline: [{ when: "Aug 2025", what: "Built end to end." }],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["gravton"],
   },
 
@@ -1040,7 +1049,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       "Improvements trade against each other and have to be reported together. Smoothing cut path length 27%, and quoting that without the runtime it costs would be a half-truth.",
     ],
     timeline: [{ when: "Dec 2024 – Jan 2025", what: "Implemented, benchmarked and visualised." }],
-    links: [{ label: "Resume", href: "/resume.pdf" }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["medproqa"],
   },
 };
