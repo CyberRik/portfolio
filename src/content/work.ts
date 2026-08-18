@@ -553,7 +553,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     shortTitle: "Gravton",
     tier: "featured",
     role: "AI Engineer",
-    period: "Feb 2026 – Jun 2026",
+    period: "Feb 2026 – May 2026",
     context: "Gravton Labs · Ontario, Canada (remote)",
     tagline: "The crawl, attribution and ingestion layer under a GEO visibility platform",
     milestone: "ai-infra",
@@ -653,7 +653,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Feb – Mar 2026", what: "Crawler discovery, URL scoring, typed crawl budgeting and the pool audit." },
       { when: "Mar – Apr 2026", what: "Citation attribution: candidate map, scoped scoring, failure taxonomy, metrics and endpoints." },
       { when: "Apr – May 2026", what: "Airflow migration and containerisation; metric parity audit; citation and crawl DAGs to production." },
-      { when: "May – Jun 2026", what: "YouTube, Reddit and Quora intelligence pipelines; production deploy hardening." },
+      { when: "May 2026", what: "YouTube, Reddit and Quora intelligence pipelines; production deploy hardening." },
     ],
     links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["tax-cpa-parser", "smartfan"],
@@ -1112,7 +1112,10 @@ export const MILESTONES: Milestone[] = [
     summary:
       "The year the work stopped being exercises. R.E.A.C.H. went from idea to a funded cohort with a team behind it; MedProQA was a first real fine-tune with honest evaluation; SmartFan was the first end-to-end data pipeline — and the direct ancestor of the retrieval work that came later.",
     projects: ["reach", "medproqa", "smartfan"],
-    alsoShipped: ["LLM Fine-Tuning & Optimization", "Generative AI for LLMs", "Full-Stack Development"],
+    // Course names match resume/courses.tex. "Full-Stack Development" is gone:
+    // the résumé dropped it deliberately, React and Next.js already appearing
+    // under skills. AI Agents takes its place from the same list.
+    alsoShipped: ["LLM Fine-Tuning & Optimization", "Generative AI with LLMs (DeepLearning.AI)", "AI Agents (Hugging Face)"],
     tech: ["PyTorch", "Whisper", "BART", "Phi-3", "QLoRA", "Gemini", "n8n", "WebSockets"],
     lessons: [
       "Quantised fine-tuning is what makes ambitious training possible on real hardware budgets.",
@@ -1132,13 +1135,18 @@ export const MILESTONES: Milestone[] = [
     alsoShipped: [
       "Tecnod8.ai — Machine Learning Intern (Sep – Oct 2025)",
       "Multilingual document parsing: YOLOv10, PP-DocLayout-L, PaddleOCR",
-      "Qwen3-VL for tables, figures and charts; Gemma embeddings into ChromaDB",
+      "Qwen2.5-VL for tables, figures and charts; Gemma embeddings into ChromaDB",
     ],
-    tech: ["YOLOv10", "PaddleOCR", "Qwen3-VL", "ChromaDB", "Gemma embeddings"],
+    tech: ["YOLOv10", "PaddleOCR", "Qwen2.5-VL", "ChromaDB", "Gemma embeddings"],
     lessons: [
       "Document AI is a routing problem — no single extractor survives real-world input variance.",
     ],
-    impact: "Ranked Top 20 nationally for solo pipeline contribution; Tecnod8 named to Forbes India Select 200 during tenure.",
+    // The national ranking used to be recorded here as an outcome of this
+    // internship ("Top 20 ... for solo pipeline contribution"). It is Top 15 on
+    // the NCIIPC challenge leaderboard, earned independently of Tecnod8 — the
+    // résumé moved it into Achievements for exactly that reason, so it is no
+    // longer claimed as this chapter's impact.
+    impact: "Multilingual document parsing shipped into someone else's production system — 5+ languages, RTL and Devanagari, with retrieval built on top.",
   },
   {
     id: "data-systems",

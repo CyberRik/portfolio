@@ -1,15 +1,23 @@
 /**
- * All portfolio content, distilled from docs/my_resume.pdf, in one place.
+ * All portfolio content, distilled from the résumé, in one place.
  * The 3D room is the navigation; this file is the substance. Each section
  * is anchored to an object in the room (OBJECT_SECTION below) — arriving
  * at that object reveals the section's panel.
+ *
+ * SOURCE OF TRUTH: my_resume/resume/*.tex (the LaTeX section files), NOT
+ * the built PDF and not docs/my_resume.pdf, which is a stale export. When
+ * the résumé changes, the facts below are what needs re-checking against
+ * it: EXPERIENCE, SKILLS, ACHIEVEMENTS and COURSEWORK each mirror a
+ * section file. Where the résumé prunes something purely to fit its line
+ * budget, the note on that field says so — the site has no such limit.
  */
 
 export const PROFILE = {
   name: "Ritankar Mondal",
   tagline: "AI Engineer · IIT Madras",
+  // Mirrors resume/summary.tex (the \mlonly branch).
   summary:
-    "AI engineer building LLM-powered applications, retrieval systems, and production backend infrastructure — tool-calling models, document intelligence, RAG pipelines, and cloud-native services, with hands-on model training, evaluation, and deployment.",
+    "AI and LLM engineer with 10 months across four industry internships, shipping both the model and the AI systems that keep it running. Fine-tunes, benchmarks and serves tool-calling LLMs on constrained GPU hardware, and builds the fault-tolerant, observable distributed infrastructure underneath them.",
   email: "ritankarmondal123@gmail.com",
   // Built from my_resume/resume_offcampus.tex — the off-campus variant, which
   // leads with work rather than marks: no grade figures and no Achievements
@@ -91,30 +99,34 @@ export interface Role {
   bullets: string[];
 }
 
+// Mirrors resume/experience.tex (the \mlonly bullet selection), condensed
+// only where the whiteboard renders at 19px. Facts, figures and dates are
+// the résumé's — if a number here disagrees with experience.tex, this file
+// is the one that is wrong.
 export const EXPERIENCE: Role[] = [
   {
     company: "Otsuka Corporation",
-    title: "Software Development Engineer Intern",
-    location: "Tokyo, Japan",
+    title: "AI/ML Engineer Intern",
+    location: "Tokyo, Japan · PPO",
     period: "May 2026 – Jul 2026",
     bullets: [
-      "Built synthetic-data pipelines producing 50K+ function-calling examples for open-source LLM training.",
-      "QLoRA fine-tuning + automated evals for Qwen3-8B — 97% BFCL accuracy on single-turn function calling, on NVIDIA DGX Spark.",
-      "Architected Senpai, an enterprise AI execution platform: planner-driven capability graphs, dependency-aware DAGs, GraphRAG.",
-      "5× inference throughput (11 → 55 tok/s) via prefix caching, persistent context caching and parallel execution.",
+      "Ran 5 controlled LoRA/QLoRA experiments on Qwen3-8B against BFCL v4 (NVIDIA DGX Spark, GB10), establishing data composition, not volume as the central lever for tool-calling SFT — 88.6% 8-category average, 97.0% on simple_python.",
+      "Shipped Senpai, a sales copilot on Otsuka's production SPR schema: a deterministic 7-signal deal-health engine plus a tool-calling LLM served on Qwen3.6-35B-A3B-NVFP4; traced repetition-loop degeneration to unset sampling under greedy decode.",
+      "Rearchitected Senpai's serving path off a frozen-context A/B — grounded synthesis moved to a Q4 8B (2.72× wall, 3.8× decode, at grounding parity) while tool selection stayed on the 27B, which the 8B could not do reliably.",
+      "Root-caused catastrophic FP8 gradient explosion on GB10 (sm_121) after eliminating 8 hypotheses; moved production to Unsloth NF4 QLoRA — 22% faster and 45 GiB lighter than HF+PEFT.",
     ],
   },
   {
     company: "Gravton Labs",
     title: "AI Engineer Intern",
     location: "Ontario, Canada · Remote",
-    period: "Feb 2026 – Jun 2026",
+    period: "Feb 2026 – May 2026",
     bullets: [
-      "Primary engineer on the citation attribution engine — extraction normalized across 5 LLM provider families plus Google AI Overviews, gated on retrieved grounding so ungrounded URLs never score.",
-      "Sole author of the Reddit, Quora and YouTube intelligence pipelines: three Django apps behind their own Airflow DAGs, with deterministic 5-signal community-authority scoring.",
-      "Sole engineer on the production crawler — adaptive discovery (DOM, sitemap, Apify fallback) feeding a best-first scorer over a three-tier pooled Playwright runtime.",
-      "Drove the Airflow migration and took the platform to production — containerized the Django + Celery + Airflow stack, then hardened the deploy.",
-      "Ported the crawler and insights services from Encore TypeScript to FastAPI on Railway over Supabase, dispatching heavy stages to Modal serverless.",
+      "Primary engineer on the citation attribution engine behind a live AI-search-visibility product — extraction normalized across 5 LLM provider families (OpenAI, Anthropic, Gemini, Perplexity, xAI) plus Google AI Overviews behind one registry, gated on retrieved grounding so ungrounded URLs never score.",
+      "Sole author of the Reddit, Quora and YouTube intelligence pipelines: three Django apps behind their own Airflow DAGs (YouTube alone is 17 tasks), with deterministic 5-signal community-authority scoring.",
+      "Built and owned the production crawler — adaptive discovery (DOM, sitemap, Apify fallback) feeding a best-first scorer over a three-tier pooled Playwright runtime (2 browsers / 100 contexts / 250 pages), later cut 5–10× after auditing pool exhaustion under load.",
+      "Drove the Airflow migration and took the platform to production — containerized the Django, Celery and Airflow stack, moved crawl, enrich and citation stages onto scheduled DAGs with idempotent persistence, then hardened the deploy.",
+      "Ported the crawler and insights services from Encore TypeScript to FastAPI on Railway over Supabase, dispatching heavy stages to Modal serverless. Both platforms run in production today.",
     ],
   },
   {
@@ -123,21 +135,21 @@ export const EXPERIENCE: Role[] = [
     location: "San Francisco, CA · Remote",
     period: "Oct 2025 – Dec 2025",
     bullets: [
-      "Primary engineer on a document intelligence platform processing 10K+ pages/month end to end.",
-      "Hybrid parsing pipeline — OCR, CV layout detection, multimodal encoders, LLM fallback routing — for variable tax documents.",
-      "Long-document RAG accuracy up 20–30% via semantic, recursive and hybrid chunking.",
-      "Shipped a production Tax CPA Parser; onboarded 10+ U.S. CPA firms, cutting manual review time 40%+.",
+      "Primary engineer on a document intelligence platform on GCP (Cloud Run, Cloud SQL, Cloud Build CI/CD); shipped the Tax CPA Parser to 10+ U.S. CPA firms, cutting manual review time 40%+.",
+      "Extended od-parse, the in-house parser, from PDF and image input to Excel, DOCX, PPTX and CAD vector formats behind a classifying router with vector-vs-raster PDF triage; shipped as a Dockerized FastAPI service.",
+      "Owned od-parse's mechanical-drawing pipeline — Roboflow annotation detection, batched Gemini multimodal verification, and a full-image rescan recovering annotations the detector missed.",
+      "Grounded a CrewAI multi-agent tax analysis system (return analyzer, IRS code researcher, strategy analyst) on Gemini over a semantic chunker — Chonkie plus Gemini embeddings, recursive fallback.",
     ],
   },
   {
     company: "Tecnod8.ai",
     title: "Machine Learning Intern",
-    location: "Remote",
+    location: "IIT Mandi Incubated · Remote",
     period: "Sep 2025 – Oct 2025",
     bullets: [
-      "Multilingual document parsing (5+ languages, RTL + Devanagari) with YOLOv10, PP-DocLayout-L and PaddleOCR.",
-      "Qwen3-VL for tables, figures and charts; Gemma embeddings into ChromaDB for downstream retrieval.",
-      "Ranked Top 20 nationally for solo pipeline contribution; Tecnod8 named to Forbes India Select 200 during tenure.",
+      "Built multilingual document parsing across 5+ languages with YOLOv10, PP-DocLayout-L and PaddleOCR — RTL and Devanagari support, ensemble layout inference with rotation handling and adaptive scaling.",
+      "Integrated Qwen2.5-VL for table, figure and chart extraction, embedding structured outputs via Gemma into ChromaDB for retrieval.",
+      "Trained the detector to bounding-box document structure as distinct classes — titles, section headers, paragraphs, tables and figures — raising accuracy through dataset auditing, active-learning reannotation of low-confidence regions, and per-class error analysis.",
     ],
   },
 ];
@@ -149,31 +161,44 @@ export interface SkillGroup {
   items: string[];
 }
 
+// Rows and their contents mirror resume/technical skills.tex (\mlonly), which
+// holds every row to one rendered line and says "prune before adding". Two
+// items are carried over from that file's SDE rows, where they are listed
+// against the same shipped code: WebSockets (R.E.A.C.H. Socket.IO, Ancora's
+// live dashboard) and OpenTelemetry (Ancora, TinyServe). They are absent from
+// the ML rows for line budget, and a terminal panel has no line budget.
 export const SKILLS: SkillGroup[] = [
-  { label: "Languages", items: ["Python", "C++", "TypeScript", "SQL", "Bash"] },
   {
-    label: "LLM & ML",
-    items: ["PyTorch", "Transformers", "TRL / PEFT", "QLoRA / LoRA", "Tool & Function Calling", "Evaluation"],
+    label: "Languages & Tooling",
+    items: ["Python", "C++", "TypeScript", "SQL", "Bash", "Git", "pytest", "uv"],
   },
   {
-    label: "GPU & Training",
-    items: ["CUDA", "DGX Spark", "Unsloth", "FlashAttention-2", "NF4 / BF16 / FP8"],
+    label: "ML & Deep Learning",
+    items: ["PyTorch", "Transformers", "TRL", "PEFT", "LoRA / QLoRA", "Fine Tuning (SFT)", "Evaluation & Benchmarking"],
   },
   {
-    label: "Retrieval",
-    items: ["RAG & Hybrid Retrieval", "GraphRAG", "ChromaDB", "pgvector", "Chunking Strategies"],
+    label: "GPU & Training Infra",
+    items: ["CUDA", "DGX Spark (GB10)", "Unsloth", "FlashAttention-2", "Transformer Engine", "bitsandbytes"],
+  },
+  {
+    label: "Quantization & Serving",
+    items: ["NF4", "BF16", "FP8", "NVFP4", "GGUF / Q4_K_M", "vLLM", "llama.cpp / llama-server"],
+  },
+  {
+    label: "LLM Systems",
+    items: ["Tool Calling", "RAG & Hybrid Retrieval", "GraphRAG", "Chonkie", "ChromaDB", "pgvector", "Roboflow"],
   },
   {
     label: "Distributed Systems",
-    items: ["Temporal", "Ray", "Airflow", "Celery", "Event Sourcing", "Exactly-Once Semantics"],
+    items: ["Temporal", "Ray", "Event Sourcing", "Airflow", "Celery", "Exactly-Once Semantics"],
   },
   {
-    label: "Backend",
-    items: ["FastAPI", "Django REST", "AsyncIO", "WebSockets", "PostgreSQL", "Redis"],
+    label: "Backend & Web",
+    items: ["FastAPI", "Django REST", "PostgreSQL", "Redis", "WebSockets", "Next.js", "React"],
   },
   {
     label: "Infra & Observability",
-    items: ["Docker", "GCP", "Modal", "CI/CD", "Linux", "OpenTelemetry", "Prometheus"],
+    items: ["Docker", "GCP", "Modal", "Railway", "Playwright", "CI/CD", "OpenTelemetry", "Prometheus", "Grafana"],
   },
 ];
 
@@ -219,22 +244,42 @@ export const BOOT_NOTES: readonly string[] = [
   "A fault-tolerance claim needs a test that asserts it, not a demo that shows it once.",
 ] as const;
 
+// Mirrors resume/acheivements.tex, strongest first. Two corrections came from
+// that file: the Willings selection and the Otsuka PPO were missing here
+// entirely, and the national ranking was recorded as "Top 20 ... at Tecnod8"
+// when it is Top 15 on the NCIIPC challenge leaderboard — a Government of
+// India ranking earned on its own, not an outcome of that internship, which is
+// why the résumé moved it out of the Tecnod8 entry and this file follows.
+// The NIRMAAN line has no counterpart in that section; it is résumé-backed
+// from the R.E.A.C.H. project entry.
+// Kept to one book page (~380px of column at 15px serif): the résumé carries
+// each of these as a full sentence, so the phrasing here is the short form.
+// Adding a seventh entry, or a longer one, will overflow the page — check it
+// in the book before growing this list.
 export const ACHIEVEMENTS: string[] = [
+  "Sole selectee from IIT Madras, and the first across all IITs, for the Willings Programme — Japan industry placement, converted to Otsuka in Tokyo with the only intern Pre-Placement Offer",
+  "Top 15 nationally — NCIIPC (Govt. of India) Startup India AI Grand Challenge, multilingual document understanding",
+  "Selected from 200+ startups by IITM NIRMAAN (R.E.A.C.H.)",
   "98.61 percentile in JEE Mains among 1.2M+ candidates",
   "Top 450 in WBJEE",
   "AIR 71 (Junior Squad) and City Topper — Technothlon Prelims",
-  "Ranked Top 20 nationally for solo ML pipeline contribution at Tecnod8",
-  "Selected from 200+ startups by IITM NIRMAAN (R.E.A.C.H.)",
 ];
 
+// Mirrors resume/courses.tex, in that file's \mlonly order. "Full-Stack
+// Development" is gone because the résumé dropped it deliberately (React and
+// Next.js already appear under skills). fast.ai is kept although courses.tex
+// does not list it — nothing there contradicts it, and dropping a real
+// credential to match a document that merely omits it loses information.
 export const COURSEWORK: string[] = [
-  "Deep Learning Specialization (Andrew Ng)",
-  "Practical Deep Learning (fast.ai)",
   "LLM Fine-Tuning & Optimization",
-  "Machine Learning in Production",
-  "Generative AI for LLMs",
-  "Full-Stack Development",
-  "Mathematics for ML",
+  "Generative AI with LLMs (DeepLearning.AI)",
+  "Machine Learning in Production (MLOps)",
+  "AI Agents (Hugging Face)",
+  "Mathematics for ML (Linear Algebra)",
+  "Deep Learning Specialization (Andrew Ng)",
+  "Probability & Statistics for ML (DeepLearning.AI)",
+  "Node.js, Express & MongoDB (Backend Bootcamp)",
+  "Practical Deep Learning (fast.ai)",
 ];
 
 /* ------------------------------------------------------------------ */

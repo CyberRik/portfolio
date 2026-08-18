@@ -88,8 +88,14 @@ export function AchievementsBook({ onClose }: PortalProps) {
       {opened && (
         <motion.div
           // height yields to short viewports so the whole trim always
-          // fits — nothing about the book may live below the fold
-          className="relative flex h-[min(560px,78vh)] w-[min(880px,94vw)] cursor-pointer"
+          // fits — nothing about the book may live below the fold.
+          // 660, not 560: the Achievements and Coursework chapters both grew
+          // when the résumé was reconciled (six entries, nine courses) and
+          // overflowed a 560px page by ~60px. The trim sat in a wide empty
+          // margin, so the page grew instead of the content being cut. On a
+          // viewport too short for that, the vh term still wins and the body
+          // scrolls, which is the pre-existing fallback.
+          className="relative flex h-[min(660px,84vh)] w-[min(920px,94vw)] cursor-pointer"
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -279,7 +285,10 @@ function EducationPage() {
 function AchievementsPage() {
   return (
     <div className="font-serif text-[#3a2f1d]">
-      <ol className="space-y-4">
+      {/* space-y-3, not -4: the list grew from five short lines to six, two of
+          which run several lines, and the chapter is meant to sit on one page
+          without scrolling. */}
+      <ol className="space-y-3">
         {ACHIEVEMENTS.map((a, i) => (
           <motion.li
             key={a}
@@ -306,7 +315,7 @@ function AchievementsPage() {
         ))}
       </ol>
       <motion.p
-        className="mt-6 ml-8 -rotate-1 text-[16px]"
+        className="mt-4 ml-8 -rotate-1 text-[16px]"
         style={{ fontFamily: HAND, color: PENCIL }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
