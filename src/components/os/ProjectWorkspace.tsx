@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   isTodo,
@@ -12,6 +12,7 @@ import {
 } from "@/content/work";
 import { DUR, EASE } from "@/lib/design";
 import { ArchDiagram } from "./ArchDiagram";
+import { DemoPlayer } from "./DemoPlayer";
 import { useOSRouter } from "./OSRouter";
 import { OS } from "./theme";
 import { Prose, TodoNote } from "./TodoNote";
@@ -37,6 +38,9 @@ const SUMMARY_RESULTS = 3;
 
 const SECTIONS = [
   { id: "overview", label: "Overview" },
+  // sits second because it is the fastest possible answer to "does this
+  // actually run"; filtered out entirely for projects with no recording
+  { id: "demo", label: "Demo" },
   { id: "problem", label: "Problem" },
   { id: "architecture", label: "Architecture" },
   { id: "challenges", label: "Challenges" },
@@ -52,6 +56,11 @@ export function ProjectWorkspace({ id }: { id: ProjectId }) {
   const paneRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<string>("overview");
   const { isPoppedOut } = useOSDesktop();
+  // the rail must not advertise a section the document never renders
+  const sections = useMemo(
+    () => SECTIONS.filter((s) => s.id !== "demo" || doc.demo),
+    [doc.demo],
+  );
 
   // jumping to a section scrolls the pane, not the page
   const jump = useCallback((sectionId: string) => {
@@ -95,7 +104,7 @@ export function ProjectWorkspace({ id }: { id: ProjectId }) {
           In this doc
         </p>
         <ul className="mt-1 flex flex-col gap-0.5">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <li key={s.id}>
               <button
                 onClick={() => jump(s.id)}
@@ -164,6 +173,12 @@ export function ProjectWorkspace({ id }: { id: ProjectId }) {
           <Section id="overview" label="Overview">
             <Prose text={doc.overview} />
           </Section>
+
+          {doc.demo && (
+            <Section id="demo" label="Demo">
+              <DemoPlayer demo={doc.demo} />
+            </Section>
+          )}
 
           <Section id="problem" label="Problem">
             <Prose text={doc.problem} />

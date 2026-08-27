@@ -59,6 +59,46 @@ export interface ArchDiagram {
 }
 
 /* ------------------------------------------------------------------ */
+/* demos                                                              */
+
+/**
+ * A recorded walkthrough of the running system.
+ *
+ * Demos are hosted on YouTube and never in `public/` — a 2-minute
+ * screen capture is ~40 MB, which is both over Vercel's per-file
+ * deployment ceiling and bandwidth this site should not be paying for.
+ * What ships locally is the poster frame: a single JPEG that stands in
+ * for the player until somebody actually asks for it.
+ *
+ * That split is the whole performance story. RM-OS renders as live DOM
+ * on the monitor's screen plane, so an <iframe> there is legal but
+ * expensive; the poster costs one cached image and the player is only
+ * ever mounted in popped-out mode, where the R3F loop is already
+ * frozen (see PortalSuspend) and nothing competes with it.
+ */
+
+/** a seek point in a recording — finer-grained than the YouTube chapter list */
+export interface DemoChapter {
+  /** seconds from the start of the video */
+  at: number;
+  label: string;
+}
+
+export interface ProjectDemo {
+  /** YouTube video id */
+  youtube: string;
+  /** runtime, pre-formatted — shown before any player exists */
+  length: string;
+  /** poster frame, served from public/ */
+  poster: string;
+  /** what the recording *proves*, not what it contains */
+  blurb: string;
+  /** the moment worth linking to on its own, if there is one */
+  highlight?: DemoChapter;
+  chapters: DemoChapter[];
+}
+
+/* ------------------------------------------------------------------ */
 /* projects                                                           */
 
 export type ProjectId =
@@ -110,6 +150,8 @@ export interface ProjectDoc {
   results: string[];
   lessons: string[];
   timeline: { when: string; what: string }[];
+  /** a recorded walkthrough, where one exists */
+  demo?: ProjectDemo;
   links: { label: string; href: string }[];
   /** other projects worth reading next */
   related: ProjectId[];
@@ -232,6 +274,28 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "27 Jul 2026", what: "Asserting chaos experiments and fast failover via heartbeats." },
       { when: "Next", what: "Kubernetes (Helm/KubeRay/KEDA), OIDC/RBAC and tenant isolation, signed third-party plugins." },
     ],
+    demo: {
+      youtube: "UVKmMZnP50A",
+      length: "2:38",
+      poster: "/demos/ancora.jpg",
+      blurb:
+        "The running system end to end — nothing mocked. Every graph is reconstructed from Temporal's real event history, and it closes by SIGKILLing a live worker mid-run and machine-checking that the run recovered correctly.",
+      highlight: { at: 121, label: "The chaos experiment — PASS, with the invariants it checked" },
+      chapters: [
+        { at: 0, label: "Durable execution, in one line" },
+        { at: 12, label: "Real runs, started live" },
+        { at: 24, label: "Parked at a human gate — waiting costs no compute" },
+        { at: 36, label: "The DAG, reconstructed from history" },
+        { at: 48, label: "Deterministic replay" },
+        { at: 64, label: "A worker dies mid-pipeline" },
+        { at: 76, label: "Chaos Lab — a real SIGKILL" },
+        { at: 88, label: "A dead worker and a slow worker look identical" },
+        { at: 96, label: "The fan-out finishes — one lost attempt, no lost work" },
+        { at: 116, label: "An experiment, not a demonstration" },
+        { at: 121, label: "PASS — three invariants, machine-checked" },
+        { at: 142, label: "Temporal's own UI — the same runs" },
+      ],
+    },
     links: [
       { label: "GitHub", href: "https://github.com/CyberRik/Ancora" },
       { label: "RFC-0001", href: "https://github.com/CyberRik/Ancora/blob/main/docs/RFC-0001-durable-ai-runtime.md" },

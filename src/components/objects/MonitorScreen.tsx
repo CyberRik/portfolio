@@ -368,12 +368,33 @@ export function Desktop({ isPoppedOut = false }: { isPoppedOut?: boolean }) {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.08 + i * 0.05, duration: DUR.ui, ease: EASE.out }}
                   >
-                    <AppIcon
-                      label={PROJECT_DOCS[id].title}
-                      tint={APP_TINTS[i % APP_TINTS.length]}
-                      size={38}
-                      radius={10}
-                    />
+                    {/* A demo badge, the way a desktop file gets a media
+                        overlay — it is the only cue at icon size that this
+                        project has something to watch, and the Demo section
+                        is otherwise two clicks deep in the case study. */}
+                    <span className="relative">
+                      <AppIcon
+                        label={PROJECT_DOCS[id].title}
+                        tint={APP_TINTS[i % APP_TINTS.length]}
+                        size={38}
+                        radius={10}
+                      />
+                      {PROJECT_DOCS[id].demo && (
+                        <span
+                          title="Has a recorded demo"
+                          className="absolute -right-[3px] -bottom-[3px] flex h-[15px] w-[15px] items-center justify-center rounded-full"
+                          style={{
+                            background: "rgba(18,16,13,0.94)",
+                            border: `1px solid ${OS.accent}80`,
+                            color: OS.accent,
+                          }}
+                        >
+                          <span className="text-[7px] leading-none" style={{ marginLeft: 1 }}>
+                            ▶
+                          </span>
+                        </span>
+                      )}
+                    </span>
                     {/* Two lines, always: line-clamp caps a long name and the
                         fixed height reserves the second line even for a short
                         one, so every cell is the same size and the grid keeps
