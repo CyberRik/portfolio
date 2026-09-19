@@ -53,15 +53,21 @@ export const PROJECTS: Project[] = [
   {
     title: "R.E.A.C.H.",
     role: "Co-founder & AI Lead",
-    period: "Apr 2025 – Present",
+    period: "Apr 2025 – Aug 2026",
     context: "AI-powered emergency response platform · IITM Nirmaan cohort",
+    // BART summarisation and "spoof detection at 78% precision" were removed
+    // 2026-09-16: neither exists in reach-app or reach-asr (the only hits for
+    // either term are in node_modules), and no artefact produces the 78%
+    // figure. The résumé dropped both for the same reason. Replaced with the
+    // measured WER pair from reach-asr/README.md.
     bullets: [
-      "Fine-tuned Whisper on noisy emergency calls for real-time transcription; BART summarization + spoof detection at 78% precision.",
+      "LoRA fine-tuned Whisper for telephony-band noisy speech on a *synthetic* channel (300-3400 Hz passband, G.711 companding, ESC-50 noise, packet loss): WER 23.76% to 21.20%, 95% CI [-3.85, -1.31].",
+      "Measured what the specialisation cost rather than omitting it - clean WER 4.37% to 5.24% - and audited the evaluation's own SNR labelling.",
       "Built real-time SOS dispatch and responder tracking on Socket.IO, OSRM routing and Leaflet/OpenStreetMap - zero paid map infrastructure.",
-      "Added a metadata-based fake-report filter validating EXIF GPS/timestamp against claimed incident locations.",
+      "Added a metadata-based fake-report filter validating EXIF GPS against claimed incident locations within 3 km, failing open on stripped metadata.",
       "Selected from 200+ startups by IITM NIRMAAN; led a 5-member cross-functional team to MVP.",
     ],
-    tags: ["Whisper", "BART", "Socket.IO", "OSRM", "Leadership"],
+    tags: ["Whisper", "LoRA", "Socket.IO", "OSRM", "Leadership"],
   },
   {
     title: "SmartFan",

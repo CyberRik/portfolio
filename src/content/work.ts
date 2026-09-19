@@ -109,6 +109,7 @@ export type ProjectId =
   | "gravton"
   | "tax-cpa-parser"
   | "reach"
+  | "indic-asr"
   | "medproqa"
   | "smartfan"
   | "rrt";
@@ -843,43 +844,64 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     title: "R.E.A.C.H.",
     tier: "featured",
     role: "Co-founder & AI Lead",
-    period: "Apr 2025 – Present",
+    period: "Apr 2025 – Aug 2026",
     context: "IITM Nirmaan cohort",
-    tagline: "AI-powered emergency response platform",
+    tagline: "Emergency response platform — a Whisper fine-tune for telephony-band audio, and a voice path that degrades without losing the report",
     milestone: "building",
 
     overview:
-      "An emergency response platform built out of the IITM Nirmaan startup cohort. Emergency calls are the worst possible input for speech models — noise, panic, cross-talk, accents — and the output has to be trustworthy enough to dispatch against.",
+      "An emergency response platform built out of the IITM Nirmaan startup cohort: real-time SOS dispatch and responder tracking, EXIF-based screening of bystander media, and a voice-report path that records a spoken report in the browser and transcribes it through a separately-served Whisper checkpoint LoRA fine-tuned for telephony-band noisy speech.",
     problem:
-      "Emergency dispatch depends on a human parsing a distressed call in real time. Transcription that degrades under noise, and no automated way to flag spoofed calls, makes that pipeline both slow and abusable.",
+      "Emergency dispatch depends on a human parsing a distressed call in real time, and off-the-shelf speech models are trained on clean read speech. The honest obstacle is that the target condition cannot be trained on directly: there is no public corpus of real emergency-call audio, because 911 recordings are legally restricted almost everywhere. So the acoustic condition has to be constructed, stated as constructed, and the result measured against a baseline on identical utterances rather than asserted.",
     architecture: {
       summary:
-        "Whisper fine-tuned on noisy emergency audio produces real-time transcription; BART summarises the call for the dispatcher; a spoof-detection model flags likely false reports. Dispatch and responder tracking run over Socket.IO/WebSockets, with live routes computed against the OSRM routing engine and rendered on Leaflet/OpenStreetMap.",
+        "A responder records a spoken report with MediaRecorder; the clip posts to a Next.js route that proxies it to reach-asr, a separate FastAPI service holding the fine-tuned Whisper checkpoint. The model runs out-of-process deliberately — a resident ~290MB PyTorch graph wants a GPU for the process lifetime, which is the opposite shape from a route handler that scales to zero. If that service is slow or down the route returns a degraded response and the recording is still attached to the incident. Dispatch and responder tracking run over Socket.IO against OSRM-computed routes, and bystander photos are screened on EXIF GPS against the claimed location.",
       diagram: {
-        caption: "R.E.A.C.H. — call to dispatch",
+        caption: "R.E.A.C.H. — voice report to dispatch, and what happens when ASR is down",
         nodes: [
-          { id: "call", label: "Emergency Call", col: 0, row: 1, kind: "input" },
-          { id: "whisper", label: "Whisper", sub: "fine-tuned, noisy audio", col: 1, row: 1, kind: "model" },
-          { id: "bart", label: "BART", sub: "summarisation", col: 2, row: 0, kind: "model" },
-          { id: "spoof", label: "Spoof Detection", col: 2, row: 2, kind: "model" },
-          { id: "dispatch", label: "SOS Dispatch", sub: "Socket.IO", col: 3, row: 1, kind: "core" },
-          { id: "track", label: "Responder Tracking", sub: "OSRM + Leaflet", col: 4, row: 1, kind: "output" },
+          { id: "mic", label: "MediaRecorder", sub: "browser · 30s cap", col: 0, row: 1, kind: "input" },
+          { id: "route", label: "/api/transcribe", sub: "Next.js · 20s timeout", col: 1, row: 1, kind: "core" },
+          { id: "asr", label: "reach-asr", sub: "FastAPI · Whisper + LoRA", col: 2, row: 0, kind: "model" },
+          { id: "audio", label: "Playable Recording", sub: "kept regardless", col: 2, row: 2, kind: "store" },
+          { id: "feed", label: "Incident Feed", col: 3, row: 1, kind: "core" },
+          { id: "photo", label: "Bystander Photo", col: 0, row: 3, kind: "input" },
+          { id: "exif", label: "EXIF Screen", sub: "Haversine · 3 km", col: 1, row: 3, kind: "core" },
+          { id: "dispatch", label: "SOS Dispatch", sub: "Socket.IO", col: 4, row: 2, kind: "core" },
+          { id: "track", label: "Responder Tracking", sub: "OSRM routes", col: 5, row: 2, kind: "output" },
         ],
         edges: [
-          { from: "call", to: "whisper" },
-          { from: "whisper", to: "bart" },
-          { from: "whisper", to: "spoof" },
-          { from: "bart", to: "dispatch" },
-          { from: "spoof", to: "dispatch", label: "flag" },
+          { from: "mic", to: "route" },
+          { from: "route", to: "asr", label: "transcribe" },
+          { from: "route", to: "audio", dashed: true, label: "503 · degraded" },
+          { from: "asr", to: "feed", label: "transcript" },
+          { from: "audio", to: "feed" },
+          { from: "photo", to: "exif" },
+          { from: "exif", to: "dispatch", label: "accept · flag" },
+          { from: "feed", to: "dispatch" },
           { from: "dispatch", to: "track" },
         ],
       },
     },
     challenges: [
       {
-        title: "Transcription under real noise",
+        title: "The training condition had to be built, and said to be built",
         body:
-          "Off-the-shelf Whisper degrades badly on emergency audio. Fine-tuning on noisy calls was the only way to get transcription usable in real time.",
+          "There is no public corpus of real emergency-call audio — 911 recordings are legally restricted almost everywhere — so \"fine-tuned on emergency calls\" was never an available claim. The channel is constructed instead, from stages that each model something specific: a 300–3400 Hz bandpass for the telephone passband (which removes the fricative band, and is why \"six\"/\"fix\" is the classic phone confusion), 8 kHz G.711 μ-law for the PSTN codec, ESC-50 environmental noise at a controlled SNR for the sirens and traffic behind a real call, and packet loss over 20 ms frames — signal absent rather than corrupted, which is where Whisper hallucinates fluent text across the gap instead of degrading. The defensible claim is \"fine-tuned for telephony-band noisy speech\", and it is the one made.",
+      },
+      {
+        title: "Measuring the full 2×2, including the cell that hurts",
+        body:
+          "Three cells of the evaluation make the fine-tune look good; the fourth is the one that says what it cost. Clean zero-shot is the ceiling (4.37%), degraded zero-shot the baseline (23.76%), degraded fine-tuned the result (21.20%). Reporting those three leaves \"it learned to handle phone audio\" and \"it learned to only handle phone audio\" indistinguishable, so clean audio was run through the tuned model too: 5.24%, a real +0.87 pp regression. Both effects carry 95% paired bootstrap intervals over 10,000 resamples and neither contains zero. Read honestly, the fine-tune recovered 2.56 of the 19.39 points the channel cost — about 13% of the gap — and gave up 0.87 points on clean speech to do it. In relative terms the trade inverts (−10.8% degraded against +19.9% clean), and quoting only the first framing is how this gets oversold.",
+      },
+      {
+        title: "Auditing my own evaluation, and finding it mislabelled",
+        body:
+          "The WER-vs-SNR breakdown turned out not to be sorting by condition. `degrade()` computes the speech-to-noise ratio at 16 kHz full-band and then band-limits, resamples and μ-law encodes the mixture — so the SNR written into the manifest is measured before the channel while the audio is scored after it. Because band-limiting is linear and different noises put their energy in different places, the drift is not a constant offset: at a labelled 10 dB, measured post-channel SNR ranged from 2 dB to 33 dB depending only on which noise clip was drawn. Hiss above 4 kHz is largely deleted and effectively becomes clean audio (+23.41 dB); a ~1 kHz tonal siren survives inside the passband while the speech loses its out-of-band energy (−7.98 dB). Every one of those files carries \"snr_db\": 10.0. The headline WER pair is unaffected — it never used the SNR label — but the breakdown built on it was measuring the wrong axis.",
+      },
+      {
+        title: "An inference outage must not delete someone's report",
+        body:
+          "The voice path treats the audio as the report and the transcript as an enrichment, and the code is arranged so that ordering cannot be violated by accident. The blob URL is created before the upload is attempted, so every failure branch — non-OK response, empty transcript, unreachable service, a 20 s abort — still hands the recording upward with failed: true rather than dropping it. The route answers a failed transcription with an explicit degraded flag on a 503, never an error that looks like lost data. A GET on the same route proxies the service's health check so the UI can say transcription is offline up front, instead of letting a responder record twenty seconds and discover it afterwards; recording is deliberately not gated on that check.",
       },
       {
         title: "Low-latency dispatch",
@@ -898,32 +920,163 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       },
     ],
     stack: [
-      { group: "Speech & NLP", items: ["Whisper", "BART", "Fine-tuning"] },
+      { group: "Speech", items: ["Whisper", "LoRA / PEFT", "torchaudio", "EnglishTextNormalizer"] },
+      { group: "Channel simulation", items: ["Bandpass 300–3400 Hz", "G.711 μ-law", "ESC-50 noise", "Packet loss"] },
+      { group: "Evaluation", items: ["jiwer", "Paired bootstrap", "SNR bucketing"] },
+      { group: "Serving", items: ["FastAPI", "MediaRecorder", "Next.js route proxy"] },
       { group: "Realtime & Maps", items: ["Socket.IO", "OSRM", "Leaflet / OpenStreetMap", "Overpass API"] },
       { group: "Media Verification", items: ["EXIF metadata", "Haversine geofencing"] },
     ],
     results: [
-      "Spoof detection at 78% precision on emergency call audio.",
+      "WER on telephony-band degraded audio cut from 23.76% to 21.20% — −2.56 pp, 95% CI [−3.85, −1.31] over 10,000 paired bootstrap resamples — with a LoRA (r=32, α=64 on q_proj/v_proj) over whisper-base, 2000 training and 300 eval utterances on a Kaggle T4.",
+      "The specialisation cost measured rather than omitted: clean WER 4.37% → 5.24%, +0.87 pp, CI [+0.35, +1.40]. The model narrowed slightly; a LoRA that had genuinely collapsed onto the channel would put clean WER in the teens.",
+      "Scored through Whisper's own EnglishTextNormalizer, so the numbers are comparable to the published model card rather than to a bespoke scoring function.",
+      "A self-audit of the evaluation found its per-utterance SNR labels were measured before the channel and scored after it — a labelled 10 dB spanning 2–33 dB in reality — and documented what that does and does not invalidate.",
+      "A voice-report path that degrades without losing data: the recording is attached to the incident whether transcription succeeds, times out at 20 s, or is unreachable.",
       "Live responder tracking on real OSRM-computed routes, streamed over Socket.IO with zero paid map/routing infrastructure.",
-      "Selected from 200+ startups by IITM NIRMAAN.",
-      "Led a 5-member cross-functional team to MVP.",
+      "EXIF-GPS screening of bystander photos against the claimed location within a 3 km Haversine tolerance, failing open on stripped or unreadable metadata.",
+      "Selected from 200+ startups by IITM NIRMAAN; led a 5-member cross-functional team to MVP.",
     ],
     lessons: [
       "A latency budget is a design constraint, not a tuning target. Dispatch and responder tracking had to be architected around real-time delivery from the start — a slow update isn't a degraded feature here, it's a failed one.",
-      "Off-the-shelf models assume clean inputs. Whisper was unusable on real emergency audio until it was fine-tuned on the noise it would actually meet, which is the whole gap between a demo and a system.",
-      "On a cross-functional team the risk moves into the seams. The components were tractable; keeping speech, realtime and front-end aligned on one contract is what decided whether an MVP existed.",
+      "When the real data is unobtainable, construct the condition and say so. \"Fine-tuned on emergency calls\" would have been a lie one question about the dataset would expose; \"fine-tuned for telephony-band noisy speech\", with the channel's four stages named, survives the question.",
+      "Measure the cell that makes your result look worse. Without clean-audio-through-the-tuned-model, robustness and narrowing are indistinguishable — and the fourth cell is the one an interviewer asks for first.",
+      "A delta from 300 utterances and one seed is not a result until it has an interval. A reader who has to ask for one has already discounted the number.",
+      "Audit the measurement, not just the model. The SNR labels were computed at the wrong point in the pipeline, and nothing about the run looked wrong — the breakdown was simply sorting by a number that no longer described the file.",
+      "Decide what is load-bearing and protect it in the control flow. The audio is the report and the transcript is an enrichment, so the blob is created before the upload is tried and every failure path still carries it.",
     ],
     timeline: [
       { when: "Apr 2025", what: "Founded; selected into the IITM Nirmaan cohort." },
-      { when: "2025", what: "Whisper fine-tuning, BART summarisation, spoof detection." },
-      { when: "2026", what: "Rebuilt the dispatch/tracking backend on a fully free stack (Socket.IO, OSRM, Overpass, Leaflet) and added EXIF-based media verification." },
-      { when: "Present", what: "Ongoing." },
+      { when: "2025", what: "First platform build: incident reporting, dispatch dashboard, responder flows." },
+      { when: "Aug 2026", what: "Rebuilt dispatch/tracking on a fully free stack (Socket.IO, OSRM, Overpass, Leaflet); EXIF-based media verification with a fail-open rule." },
+      { when: "Aug 2026", what: "reach-asr: telephony degradation pipeline, Whisper LoRA fine-tune and WER evaluation; voice-report flow wired into the incident modal with degraded-mode handling." },
+      { when: "Sep 2026", what: "Paired bootstrap intervals, the 2×2 specialisation check, and an audit of the evaluation's own methodology." },
     ],
     links: [
       { label: "Resume", href: PROFILE.resumeUrl },
-      { label: "GitHub", href: "https://github.com/CyberRik/reach-app" },
+      { label: "GitHub — platform", href: "https://github.com/CyberRik/reach-app" },
+      { label: "GitHub — reach-asr", href: "https://github.com/CyberRik/reach-asr" },
     ],
-    related: ["medproqa", "smartfan"],
+    related: ["indic-asr", "medproqa", "smartfan"],
+  },
+
+  /* ---------------------------------------------------------------- */
+  "indic-asr": {
+    id: "indic-asr",
+    title: "Indic Speaker-Attributed ASR",
+    tier: "featured",
+    role: "Solo Developer",
+    period: "Sep 2026",
+    context: "Personal project · open source",
+    tagline: "Who said what, across 9 Indic scripts — a diarization and ASR benchmark, and the two decode defects that dominated it",
+    milestone: "current",
+
+    overview:
+      "A six-stage pipeline that diarizes multi-speaker Indic recordings, transcribes them, and assigns every word to a speaker — benchmarked end to end on 12.26 hours of labelled YouTube audio across 9 scripts and 2–8 speakers, under a deliberately strict metric policy. Three diarizers and three ASR systems are compared on identical words, so any difference between them is the thing being measured rather than an artefact of who transcribed what.",
+    problem:
+      "Speaker-attributed ASR is usually reported as one number on one configuration, which hides where the error actually is. Indic audio makes that worse: the languages share acoustics but not scripts, so a system can recognise speech correctly and still score 100% WER by writing it in the wrong alphabet. Separating recognition error from attribution error, and both from decoding defects, needs a harness where only one thing changes at a time.",
+    architecture: {
+      summary:
+        "Each recording is transcribed once and every word is assigned to the diarizer turn it overlaps most, rather than transcribing each diarized segment. That keeps the words identical across diarizers — so a cpWER difference is purely a labelling difference — avoids Whisper degrading on sub-second fragments, and costs 99 ASR calls instead of 12,809. Download, model and attribution stages checkpoint to an append-only manifest and resume, so a lost Colab session costs one recording rather than a run. Each GPU stack runs in its own environment, because NeMo, pyannote, faster-whisper and onnxruntime-gpu pin conflicting numpy and cuDNN versions.",
+      diagram: {
+        caption: "Transcribe once, then assign words to turns",
+        nodes: [
+          { id: "yt", label: "YouTube Audio", sub: "99 clips · 12.26 h", col: 0, row: 1, kind: "input" },
+          { id: "refs", label: "Reference Parse", sub: "RTTM + attributed text", col: 1, row: 2, kind: "store" },
+          { id: "diar", label: "Diarization", sub: "pyannote 3.1 · Sortformer", col: 1, row: 0, kind: "model" },
+          { id: "asr", label: "ASR", sub: "IndicConformer · Whisper", col: 2, row: 1, kind: "model" },
+          { id: "lid", label: "LID Fallback", sub: "out-of-set → Whisper", col: 3, row: 1, kind: "core" },
+          { id: "attr", label: "Word → Speaker", sub: "max-overlap turn", col: 4, row: 1, kind: "core" },
+          { id: "relabel", label: "Relabelling", sub: "rule · Qwen2.5-7B", col: 4, row: 3, kind: "model" },
+          { id: "score", label: "Scoring", sub: "DER/JER · WER/cpWER/WDER", col: 5, row: 1, kind: "output" },
+        ],
+        edges: [
+          { from: "yt", to: "diar" },
+          { from: "yt", to: "asr" },
+          { from: "yt", to: "refs", dashed: true },
+          { from: "asr", to: "lid" },
+          { from: "lid", to: "attr" },
+          { from: "diar", to: "attr", label: "turns" },
+          { from: "attr", to: "score" },
+          { from: "attr", to: "relabel", dashed: true },
+          { from: "relabel", to: "score", dashed: true, label: "rejected" },
+          { from: "refs", to: "score", dashed: true, label: "scorers only" },
+        ],
+      },
+    },
+    challenges: [
+      {
+        title: "A multi-softmax CTC head decoded as if it were one softmax",
+        body:
+          "IndicConformer scores each language in its own 256-token block with its own softmax, so logits from different languages are not comparable on one scale. Taking a global argmax across all of them spelled single words across six scripts at once — output that looks like a tokeniser bug and is actually a decoding-contract mistake. Voting for the recording's language over its frames and then decoding inside that block took WER from 93.66 to 78.82, a 14.84-point move with the same model, the same weights and the same audio. The naive decode is kept as a scored ablation rather than deleted, because the size of the gap is the evidence that the defect was real.",
+      },
+      {
+        title: "A benchmark that returned a different answer every run",
+        body:
+          "faster-whisper's default temperature fallback samples without a seed, so the same recording returned 87, 84 and 100 words on three identical runs — a benchmark that cannot be reproduced is not a benchmark. At temperature 0 it returns 211 words every time. Pinning it improved corpus WER 86.62 → 85.70 and cut runtime from 396 to 153 minutes, so determinism here was free in both directions.",
+      },
+      {
+        title: "The improvement that held, and the check that it wasn't fitted",
+        body:
+          "On 13 recordings IndicConformer's own language vote chose Urdu or Nepali — spoken Hindi and Urdu are nearly identical and differ mainly in script, so this is genuine acoustic ambiguity — and every word came out in the wrong alphabet, scoring 100% WER. The rule is to take Whisper's words when the detected language falls outside the ten served codes; no reference is ever read. cpWER goes 79.67 → 72.96 with 12 recordings better, 87 unchanged and 0 worse, and it holds on all three diarizers. The check that matters is the counterfactual: routing clips detected as Hindi or Marathi to Whisper instead makes corpus WER worse (82.56), so the gain comes from the out-of-set rule rather than from a general preference for Whisper.",
+      },
+      {
+        title: "Building the LLM relabeller, and reporting that it failed",
+        body:
+          "Speaker relabelling from the transcript, in the spirit of DiarizationLM, was built and guarded properly — Qwen2.5-7B-Instruct in 4-bit over windows of 25 units, edits below 0.7 confidence dropped, any recording where it tried to edit over 30% of units discarded, and a per-clip assertion that the text never changes so WER cannot move. It made things worse: cpWER 79.67 → 80.00, WDER 20.12 → 20.96, and only 6 recordings improved against 19 that degraded. An oracle audit explains why rather than leaving it as a shrug — even after splitting at pauses over 0.5 s, 37.87% of words sit in units spanning two true speakers, where no relabel can help. At ~79% WER the text simply does not carry enough evidence of who is speaking, and the model's confidences were always 0.8 or 0.9 regardless.",
+      },
+      {
+        title: "A fair control for a metric the fix doesn't natively speak",
+        body:
+          "Relabelling edits word labels, but DER is defined over turns, so comparing a relabelled system's DER against the raw diarizer's would charge it for the projection as well as for its edits. Mapping word labels back onto turns with zero edits already moves DER from 27.34 to 29.03, so that zero-edit projection is the honest baseline. Measured against it, the rule method costs +1.52 DER and the LLM +0.87 — and the results table reports the control beside every DER rather than quoting the flattering comparison.",
+      },
+      {
+        title: "Choosing the strict metric policy and publishing the sensitivity",
+        body:
+          "DER and JER are scored at collar 0 with overlapped speech included, over the whole recording — the least forgiving standard configuration. The same system under a 0.25 s collar with overlap excluded would report 20.58 instead of 27.34, and that sensitivity is printed by the scorer rather than left for a reader to discover. Publishing the harsher number with its softer counterpart is what makes the comparison against published figures meaningful.",
+      },
+      {
+        title: "Invariants, asserted rather than assumed",
+        body:
+          "Each stage asserts what must not have changed: WER identical across every relabelling of one ASR output because text never changes, missed speech and false alarm identical between a diarizer's RTTM and its relabelled versions to 0.000 s because boundaries never move, every fallback row reproducing the per-recording scores of the system it took words from, and every corpus figure re-derived from per-clip counts and matched against the stage that produced it. The reproducibility notebook re-runs each model live on a 3-recording subset and recomputes every CPU stage over all 99, asserting equality with the committed tables — it reproduces 0.00% DER and identical word sequences on different hardware and library versions.",
+      },
+    ],
+    stack: [
+      { group: "Diarization", items: ["pyannote 3.1", "Sortformer 4spk-v1", "NeMo"] },
+      { group: "ASR", items: ["IndicConformer-600M", "ONNX Runtime", "Whisper large-v3", "faster-whisper"] },
+      { group: "Relabelling", items: ["Qwen2.5-7B-Instruct", "bitsandbytes 4-bit", "transformers"] },
+      { group: "Metrics", items: ["pyannote.metrics", "MeetEval", "WDER", "rapidfuzz"] },
+      { group: "Pipeline", items: ["Python", "yt-dlp", "ffmpeg", "Colab / Kaggle T4", "Append-only manifests"] },
+    ],
+    results: [
+      "Benchmarked 3 diarizers × 3 ASR systems on 99 recordings (12.26 h, 9 scripts, 2–8 speakers, 7.61% overlapped speech) at collar 0 with overlap scored — pyannote 3.1 best at DER 27.34 / JER 38.14.",
+      "Root-caused a multi-softmax CTC decode defect: language-locked decoding took WER 93.66 → 78.82 (−14.84) and cpWER 94.15 → 79.67 on the same weights and audio.",
+      "A language-ID fallback to Whisper on out-of-set recordings cut cpWER 79.67 → 72.96 and WDER 20.12 → 9.32, with 12 recordings better, 87 unchanged and 0 worse — and it holds on all three diarizers.",
+      "Devanagari WER 79.16 → 57.20, better than either system alone (Whisper 69.39), while a control routing in-set languages to Whisper made corpus WER worse (82.56) — the gain is the rule, not a preference.",
+      "Made the Whisper benchmark deterministic by disabling an unseeded temperature fallback: 87/84/100 words across identical runs became 211 every time, corpus WER 86.62 → 85.70, runtime 396 → 153 min.",
+      "Built, guarded and then rejected LLM speaker relabelling on its own numbers (cpWER 79.67 → 80.00), with an oracle audit putting 37.87% of words beyond the reach of any relabel.",
+      "Established that recognition, not attribution, is the bottleneck — cpWER sits under 1 point above WER — and that only 24% of pyannote's error seconds fall in overlapped speech.",
+    ],
+    lessons: [
+      "Read the model's output contract before trusting its decode. A per-language softmax argmaxed globally produces confident nonsense, and 14.8 WER points were sitting behind an assumption nobody had checked.",
+      "A benchmark that isn't deterministic isn't a benchmark. An unseeded sampling fallback was silently changing the transcript between runs, and pinning it happened to make the system both better and faster.",
+      "Hold everything constant but one thing. Transcribing once and assigning words to turns is what makes a cpWER difference attributable to labelling rather than to two systems having heard different words.",
+      "A negative result needs a mechanism, not an apology. The LLM relabeller failing is only useful because the oracle audit says why — 37.87% of words are in units no relabel could fix.",
+      "Give a method the control it deserves. Projecting words back to turns costs DER on its own, so charging the relabeller for that projection would have understated it; the zero-edit control is what makes the comparison fair.",
+      "Quote the strict number and publish the lenient one beside it. Collar 0 with overlap scored reads worse than the 0.25 s convention, and hiding the difference is how benchmark figures stop being comparable.",
+    ],
+    timeline: [
+      { when: "Sep 2026", what: "Six-stage diarization and ASR benchmark pipeline; reference cleaning and the metric policy." },
+      { when: "Sep 2026", what: "Stage 5 relabelling (rule and LLM) plus the zero-edit DER projection control." },
+      { when: "Sep 2026", what: "Language-ID fallback: IndicConformer, or Whisper when its own LID lands out of set." },
+      { when: "Sep 2026", what: "End-to-end Colab notebook reproducing every committed table, and the write-up." },
+    ],
+    links: [
+      { label: "GitHub", href: "https://github.com/CyberRik/indic-speaker-asr" },
+      { label: "Write-up", href: "https://github.com/CyberRik/indic-speaker-asr/blob/main/WRITEUP.md" },
+      { label: "Results table", href: "https://github.com/CyberRik/indic-speaker-asr/blob/main/data/results/results_table.md" },
+    ],
+    related: ["reach", "tinyserve", "toolcalllm"],
   },
 
   /* ---------------------------------------------------------------- */
@@ -1118,7 +1271,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
   },
 };
 
-export const FEATURED: ProjectId[] = ["ancora", "tinyserve", "senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
+export const FEATURED: ProjectId[] = ["ancora", "tinyserve", "indic-asr", "senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
 export const ARCHIVE: ProjectId[] = ["medproqa", "smartfan", "rrt"];
 
 /* ------------------------------------------------------------------ */
@@ -1180,7 +1333,7 @@ export const MILESTONES: Milestone[] = [
     // the résumé dropped it deliberately, React and Next.js already appearing
     // under skills. AI Agents takes its place from the same list.
     alsoShipped: ["LLM Fine-Tuning & Optimization", "Generative AI with LLMs (DeepLearning.AI)", "AI Agents (Hugging Face)"],
-    tech: ["PyTorch", "Whisper", "BART", "Phi-3", "QLoRA", "Gemini", "n8n", "WebSockets"],
+    tech: ["PyTorch", "Whisper", "LoRA", "Phi-3", "QLoRA", "Gemini", "n8n", "WebSockets"],
     lessons: [
       "Quantised fine-tuning is what makes ambitious training possible on real hardware budgets.",
       "Evaluation you hand-label yourself is the only evaluation you trust.",
@@ -1269,22 +1422,23 @@ export const MILESTONES: Milestone[] = [
     period: "2026 – 2027",
     became: "An engineer who builds the runtime itself — and holds it to a proof, not a demo.",
     summary:
-      "Placement preparation alongside continued work on AI systems, split across two personal runtimes. Ancora makes losing a multi-step computation to a dead worker structurally impossible, proven with chaos experiments that assert rather than demonstrate. TinyServe takes the same scheduling instincts — admission control, fair queuing, backpressure — and applies them to LLM inference, built from scratch on llama.cpp at a scale where every latency number traces back to a specific decision in the code.",
-    projects: ["ancora", "tinyserve"],
+      "Placement preparation alongside continued work on AI systems, across two personal runtimes and a speech benchmark. Ancora makes losing a multi-step computation to a dead worker structurally impossible, proven with chaos experiments that assert rather than demonstrate. TinyServe takes the same scheduling instincts — admission control, fair queuing, backpressure — and applies them to LLM inference, built from scratch on llama.cpp at a scale where every latency number traces back to a specific decision in the code. The Indic speaker-attributed ASR work is the same instinct pointed at measurement: hold everything constant but one variable, assert the invariants, and report the method that failed next to the one that worked.",
+    projects: ["ancora", "tinyserve", "indic-asr"],
     alsoShipped: [
       "Ancora — fault-tolerant runtime for durable AI workflows (Temporal + Ray), open source",
       "TinyServe — from-scratch LLM inference runtime on llama.cpp, open source",
+      "Indic Speaker-Attributed ASR — diarization and ASR benchmark over 12.26 h of 9-script audio, open source",
       "Placement preparation",
       "AI systems and distributed systems",
     ],
-    tech: ["Temporal", "Ray", "Distributed Systems", "OpenTelemetry", "Chaos Engineering", "llama.cpp", "Continuous Batching", "Prometheus", "Grafana"],
+    tech: ["Temporal", "Ray", "Distributed Systems", "OpenTelemetry", "Chaos Engineering", "llama.cpp", "Continuous Batching", "Prometheus", "Grafana", "pyannote", "Whisper", "IndicConformer", "ONNX Runtime"],
     lessons: [
       "Durability and liveness are different guarantees. Temporal keeps your state through any crash; only spare capacity turns that into progress.",
       "A fault-tolerance claim needs a test that asserts it, not a demo that shows it once.",
       "The same scheduling primitives — admission control, fair queuing — apply whether the resource being rationed is worker-seconds or KV-cache memory; only the substrate changes.",
     ],
     impact:
-      "Ancora: three durability invariants machine-checked from Temporal history after a real SIGKILL, kill-detection cut 9.5× to ~6s, 284 tests green. TinyServe: WFQ bounds scheduling unfairness 2.54× vs strict Priority's 3.87×, admission control verified live under burst load, 97.2% of wall time profiled inside llama_decode(). B.Tech completes 2027.",
+      "Ancora: three durability invariants machine-checked from Temporal history after a real SIGKILL, kill-detection cut 9.5× to ~6s, 284 tests green. TinyServe: WFQ bounds scheduling unfairness 2.54× vs strict Priority's 3.87×, admission control verified live under burst load, 97.2% of wall time profiled inside llama_decode(). Indic ASR: a multi-softmax CTC decode defect root-caused for 14.8 WER points, and a language-ID fallback taking cpWER 79.67 → 72.96 with 0 of 99 recordings worse. B.Tech completes 2027.",
   },
 ];
 
