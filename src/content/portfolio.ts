@@ -19,6 +19,10 @@ export const PROFILE = {
   summary:
     "AI and LLM engineer with 10 months across four industry internships, shipping both the model and the AI systems that keep it running. Fine-tunes, benchmarks and serves tool-calling LLMs on constrained GPU hardware, and builds the fault-tolerant, observable distributed infrastructure underneath them.",
   email: "ritankarmondal123@gmail.com",
+  // Usernames drive the header links; /api/stats pulls the live LeetCode
+  // solved count from the leetcode account.
+  github: "CyberRik",
+  leetcode: "Rik0411",
   // Built from my_resume/resume_offcampus.tex — the off-campus variant, which
   // leads with work rather than marks: no grade figures and no Achievements
   // section. Every download link in the site routes through this one constant,

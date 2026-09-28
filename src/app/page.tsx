@@ -7,6 +7,7 @@ import { PROFILE } from "@/content/portfolio";
 import { isExitKey } from "@/lib/keys";
 import { getPortalSection } from "@/lib/portal";
 import { AmbientAudio } from "@/components/ui/AmbientAudio";
+import { ProfileStats } from "@/components/ui/ProfileStats";
 
 // The entire 3D world and its DOM UI overlays are client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
@@ -84,14 +85,19 @@ export default function Home() {
           them out as a single justify-between row makes that collision
           structurally impossible at any width instead of merely tuned
           away at the widths someone happened to test. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
+      {/* Soft scrim under the top bar so the sun shafts crossing the top
+          edge can't wash out the header text. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-28 bg-gradient-to-b from-black/55 to-transparent sm:h-32" />
+
+      <div className="hud-text pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
         <div className="select-none">
-          <p className="font-mono text-[9px] tracking-[0.22em] text-[#a89880] uppercase sm:text-[11px] sm:tracking-[0.35em]">
+          <p className="font-mono text-[9px] tracking-[0.22em] text-[#eadbc2] uppercase sm:text-[11px] sm:tracking-[0.35em]">
             Ritankar Mondal
           </p>
-          <p className="mt-1 font-mono text-[8.5px] tracking-[0.14em] text-[#6b6152] sm:text-[10px] sm:tracking-[0.2em]">
+          <p className="mt-1 font-mono text-[8.5px] tracking-[0.14em] text-[#bfae92] sm:text-[10px] sm:tracking-[0.2em]">
             AI Engineer · IIT Madras
           </p>
+          <ProfileStats />
         </div>
 
         <div className="pointer-events-auto flex shrink-0 items-center gap-3 font-mono text-[9px] tracking-[0.14em] uppercase sm:gap-5 sm:text-[10px] sm:tracking-[0.2em]">
@@ -100,13 +106,13 @@ export default function Home() {
             href={PROFILE.resumeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
+            className="text-[#d6c6ab] transition-colors hover:text-[#ffd9a8]"
           >
             resume ↓
           </a>
           <a
             href={`mailto:${PROFILE.email}`}
-            className="text-[#a89880] transition-colors hover:text-[#ffd9a8]"
+            className="text-[#d6c6ab] transition-colors hover:text-[#ffd9a8]"
           >
             say hello ↗
           </a>

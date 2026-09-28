@@ -19,7 +19,7 @@ export function AmbientAudio() {
           track name is a nice-to-have; a reachable header is not. */}
       <button
         onClick={() => audioPlayer.togglePlay()}
-        className="flex w-auto items-center gap-2 overflow-hidden rounded-full border border-[#a89880]/30 bg-black/20 px-2.5 py-1.5 text-[#a89880] transition-colors hover:border-[#ffd9a8]/50 hover:text-[#ffd9a8] sm:w-48 sm:px-3"
+        className="flex w-auto items-center gap-2 overflow-hidden rounded-full border border-[#d6c6ab]/35 bg-black/40 px-2.5 py-1.5 text-[#d6c6ab] transition-colors hover:border-[#ffd9a8]/50 hover:text-[#ffd9a8] sm:w-48 sm:px-3"
         aria-label={playing ? "Pause background music" : "Play background music"}
       >
         <span className="shrink-0">{playing ? "🔈" : "🔇"}</span>
@@ -31,7 +31,7 @@ export function AmbientAudio() {
             </div>
           </div>
         ) : (
-          <span className="hidden text-[10px] tracking-widest text-[#a89880]/70 uppercase sm:inline">Audio</span>
+          <span className="hidden text-[10px] tracking-widest text-[#d6c6ab]/80 uppercase sm:inline">Audio</span>
         )}
       </button>
     </div>
