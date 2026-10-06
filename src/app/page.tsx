@@ -7,7 +7,7 @@ import { PROFILE } from "@/content/portfolio";
 import { isExitKey } from "@/lib/keys";
 import { getPortalSection } from "@/lib/portal";
 import { AmbientAudio } from "@/components/ui/AmbientAudio";
-import { ProfileStats } from "@/components/ui/ProfileStats";
+import { ProfileLinks } from "@/components/ui/ProfileLinks";
 
 // The entire 3D world and its DOM UI overlays are client-only and code-split away from the shell.
 const SceneCanvas = dynamic(
@@ -90,17 +90,19 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-28 bg-gradient-to-b from-black/55 to-transparent sm:h-32" />
 
       <div className="hud-text pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
-        <div className="select-none">
+        <div className="hud-panel min-w-0 select-none">
           <p className="font-mono text-[9px] tracking-[0.22em] text-[#eadbc2] uppercase sm:text-[11px] sm:tracking-[0.35em]">
             Ritankar Mondal
           </p>
           <p className="mt-1 font-mono text-[8.5px] tracking-[0.14em] text-[#bfae92] sm:text-[10px] sm:tracking-[0.2em]">
-            AI Engineer · IIT Madras
+            {/* Breaks between the two halves, never mid-phrase. */}
+            <span className="inline-block">AI Engineer ·</span>{" "}
+            <span className="inline-block">IIT Madras</span>
           </p>
-          <ProfileStats />
+          <ProfileLinks />
         </div>
 
-        <div className="pointer-events-auto flex shrink-0 items-center gap-3 font-mono text-[9px] tracking-[0.14em] uppercase sm:gap-5 sm:text-[10px] sm:tracking-[0.2em]">
+        <div className="hud-panel pointer-events-auto flex shrink-0 items-center gap-2.5 font-mono text-[9px] tracking-[0.14em] uppercase sm:gap-5 sm:text-[10px] sm:tracking-[0.2em]">
           <AmbientAudio />
           <a
             href={PROFILE.resumeUrl}
