@@ -1428,6 +1428,7 @@ export const MILESTONES: Milestone[] = [
       "Ancora — fault-tolerant runtime for durable AI workflows (Temporal + Ray), open source",
       "TinyServe — from-scratch LLM inference runtime on llama.cpp, open source",
       "Indic Speaker-Attributed ASR — diarization and ASR benchmark over 12.26 h of 9-script audio, open source",
+      "Docling (Linux Foundation AI & Data) — 2 merged PRs: HTML links and images outside the base directory no longer fail a conversion; EPUB images in single quotes or percent-escaped paths now load",
       "Placement preparation",
       "AI systems and distributed systems",
     ],

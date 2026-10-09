@@ -264,13 +264,14 @@ export const BOOT_NOTES: readonly string[] = [
 // Kept to one book page (~380px of column at 15px serif): the résumé carries
 // each of these as a full sentence, so the phrasing here is the short form.
 // Adding a seventh entry, or a longer one, will overflow the page — check it
-// in the book before growing this list.
+// in the book before growing this list. The Docling entry took the slot freed
+// by folding the JEE and WBJEE rows into one, as the résumé already does.
 export const ACHIEVEMENTS: string[] = [
   "Sole selectee from IIT Madras, and the first across all IITs, for the Willings Programme — Japan industry placement, converted to Otsuka in Tokyo with the only intern Pre-Placement Offer",
   "Top 15 nationally — NCIIPC (Govt. of India) Startup India AI Grand Challenge, multilingual document understanding",
+  "Open-source contributor to Docling (Linux Foundation AI & Data, 68k+ stars) — 2 merged PRs fixing HTML and EPUB conversion",
   "Selected from 200+ startups by IITM NIRMAAN (R.E.A.C.H.)",
-  "98.61 percentile in JEE Mains among 1.2M+ candidates",
-  "Top 450 in WBJEE",
+  "98.61 percentile in JEE Mains among 1.2M+ candidates; Top 450 in WBJEE",
   "AIR 71 (Junior Squad) and City Topper — Technothlon Prelims",
 ];
 
