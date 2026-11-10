@@ -269,7 +269,7 @@ export const BOOT_NOTES: readonly string[] = [
 export const ACHIEVEMENTS: string[] = [
   "Sole selectee from IIT Madras, and the first across all IITs, for the Willings Programme — Japan industry placement, converted to Otsuka in Tokyo with the only intern Pre-Placement Offer",
   "Top 15 nationally — NCIIPC (Govt. of India) Startup India AI Grand Challenge, multilingual document understanding",
-  "Open-source contributor to Docling (Linux Foundation AI & Data, 68k+ stars) — 2 merged PRs fixing HTML and EPUB conversion",
+  "Open-source contributor to Docling and Feast (Linux Foundation AI & Data) — merged fixes to document conversion and DynamoDB pool warmup",
   "Selected from 200+ startups by IITM NIRMAAN (R.E.A.C.H.)",
   "98.61 percentile in JEE Mains among 1.2M+ candidates; Top 450 in WBJEE",
   "AIR 71 (Junior Squad) and City Topper — Technothlon Prelims",

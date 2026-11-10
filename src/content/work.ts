@@ -1429,6 +1429,7 @@ export const MILESTONES: Milestone[] = [
       "TinyServe — from-scratch LLM inference runtime on llama.cpp, open source",
       "Indic Speaker-Attributed ASR — diarization and ASR benchmark over 12.26 h of 9-script audio, open source",
       "Docling (Linux Foundation AI & Data) — 2 merged PRs: HTML links and images outside the base directory no longer fail a conversion; EPUB images in single quotes or percent-escaped paths now load",
+      "Feast (Linux Foundation AI & Data) — merged PR: the DynamoDB online store now warms up its whole connection pool at startup instead of a single connection",
       "Placement preparation",
       "AI systems and distributed systems",
     ],
