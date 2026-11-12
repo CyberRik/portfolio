@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { flyToView } from "@/components/camera/cameraBus";
 import { PROFILE } from "@/content/portfolio";
 import { isExitKey } from "@/lib/keys";
@@ -102,8 +103,18 @@ export default function Home() {
           <ProfileLinks />
         </div>
 
-        <div className="hud-panel pointer-events-auto flex shrink-0 items-center gap-2.5 font-mono text-[9px] tracking-[0.14em] uppercase sm:gap-5 sm:text-[10px] sm:tracking-[0.2em]">
+        <div className="hud-panel pointer-events-auto relative flex shrink-0 items-center gap-2.5 font-mono text-[9px] tracking-[0.14em] uppercase sm:gap-5 sm:text-[10px] sm:tracking-[0.2em]">
           <AmbientAudio />
+          {/* The flat, scrollable version of everything in the room. On
+              phones it hangs on its own line under the other links, taken
+              out of flow so it can't widen this panel: inline (or even
+              wrapped), it crushed the identity chip to ~48px at 390px. */}
+          <Link
+            href="/brief"
+            className="absolute top-full right-0 mt-2 whitespace-nowrap rounded-lg border border-[rgba(214,198,171,0.08)] bg-[rgba(12,10,8,0.62)] px-2 py-1.5 backdrop-blur-[6px] text-[#ffd9a8] sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none transition-colors hover:text-[#ffb361] sm:static sm:mt-0 sm:text-[#d6c6ab] sm:hover:text-[#ffd9a8]"
+          >
+            quick read →
+          </Link>
           <a
             href={PROFILE.resumeUrl}
             target="_blank"

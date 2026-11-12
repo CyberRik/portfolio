@@ -28,7 +28,20 @@ const PAD = 16;
 const CH_LABEL = 5.25;
 const CH_SUB = 4.35;
 
-export function ArchDiagram({ spec }: { spec: Spec }) {
+/**
+ * `fit` lets the drawing grow to fill its container (up to 1.6x) instead
+ * of rendering at fixed size. The layout is tuned for the monitor's small
+ * CSS pixels; /brief shows the same diagram across a full page, where
+ * 8.5px labels would be unreadable. It never shrinks below natural size —
+ * a narrow screen scrolls sideways instead.
+ */
+export function ArchDiagram({
+  spec,
+  fit = false,
+}: {
+  spec: Spec;
+  fit?: boolean;
+}) {
   const maxRow = Math.max(...spec.nodes.map((n) => n.row));
   const maxCol = Math.max(...spec.nodes.map((n) => n.col));
 
@@ -37,7 +50,11 @@ export function ArchDiagram({ spec }: { spec: Spec }) {
   // real component names, not something to truncate. Each column is then
   // as wide as its widest node so nothing collides.
   const nodeW = (n: (typeof spec.nodes)[number]) =>
-    Math.max(MIN_W, n.label.length * CH_LABEL + 22, (n.sub?.length ?? 0) * CH_SUB + 22);
+    Math.max(
+      MIN_W,
+      n.label.length * CH_LABEL + 22,
+      (n.sub?.length ?? 0) * CH_SUB + 22,
+    );
 
   const colW: number[] = [];
   for (let c = 0; c <= maxCol; c++) {
@@ -55,16 +72,50 @@ export function ArchDiagram({ spec }: { spec: Spec }) {
   const at = (id: string) => {
     const n = spec.nodes.find((x) => x.id === id);
     if (!n) return null;
-    return { x: colX[n.col], y: PAD + n.row * ROW_H, w: colW[n.col], h: NODE_H };
+    return {
+      x: colX[n.col],
+      y: PAD + n.row * ROW_H,
+      w: colW[n.col],
+      h: NODE_H,
+    };
   };
 
   return (
     <figure className="m-0">
       {/* the diagram scrolls on its own axis — the panel never does */}
-      <div className="os-scroll overflow-x-auto rounded-md" style={{ background: OS.sunk, border: `1px solid ${OS.lineSoft}` }}>
-        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={spec.caption}>
+      <div
+        className="os-scroll overflow-x-auto rounded-md"
+        style={{ background: OS.sunk, border: `1px solid ${OS.lineSoft}` }}
+      >
+        <svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={spec.caption}
+          style={
+            fit
+              ? {
+                  display: "block",
+                  width: "100%",
+                  height: "auto",
+                  minWidth: width,
+                  maxWidth: width * 1.6,
+                  margin: "0 auto",
+                }
+              : undefined
+          }
+        >
           <defs>
-            <marker id="arch-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+            <marker
+              id="arch-arrow"
+              viewBox="0 0 8 8"
+              refX="7"
+              refY="4"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto"
+            >
               <path d="M 0 1 L 7 4 L 0 7 z" fill={OS.faint} />
             </marker>
           </defs>
@@ -101,7 +152,11 @@ export function ArchDiagram({ spec }: { spec: Spec }) {
                   markerEnd="url(#arch-arrow)"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 + i * 0.02, duration: DUR.ui, ease: EASE.out }}
+                  transition={{
+                    delay: 0.1 + i * 0.02,
+                    duration: DUR.ui,
+                    ease: EASE.out,
+                  }}
                 />
                 {e.label && (
                   <text
@@ -129,7 +184,11 @@ export function ArchDiagram({ spec }: { spec: Spec }) {
                 key={n.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.025, duration: DUR.ui, ease: EASE.out }}
+                transition={{
+                  delay: i * 0.025,
+                  duration: DUR.ui,
+                  ease: EASE.out,
+                }}
               >
                 <rect
                   x={p.x}
@@ -142,7 +201,14 @@ export function ArchDiagram({ spec }: { spec: Spec }) {
                   strokeWidth={1}
                 />
                 {/* a 2px spine in the node's own colour — the legend key */}
-                <rect x={p.x} y={p.y + 8} width={2} height={p.h - 16} rx={1} fill={tint} />
+                <rect
+                  x={p.x}
+                  y={p.y + 8}
+                  width={2}
+                  height={p.h - 16}
+                  rx={1}
+                  fill={tint}
+                />
                 <text
                   x={p.x + 10}
                   y={n.sub ? p.y + 20 : p.y + p.h / 2 + 3}
@@ -168,7 +234,10 @@ export function ArchDiagram({ spec }: { spec: Spec }) {
           })}
         </svg>
       </div>
-      <figcaption className="mt-1.5 font-mono text-[8px] tracking-[0.16em] uppercase" style={{ color: OS.faint }}>
+      <figcaption
+        className="mt-1.5 font-mono text-[8px] tracking-[0.16em] uppercase"
+        style={{ color: OS.faint }}
+      >
         {spec.caption}
       </figcaption>
     </figure>
