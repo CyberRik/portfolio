@@ -46,6 +46,18 @@ const OnboardingHint = dynamic(
 );
 
 export default function Home() {
+  // No WebGL at all (locked-down work machines, some old phones, WebGL
+  // disabled in settings): the room can only render a black canvas, so
+  // hand the visitor the flat version instead. `replace`, not push, so
+  // Back doesn't bounce them into the same dead end. Devices that merely
+  // have a weak GPU still get the room — gpuTier scales it down for them.
+  useEffect(() => {
+    const probe = document.createElement("canvas");
+    const gl = probe.getContext("webgl2") ?? probe.getContext("webgl");
+    if (!gl) window.location.replace("/brief");
+    else gl.getExtension("WEBGL_lose_context")?.loseContext();
+  }, []);
+
   // any key returns to the wide shot — the "back out" gesture. Same rule
   // as the portal worlds use, so backing out feels identical whether or
   // not a world is open (see lib/keys.ts for what "any" excludes).
