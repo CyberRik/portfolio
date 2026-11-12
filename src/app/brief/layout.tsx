@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import Link from "next/link";
 import { PROFILE } from "@/content/portfolio";
 import { SmoothScroll } from "@/components/brief/motion";
@@ -9,6 +10,9 @@ import "./brief.css";
  * outside `.brief-page`, so a page transition swaps only the page while
  * the nav holds still (see the view-transition rules in brief.css).
  */
+// the room's chrome colour is its warm brown; the brief is black
+export const viewport: Viewport = { themeColor: "#000000" };
+
 export default function BriefLayout({
   children,
 }: {

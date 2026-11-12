@@ -19,6 +19,13 @@ import {
   Reveal,
   TransitionLink,
 } from "@/components/brief/motion";
+import {
+  BlurIn,
+  HeroArt,
+  NumbersWall,
+  PopChips,
+  type Stat,
+} from "@/components/brief/effects";
 import { real } from "@/components/brief/util";
 
 /**
@@ -52,6 +59,70 @@ const SECTIONS = [
   { id: "contact", n: "05", object: "Laptop", title: "Contact" },
 ] as const;
 
+/**
+ * The numbers wall. Every figure is lifted from that project's `results`
+ * (or, for OctonData, the EXPERIENCE bullet) in the content files — this
+ * list selects and shortens, it never computes or rounds. If a source
+ * line changes, change the card with it.
+ */
+const STATS: Stat[] = [
+  {
+    value: "97%",
+    label: "BFCL accuracy on single-turn function calling, fine-tuned Qwen3-8B",
+    href: "/brief/work/toolcalllm",
+    project: "ToolCallLM",
+  },
+  {
+    value: "11 → 55 tok/s",
+    label: "5× inference throughput via prefix and persistent context caching",
+    href: "/brief/work/senpai",
+    project: "Senpai",
+  },
+  {
+    value: "10K+",
+    label: "pages processed per month, end to end",
+    href: "/brief/work/tax-cpa-parser",
+    project: "Tax CPA Parser",
+  },
+  {
+    value: "9.5×",
+    label: "faster worker-death detection — ~60s down to ~6s",
+    href: "/brief/work/ancora",
+    project: "Ancora",
+  },
+  {
+    value: "−2.56 pp",
+    label: "WER on telephony-band audio, 95% CI [−3.85, −1.31]",
+    href: "/brief/work/reach",
+    project: "R.E.A.C.H.",
+  },
+  {
+    value: "42 / 64",
+    label:
+      "requests admitted at exactly the KV-budget boundary under burst load",
+    href: "/brief/work/tinyserve",
+    project: "TinyServe",
+  },
+  {
+    value: "−14.84",
+    label: "WER from root-causing a multi-softmax CTC decode defect",
+    href: "/brief/work/indic-asr",
+    project: "Indic ASR",
+  },
+  {
+    value: "76 of 92",
+    label: "commits in the citation attribution package",
+    href: "/brief/work/gravton",
+    project: "Gravton",
+  },
+  {
+    value: "40%+",
+    label: "less manual review time across 10+ U.S. CPA firms",
+    href: "/brief/work/tax-cpa-parser",
+    project: "OctonData",
+  },
+];
+
 export default function BriefPage() {
   const featured = FEATURED.map((id) => PROJECT_DOCS[id]);
   // two columns that drift at different speeds on desktop
@@ -61,6 +132,16 @@ export default function BriefPage() {
   return (
     <main className="brief-wrap">
       <Hero />
+
+      <NumbersWall
+        stats={STATS}
+        heading={
+          <MaskTitle className="brief-h2">
+            The work, <span className="brief-hand">in numbers</span>
+          </MaskTitle>
+        }
+        sub="Every figure here was measured, and every card opens the case study behind it."
+      />
 
       {/* ---------------------------------------------------- 01 */}
       <section id="experience" className="brief-section">
@@ -172,7 +253,10 @@ export default function BriefPage() {
             <Reveal key={g.label} delay={(i % 4) * 0.05}>
               <div>
                 <p className="brief-label">{g.label}</p>
-                <p className="brief-skill-items">{g.items.join(" · ")}</p>
+                <PopChips
+                  items={g.items}
+                  className="brief-chips brief-skill-chips"
+                />
               </div>
             </Reveal>
           ))}
@@ -219,11 +303,16 @@ export default function BriefPage() {
 /* ------------------------------------------------------------------ */
 
 function Hero() {
+  // Order of arrival, after the reference site's hero timeline: the room
+  // settles in behind, the name rises line by line, then everything else
+  // pulls into focus out of a blur.
   return (
     <section id="top" className="brief-hero">
-      <Reveal immediate delay={0.05}>
+      <HeroArt />
+
+      <BlurIn delay={0.05}>
         <p className="brief-label">{PROFILE.tagline} · The brief</p>
-      </Reveal>
+      </BlurIn>
 
       <h1 className="brief-h1">
         <MaskTitle as="span" immediate delay={0.1} className="brief-h1-line">
@@ -248,24 +337,28 @@ function Hero() {
       </h1>
 
       <div className="brief-hero-foot">
-        <Reveal immediate delay={0.5}>
-          <p className="brief-summary">{PROFILE.summary}</p>
-          <p className="brief-cta">
-            <a
-              className="brief-btn brief-btn-solid"
-              href={PROFILE.resumeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Download resume
-            </a>
-            <a className="brief-btn" href={`mailto:${PROFILE.email}`}>
-              Email me
-            </a>
-          </p>
-        </Reveal>
+        <div>
+          <BlurIn delay={0.45}>
+            <p className="brief-summary">{PROFILE.summary}</p>
+          </BlurIn>
+          <BlurIn delay={0.53}>
+            <p className="brief-cta">
+              <a
+                className="brief-btn brief-btn-solid"
+                href={PROFILE.resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download resume
+              </a>
+              <a className="brief-btn" href={`mailto:${PROFILE.email}`}>
+                Email me
+              </a>
+            </p>
+          </BlurIn>
+        </div>
 
-        <Reveal immediate delay={0.62}>
+        <BlurIn delay={0.61}>
           <nav className="brief-contents" aria-label="Contents">
             <p className="brief-label">Contents</p>
             <ol>
@@ -280,7 +373,7 @@ function Hero() {
               ))}
             </ol>
           </nav>
-        </Reveal>
+        </BlurIn>
       </div>
     </section>
   );
