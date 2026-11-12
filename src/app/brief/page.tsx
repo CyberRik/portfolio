@@ -305,13 +305,6 @@ export default function BriefPage() {
             >
               GitHub ↗
             </a>
-            <a
-              href={`https://leetcode.com/u/${PROFILE.leetcode}/`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              LeetCode ↗
-            </a>
           </p>
         </Reveal>
       </section>
