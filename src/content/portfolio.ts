@@ -269,7 +269,7 @@ export const BOOT_NOTES: readonly string[] = [
 export const ACHIEVEMENTS: string[] = [
   "Sole selectee from IIT Madras, and the first across all IITs, for the Willings Programme — Japan industry placement, converted to Otsuka in Tokyo with the only intern Pre-Placement Offer",
   "Top 15 nationally — NCIIPC (Govt. of India) Startup India AI Grand Challenge, multilingual document understanding",
-  "Open-source contributor to Docling and Feast (Linux Foundation AI & Data) — merged fixes to document conversion and DynamoDB pool warmup",
+  "Open-source contributor to Docling and Feast (Linux Foundation AI & Data) and Meshery (CNCF) — 6 merged PRs",
   "Selected from 200+ startups by IITM NIRMAAN (R.E.A.C.H.)",
   "98.61 percentile in JEE Mains among 1.2M+ candidates; Top 450 in WBJEE",
   "AIR 71 (Junior Squad) and City Topper — Technothlon Prelims",
@@ -290,6 +290,35 @@ export const COURSEWORK: string[] = [
   "Probability & Statistics for ML (DeepLearning.AI)",
   "Node.js, Express & MongoDB (Backend Bootcamp)",
   "Practical Deep Learning (fast.ai)",
+];
+
+/* ------------------------------------------------------------------ */
+
+export interface Contribution {
+  /** upstream project, as people know it */
+  project: string;
+  /** the foundation it sits under, where there is one */
+  org?: string;
+  repo: string;
+  pr: number;
+  /** what changed, in plain words — not the raw PR title */
+  what: string;
+  /** "YYYY-MM" merged, or null while still in review */
+  merged: string | null;
+}
+
+// Pulled from GitHub (`gh search prs --author CyberRik`) on 2026-11-13.
+// Merged PRs are claims; open ones are shown as "in review" and must be
+// flipped (or removed) when they land or close. Newest first.
+export const OPEN_SOURCE: Contribution[] = [
+  { project: "Docling", org: "LF AI & Data", repo: "docling-project/docling", pr: 4636, what: "EPUB images whose source carries a query string or #fragment now load", merged: "2026-11" },
+  { project: "Feast", org: "LF AI & Data", repo: "feast-dev/feast", pr: 6985, what: "The DynamoDB online store warms up its whole connection pool at startup, not a single connection", merged: "2026-11" },
+  { project: "Meshery", org: "CNCF", repo: "meshery/meshery", pr: 22574, what: "Docs: fixed the Helm Snapshot install URL and plugin usage", merged: "2026-10" },
+  { project: "docling-serve", org: "LF AI & Data", repo: "docling-project/docling-serve", pr: 721, what: "The default code/formula preset now points at a preset Docling actually ships", merged: "2026-10" },
+  { project: "Docling", org: "LF AI & Data", repo: "docling-project/docling", pr: 4602, what: "EPUB images in single quotes or percent-escaped paths now resolve", merged: "2026-10" },
+  { project: "Docling", org: "LF AI & Data", repo: "docling-project/docling", pr: 4601, what: "HTML conversion keeps going when a link or image points outside the base directory", merged: "2026-10" },
+  { project: "docling-core", org: "LF AI & Data", repo: "docling-project/docling-core", pr: 932, what: "Chunker: only split Markdown tables by columns", merged: null },
+  { project: "docling-core", org: "LF AI & Data", repo: "docling-project/docling-core", pr: 854, what: "Chunker: keep a table caption in the same window as its table", merged: null },
 ];
 
 /* ------------------------------------------------------------------ */

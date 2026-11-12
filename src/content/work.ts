@@ -110,6 +110,7 @@ export type ProjectId =
   | "tax-cpa-parser"
   | "reach"
   | "indic-asr"
+  | "desi-agent"
   | "medproqa"
   | "smartfan"
   | "rrt";
@@ -1080,6 +1081,126 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
   },
 
   /* ---------------------------------------------------------------- */
+  // Source: github.com/CyberRik/desi-agent — README results table and
+  // results/*.json. A two-person build, credited jointly and written as
+  // "we" at Ritankar's direction: the repo's R/F lanes and commit authors
+  // don't reflect who did the work (much of the fine-tuning was his,
+  // committed from the teammate's agent), so the site doesn't split it.
+  "desi-agent": {
+    id: "desi-agent",
+    title: "Desi Agent",
+    tier: "featured",
+    role: "Co-builder · team of 2",
+    period: "Nov 2026 – Present",
+    context: "Lexsi AI Safety & Alignment Hackathon · Track 3",
+    tagline:
+      "A 3.35B banking agent for English, Hindi, Bengali, Hinglish and Banglish — task success 45.9% → 97.7%, above the 14B teacher it was distilled from",
+    milestone: "current",
+
+    overview:
+      "Desi Agent is Cohere's Tiny Aya Global (3.35B) fine-tuned with AgentTune into a banking support agent that calls tools — balance, transactions, block card, dispute, UPI status, transfer, branch finder, loan EMI — for five ways of writing: English, Hindi, Bengali, Hinglish and Banglish. We built it as a team of two for Track 3 (Agentic Fine-tuning) of the Lexsi AI Safety & Alignment Hackathon 2026 — data generation, curation, fine-tuning, evaluation and the live demo, end to end.",
+    problem:
+      "Indian banking customers don't write \"please block my card\". They write \"mera card block kar do\", in Bengali script, or in Banglish — often without the card number. An agent acting on that has to pick the right tool, fill the arguments exactly, and ask instead of guessing when a detail is missing, because a wrong block_card or transfer_money is a real-world harm. The base model got 45.9% of held-out conversations right and took a wrong bank action in 20.8% of them.",
+    architecture: {
+      summary:
+        "Labels come from code; only the words come from a teacher. A scenario sampler picks the intent and builds the gold tool calls, and a deterministic mock bank executes them. A Qwen3-14B teacher writes only the customer's message and the final reply, in five languages, so a teacher mistake can make a sentence awkward but cannot make a label wrong. Episodes go through curation into frozen train / val / test splits, AgentTune distils them into a LoRA on Tiny Aya Global, and one agent loop — the same one the demo uses — scores every model against the mock bank.",
+      diagram: {
+        caption: "Desi Agent — labels from code, words from a teacher, one loop for eval and demo",
+        nodes: [
+          { id: "sampler", label: "Scenario Sampler", sub: "intent · gold calls", col: 0, row: 1, kind: "input" },
+          { id: "teacher", label: "Qwen3-14B Teacher", sub: "customer words only", col: 1, row: 0, kind: "model" },
+          { id: "bank", label: "Mock Bank", sub: "executes gold calls", col: 1, row: 2, kind: "store" },
+          { id: "episodes", label: "Episodes", sub: "messages + gold", col: 2, row: 1, kind: "core" },
+          { id: "curate", label: "Curation", sub: "script gates · dedup · judge", col: 3, row: 1, kind: "core" },
+          { id: "splits", label: "Frozen Splits", sub: "1937 · 99 · 486", col: 4, row: 1, kind: "store" },
+          { id: "distill", label: "AgentTune Distill", sub: "LoRA SFT · Tiny Aya", col: 5, row: 0, kind: "model" },
+          { id: "eval", label: "Eval Loop", sub: "same agent + mock bank", col: 5, row: 2, kind: "core" },
+          { id: "out", label: "Metrics · Lab", sub: "AuditKIT cross-check", col: 6, row: 1, kind: "output" },
+        ],
+        edges: [
+          { from: "sampler", to: "teacher" },
+          { from: "sampler", to: "bank" },
+          { from: "teacher", to: "episodes" },
+          { from: "bank", to: "episodes" },
+          { from: "episodes", to: "curate" },
+          { from: "curate", to: "splits" },
+          { from: "splits", to: "distill", label: "train · val" },
+          { from: "splits", to: "eval", label: "test" },
+          { from: "distill", to: "eval", dashed: true, label: "adapter" },
+          { from: "eval", to: "out" },
+        ],
+      },
+    },
+    challenges: [
+      {
+        title: "Making every label correct by construction",
+        body:
+          "Distilling tool calls from a teacher would teach the student the teacher's tool-calling mistakes. So the sampler builds the gold calls in code across 8 banking tools, the mock bank executes them, and the teacher only phrases the customer's message and the final reply. 12% of training cases (27% of the test, which is balanced by task type) deliberately leave out a required detail, where the correct move is to ask. That design is why the 3B student ends up above the 14B teacher it was distilled from.",
+      },
+      {
+        title: "Keeping five ways of writing apart",
+        body:
+          "Code-mixed text drifts: Hindi slides into Banglish, replies talk about the customer instead of to them. Our own gates check script and language, that the reply addresses the customer, and that block and dispute references are quoted. CuratorKIT cleans the text, scans for secrets and deduplicates — exact on the customer message within a language, so no test message has a twin in training, plus MinHash. An LLM checklist judge then dropped 87 replies that skipped a fact or echoed the customer. It does not reliably catch garbled code-mixed words, and the write-up says so.",
+      },
+      {
+        title: "A test set no model had seen",
+        body:
+          "The splits were frozen before any model saw them — 1,937 train, 99 val, 486 test — and the checkpoint rule was fixed before training: lowest validation loss. Selection happened on validation, never on test.",
+      },
+      {
+        title: "A 4.2× speed-up hiding in plain sight",
+        body:
+          "Training ran on a free Kaggle T4 ×2 (DDP, resumable across sessions via checkpoints on the Hub). torch.cuda.is_bf16_supported() returns True on a T4, but bf16 is emulated there: profiling showed 84% of GPU time in software bf16 matmuls. fp16 gave the same loss curve, and the whole run finished in 2.2 hours.",
+      },
+      {
+        title: "Measuring before adding RL",
+        body:
+          "The plan was GRPO on top of SFT, with the evaluation metric as the reward. A probe came first: 8 samples at temperature 1.0 for 377 training prompts in the areas where SFT still erred. 95.7% were already right, and only 12.7% of prompts produced any reward difference — almost no learning signal. We kept the SFT model instead of spending the time.",
+      },
+      {
+        title: "Stress-testing the headline number",
+        body:
+          "97.7% on the original wording isn't the whole story, so the evaluation goes further. Test messages were reworded by a different model family (Aya Expanse 8B) and kept only where a judge confirmed they ask for exactly the same thing (380). The mock bank was perturbed to return shifted balances, amounts and ids, to check the model reads the receipt instead of reciting training data. And success was broken down by how closely each test message resembles a training message, to rule out memorisation.",
+      },
+    ],
+    stack: [
+      { group: "Models", items: ["Tiny Aya Global (3.35B)", "Qwen3-14B teacher", "LoRA (r=16)"] },
+      { group: "Toolkits", items: ["AgentTune", "CuratorKIT", "AuditKIT"] },
+      { group: "Data + eval", items: ["vLLM", "MinHash dedup", "LLM checklist judge", "Deterministic mock bank"] },
+      { group: "Train + ship", items: ["Kaggle T4 ×2 (DDP, fp16)", "Hugging Face Hub + Spaces", "llama.cpp (GGUF LoRA)"] },
+      { group: "Quality", items: ["pytest", "uv", "GitHub Actions CI", "JSON run manifests"] },
+    ],
+    results: [
+      "Task success 45.9% → 97.7% on 486 held-out test conversations (fp16, greedy, every tool call executed against a deterministic mock bank) — above the 67.5% of the Qwen3-14B teacher it was distilled from.",
+      "Wrong bank actions (block, dispute or transfer not exactly as asked) 20.8% → 1.8%; asking for missing details instead of acting 38.6% → 96.2%; two-step tasks 0.0% → 97.3%.",
+      "Out of distribution — test messages reworded by a different model family and judge-validated (380 kept): 91.8% task success vs 49.7% for the base model. Banglish (77.8%), Bengali (87.1%) and two-step tasks (85.5%) drop most.",
+      "Reads the receipt: against a mock bank returning shifted balances, amounts and ids, task success stays at 97.7% and no reply quotes a value from the original bank.",
+      "Not memorised: success is flat across training-similarity quartiles (97.5 / 99.2 / 97.5 / 96.7%), and 0 of 486 replies quote bank numbers not retrieved in that conversation (base model: 20).",
+      "Known failure, reported rather than hidden: 4 of the 11 remaining test failures are the model inventing a card number (1234) and blocking it when none was given.",
+    ],
+    lessons: [
+      "Take the labels from code and only the words from the teacher — then a teacher mistake can make a sentence awkward but can't make a label wrong.",
+      "Fix the checkpoint rule before training and freeze the test split before any model sees it. Select on validation, never on test.",
+      "A headline number should ship with its stress tests beside it — reworded inputs, a perturbed environment, a memorisation check — and with the failure that still gets through.",
+      "Profile before trusting a capability flag, and probe for learning signal before paying for RL.",
+    ],
+    timeline: [
+      { when: "Nov 2026", what: "Contracts, mock bank tools, seed data and validator; teacher data generation across 5 languages, curation and frozen splits." },
+      { when: "Nov 2026", what: "LoRA SFT via AgentTune on Kaggle T4 ×2 — fp16 after profiling exposed emulated bf16; GRPO probed and ruled out." },
+      { when: "Nov 2026", what: "Evaluation harness and results for the base model, the 14B teacher and the fine-tuned agent." },
+      { when: "Nov 2026", what: "Robustness checks — validated OOD rewording, a perturbed bank, memorisation by similarity — and the write-up." },
+      { when: "Nov 2026", what: "Desi Agent Lab live on Hugging Face, replaying the scored test traces." },
+    ],
+    links: [
+      { label: "GitHub", href: "https://github.com/CyberRik/desi-agent" },
+      { label: "Live demo", href: "https://huggingface.co/spaces/ToolW/desi-agent-lab" },
+      { label: "Write-up", href: "https://github.com/CyberRik/desi-agent/blob/main/docs/ARTICLE.md" },
+      { label: "Model", href: "https://huggingface.co/ToolW/desi-agent-tinyaya-sft-lora" },
+    ],
+    related: ["toolcalllm", "indic-asr", "reach"],
+  },
+
+  /* ---------------------------------------------------------------- */
   medproqa: {
     id: "medproqa",
     title: "MedProQA",
@@ -1271,7 +1392,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
   },
 };
 
-export const FEATURED: ProjectId[] = ["ancora", "tinyserve", "indic-asr", "senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
+export const FEATURED: ProjectId[] = ["desi-agent", "ancora", "tinyserve", "indic-asr", "senpai", "toolcalllm", "gravton", "tax-cpa-parser", "reach"];
 export const ARCHIVE: ProjectId[] = ["medproqa", "smartfan", "rrt"];
 
 /* ------------------------------------------------------------------ */
@@ -1423,12 +1544,15 @@ export const MILESTONES: Milestone[] = [
     became: "An engineer who builds the runtime itself — and holds it to a proof, not a demo.",
     summary:
       "Placement preparation alongside continued work on AI systems, across two personal runtimes and a speech benchmark. Ancora makes losing a multi-step computation to a dead worker structurally impossible, proven with chaos experiments that assert rather than demonstrate. TinyServe takes the same scheduling instincts — admission control, fair queuing, backpressure — and applies them to LLM inference, built from scratch on llama.cpp at a scale where every latency number traces back to a specific decision in the code. The Indic speaker-attributed ASR work is the same instinct pointed at measurement: hold everything constant but one variable, assert the invariants, and report the method that failed next to the one that worked.",
-    projects: ["ancora", "tinyserve", "indic-asr"],
+    projects: ["desi-agent", "ancora", "tinyserve", "indic-asr"],
     alsoShipped: [
       "Ancora — fault-tolerant runtime for durable AI workflows (Temporal + Ray), open source",
       "TinyServe — from-scratch LLM inference runtime on llama.cpp, open source",
       "Indic Speaker-Attributed ASR — diarization and ASR benchmark over 12.26 h of 9-script audio, open source",
-      "Docling (Linux Foundation AI & Data) — 2 merged PRs: HTML links and images outside the base directory no longer fail a conversion; EPUB images in single quotes or percent-escaped paths now load",
+      "Desi Agent — multilingual banking tool-calling agent on Tiny Aya (Lexsi hackathon, Track 3); built with a teammate as a team of two",
+      "Docling (Linux Foundation AI & Data) — 3 merged PRs: HTML links and images outside the base directory no longer fail a conversion; EPUB images in single quotes, percent-escaped paths, or with a query or fragment now load",
+      "docling-serve — merged PR: the default code/formula preset now points at a preset Docling actually ships",
+      "Meshery (CNCF) — merged docs PR: fixed the Helm Snapshot install URL and plugin usage",
       "Feast (Linux Foundation AI & Data) — merged PR: the DynamoDB online store now warms up its whole connection pool at startup instead of a single connection",
       "Placement preparation",
       "AI systems and distributed systems",

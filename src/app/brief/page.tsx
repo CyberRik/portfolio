@@ -3,6 +3,7 @@ import {
   ACHIEVEMENTS,
   EDUCATION,
   EXPERIENCE,
+  OPEN_SOURCE,
   PROFILE,
   SKILLS,
 } from "@/content/portfolio";
@@ -54,9 +55,10 @@ export const metadata: Metadata = {
 const SECTIONS = [
   { id: "experience", n: "01", object: "Whiteboard", title: "Experience" },
   { id: "work", n: "02", object: "Monitor", title: "Selected work" },
-  { id: "record", n: "03", object: "Bookshelf", title: "Record" },
-  { id: "stack", n: "04", object: "Server rack", title: "Stack" },
-  { id: "contact", n: "05", object: "Laptop", title: "Contact" },
+  { id: "open-source", n: "03", object: "Upstream", title: "Open source" },
+  { id: "record", n: "04", object: "Bookshelf", title: "Record" },
+  { id: "stack", n: "05", object: "Server rack", title: "Stack" },
+  { id: "contact", n: "06", object: "Laptop", title: "Contact" },
 ] as const;
 
 /**
@@ -64,8 +66,18 @@ const SECTIONS = [
  * (or, for OctonData, the EXPERIENCE bullet) in the content files — this
  * list selects and shortens, it never computes or rounds. If a source
  * line changes, change the card with it.
+ *
+ * Kept to six on purpose: the wall sits between the hero and Experience,
+ * and every extra card is another half-screen a recruiter scrolls before
+ * reaching the work history. Only figures that land without context.
  */
 const STATS: Stat[] = [
+  {
+    value: "45.9% → 97.7%",
+    label: "task success for a 3.35B banking agent across five languages",
+    href: "/brief/work/desi-agent",
+    project: "Desi Agent",
+  },
   {
     value: "97%",
     label: "BFCL accuracy on single-turn function calling, fine-tuned Qwen3-8B",
@@ -85,41 +97,16 @@ const STATS: Stat[] = [
     project: "Tax CPA Parser",
   },
   {
-    value: "9.5×",
-    label: "faster worker-death detection — ~60s down to ~6s",
-    href: "/brief/work/ancora",
-    project: "Ancora",
-  },
-  {
-    value: "−2.56 pp",
-    label: "WER on telephony-band audio, 95% CI [−3.85, −1.31]",
-    href: "/brief/work/reach",
-    project: "R.E.A.C.H.",
-  },
-  {
-    value: "42 / 64",
-    label:
-      "requests admitted at exactly the KV-budget boundary under burst load",
-    href: "/brief/work/tinyserve",
-    project: "TinyServe",
-  },
-  {
-    value: "−14.84",
-    label: "WER from root-causing a multi-softmax CTC decode defect",
-    href: "/brief/work/indic-asr",
-    project: "Indic ASR",
-  },
-  {
-    value: "76 of 92",
-    label: "commits in the citation attribution package",
-    href: "/brief/work/gravton",
-    project: "Gravton",
-  },
-  {
     value: "40%+",
     label: "less manual review time across 10+ U.S. CPA firms",
     href: "/brief/work/tax-cpa-parser",
     project: "OctonData",
+  },
+  {
+    value: "9.5×",
+    label: "faster worker-death detection — ~60s down to ~6s",
+    href: "/brief/work/ancora",
+    project: "Ancora",
   },
 ];
 
@@ -222,8 +209,40 @@ export default function BriefPage() {
       </section>
 
       {/* ---------------------------------------------------- 03 */}
+      <section id="open-source" className="brief-section">
+        <SectionHead {...SECTIONS[2]} accent="merged upstream" />
+        <ol className="brief-oss">
+          {OPEN_SOURCE.map((c, i) => (
+            <Reveal as="li" key={c.repo + c.pr} delay={Math.min(i, 5) * 0.04}>
+              <a
+                href={`https://github.com/${c.repo}/pull/${c.pr}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="brief-oss-project">
+                  {c.project}
+                  {c.org && <span className="brief-dim"> · {c.org}</span>}
+                </span>
+                <span className="brief-oss-what">{c.what}</span>
+                <span className="brief-oss-meta">
+                  <span className="brief-label">#{c.pr}</span>
+                  <span
+                    className={
+                      c.merged ? "brief-oss-status" : "brief-oss-status is-open"
+                    }
+                  >
+                    {c.merged ? `Merged ${monthName(c.merged)}` : "In review"}
+                  </span>
+                </span>
+              </a>
+            </Reveal>
+          ))}
+        </ol>
+      </section>
+
+      {/* ---------------------------------------------------- 04 */}
       <section id="record" className="brief-section">
-        <SectionHead {...SECTIONS[2]} accent="on the shelf" />
+        <SectionHead {...SECTIONS[3]} accent="on the shelf" />
         <div className="brief-record">
           <ol className="brief-achievements">
             {ACHIEVEMENTS.map((a, i) => (
@@ -244,9 +263,9 @@ export default function BriefPage() {
         </div>
       </section>
 
-      {/* ---------------------------------------------------- 04 */}
+      {/* ---------------------------------------------------- 05 */}
       <section id="stack" className="brief-section">
-        <SectionHead {...SECTIONS[3]} accent="what it runs on" />
+        <SectionHead {...SECTIONS[4]} accent="what it runs on" />
         <Marquee items={SKILLS.flatMap((g) => g.items)} />
         <div className="brief-skills">
           {SKILLS.map((g, i) => (
@@ -263,9 +282,9 @@ export default function BriefPage() {
         </div>
       </section>
 
-      {/* ---------------------------------------------------- 05 */}
+      {/* ---------------------------------------------------- 06 */}
       <section id="contact" className="brief-section brief-contact">
-        <SectionHead {...SECTIONS[4]} accent="say hello" />
+        <SectionHead {...SECTIONS[5]} accent="say hello" />
         <Reveal>
           <a className="brief-email" href={`mailto:${PROFILE.email}`}>
             {PROFILE.email}
@@ -301,6 +320,11 @@ export default function BriefPage() {
 }
 
 /* ------------------------------------------------------------------ */
+
+const monthName = (ym: string) => {
+  const [y, m] = ym.split("-").map(Number);
+  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
+};
 
 function Hero() {
   // Order of arrival, after the reference site's hero timeline: the room
