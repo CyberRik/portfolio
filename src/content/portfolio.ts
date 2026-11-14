@@ -21,6 +21,13 @@ export const PROFILE = {
   email: "ritankarmondal123@gmail.com",
   // Username for the header's profile link.
   github: "CyberRik",
+  // Every public profile, in display order: the room header and the
+  // brief's contact block both render this list.
+  links: [
+    { label: "GitHub", href: "https://github.com/CyberRik" },
+    { label: "Kaggle", href: "https://www.kaggle.com/code/ritankarmondal" },
+    { label: "Hugging Face", href: "https://huggingface.co/Rik0411" },
+  ],
   // Built from my_resume/resume_offcampus.tex — the off-campus variant, which
   // leads with work rather than marks: no grade figures and no Achievements
   // section. Every download link in the site routes through this one constant,

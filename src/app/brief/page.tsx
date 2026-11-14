@@ -28,6 +28,7 @@ import {
   type Stat,
 } from "@/components/brief/effects";
 import { real } from "@/components/brief/util";
+import { Flower } from "@/components/brief/toys";
 
 /**
  * /brief — the room, flattened into one readable page.
@@ -298,15 +299,19 @@ export default function BriefPage() {
             >
               Resume ↓
             </a>
-            <a
-              href={`https://github.com/${PROFILE.github}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              GitHub ↗
-            </a>
+            {PROFILE.links.map((l) => (
+              <a
+                key={l.label}
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {l.label} ↗
+              </a>
+            ))}
           </p>
         </Reveal>
+        <Flower />
       </section>
     </main>
   );

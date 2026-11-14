@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PROFILE } from "@/content/portfolio";
 import { SmoothScroll } from "@/components/brief/motion";
 import { BriefNav } from "@/components/brief/chrome";
+import { PendantLamp } from "@/components/brief/toys";
 import "./brief.css";
 
 /**
@@ -22,6 +23,7 @@ export default function BriefLayout({
     <SmoothScroll>
       <div className="brief">
         <BriefNav />
+        <PendantLamp />
         <div className="brief-page">{children}</div>
         <footer className="brief-wrap">
           <div className="brief-footer">
