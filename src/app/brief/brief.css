@@ -1479,6 +1479,133 @@ html.lenis body {
   transition: opacity 0.5s ease-out;
 }
 
+/* The flower, sitting in the bottom corner of the contact section. */
+.brief-contact {
+  position: relative;
+}
+.brief-flower {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 84px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (min-width: 900px) {
+  .brief-flower {
+    width: 124px;
+    bottom: 24px;
+  }
+}
+.brief-flower:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+.brief-flower svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.brief-flower svg * {
+  transform-box: view-box;
+}
+.brief-flower-plant {
+  transform-origin: 60px 140px;
+  transform: rotate(-3deg);
+  transition: transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.brief-flower[data-open="true"] .brief-flower-plant {
+  transform: rotate(0deg);
+}
+/* toward the lamp, which hangs up and to the right */
+.brief-flower[data-lit="true"] .brief-flower-plant {
+  transform: rotate(7deg);
+}
+.brief-flower-stem {
+  fill: none;
+  stroke: var(--label);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.brief-flower-leaf {
+  fill: rgba(255, 255, 255, 0.04);
+  stroke: var(--label);
+  stroke-width: 1.2;
+  transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.brief-flower-leaf-l {
+  transform-origin: 59px 120px;
+  transform: rotate(8deg);
+}
+.brief-flower-leaf-r {
+  transform-origin: 61px 102px;
+  transform: rotate(-8deg);
+}
+.brief-flower[data-open="true"] .brief-flower-leaf-l {
+  transform: rotate(-8deg);
+}
+.brief-flower[data-open="true"] .brief-flower-leaf-r {
+  transform: rotate(8deg);
+}
+/* each petal pivots on the flower's heart (60,52): folded up into a bud
+   when closed, fanned out to its own angle when open */
+.brief-flower-petal {
+  fill: rgba(255, 179, 97, 0.06);
+  stroke: var(--label);
+  stroke-width: 1.2;
+  transform-origin: 60px 52px;
+  transform: rotate(calc(var(--angle) / 10 - 18deg)) scale(0.6);
+  transition:
+    transform 0.55s cubic-bezier(0.5, 0, 0.75, 0) calc((7 - var(--i)) * 25ms),
+    fill 0.4s,
+    stroke 0.4s;
+}
+.brief-flower[data-open="true"] .brief-flower-petal {
+  fill: rgba(255, 179, 97, 0.16);
+  stroke: var(--amber);
+  transform: rotate(var(--angle)) scale(1);
+  transition:
+    transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 45ms),
+    fill 0.4s,
+    stroke 0.4s;
+}
+.brief-flower[data-lit="true"] .brief-flower-petal {
+  fill: rgba(255, 179, 97, 0.32);
+}
+.brief-flower-heart {
+  fill: var(--raise);
+  stroke: var(--label);
+  stroke-width: 1.2;
+  transform-origin: 60px 52px;
+  transform: scale(0.55);
+  transition:
+    transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+    fill 0.4s,
+    stroke 0.4s;
+}
+.brief-flower[data-open="true"] .brief-flower-heart {
+  fill: var(--amber);
+  stroke: var(--amber);
+  transform: scale(1);
+}
+.brief-flower-pot {
+  fill: var(--raise);
+  stroke: var(--label);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brief-flower svg * {
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
+  }
+}
+
 /* ---------------------------------------------------- section icons */
 
 /* Animated emoji beside each section title (components/brief/icons.tsx).

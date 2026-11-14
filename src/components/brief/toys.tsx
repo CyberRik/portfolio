@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * The brief's toy: a pendant lamp hanging under the nav.
+ * The brief's two toys: a pendant lamp hanging under the nav, and a
+ * flower at the end of the contact section that opens toward its light.
  *
  * The lamp is the same fixture that hangs over the desk in the room. It
  * swings on a damped spring: drag it and let go, and it settles the way
@@ -13,7 +14,7 @@
  * the page can react to the light later without threading props.
  */
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /* ------------------------------------------------------------ store */
 
@@ -144,5 +145,74 @@ export function PendantLamp() {
         <span className="brief-lamp-beam" aria-hidden />
       </div>
     </div>
+  );
+}
+
+/* ----------------------------------------------------------- flower */
+
+const PETALS = 8;
+
+/**
+ * A line-drawn flower. Tap (or hover) to open it; it also opens on its
+ * own when the lamp is on, and leans toward the light.
+ *
+ * Plain CSS transitions rather than framer-motion: every part pivots on
+ * a fixed point in the drawing (petals on the flower's heart, the plant
+ * on its stem base), which CSS states exactly with
+ * `transform-box: view-box`. The overshooting curves and per-petal
+ * delays live in brief.css.
+ */
+export function Flower() {
+  const lit = useLampOn();
+  const [touched, setTouched] = useState(false);
+  const [hover, setHover] = useState(false);
+  const open = touched || hover || lit;
+
+  return (
+    <button
+      type="button"
+      className="brief-flower"
+      data-open={open}
+      data-lit={lit}
+      aria-label={open ? "Close the flower" : "Open the flower"}
+      aria-pressed={touched}
+      onClick={() => setTouched((t) => !t)}
+      onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)}
+      onPointerLeave={() => setHover(false)}
+    >
+      <svg viewBox="0 0 120 170" aria-hidden>
+        <g className="brief-flower-plant">
+          <path className="brief-flower-stem" d="M60 140 C57 118 64 92 60 64" />
+          <path
+            className="brief-flower-leaf brief-flower-leaf-l"
+            d="M59 120 C45 115 37 103 39 94 C50 96 58 106 59 120 Z"
+          />
+          <path
+            className="brief-flower-leaf brief-flower-leaf-r"
+            d="M61 102 C74 98 82 88 80 79 C70 81 62 90 61 102 Z"
+          />
+          {Array.from({ length: PETALS }, (_, i) => (
+            <ellipse
+              key={i}
+              className="brief-flower-petal"
+              cx="60"
+              cy="37"
+              rx="7.5"
+              ry="15"
+              style={
+                {
+                  "--angle": `${(360 / PETALS) * i}deg`,
+                  "--i": i,
+                } as React.CSSProperties
+              }
+            />
+          ))}
+          <circle className="brief-flower-heart" cx="60" cy="52" r="7" />
+        </g>
+        {/* the pot doesn't move */}
+        <path className="brief-flower-pot" d="M39 136 H81 V142 H39 Z" />
+        <path className="brief-flower-pot" d="M42 142 H78 L74 166 H46 Z" />
+      </svg>
+    </button>
   );
 }

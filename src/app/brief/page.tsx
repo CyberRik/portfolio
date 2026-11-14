@@ -29,6 +29,7 @@ import {
 } from "@/components/brief/effects";
 import { real } from "@/components/brief/util";
 import { SectionIcon, type IconName } from "@/components/brief/icons";
+import { Flower } from "@/components/brief/toys";
 
 /**
  * /brief — the room, flattened into one readable page.
@@ -317,6 +318,7 @@ export default function BriefPage() {
             ))}
           </p>
         </Reveal>
+        <Flower />
       </section>
     </main>
   );
