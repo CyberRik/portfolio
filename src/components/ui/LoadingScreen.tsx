@@ -132,23 +132,6 @@ export function LoadingScreen() {
               static in-flow siblings regardless of DOM order — without
               this wrapper the sky would cover the progress bar. */}
           <div className="relative z-10 flex flex-col items-center">
-          {/* Orbital Spinner (CSS animated to avoid JS freezes during shader compilation) */}
-          <div className="relative mb-12 flex h-24 w-24 items-center justify-center">
-            <div
-              className="absolute inset-0 animate-spin rounded-full border-y border-[#ffb361]/10"
-              style={{ animationDuration: "3s" }}
-            />
-            <div
-              className="absolute inset-2 animate-spin rounded-full border-x border-[#ffb361]/30"
-              style={{ animationDuration: "2s", animationDirection: "reverse" }}
-            />
-            <div
-              className="absolute inset-4 animate-spin rounded-full border-y border-[#ffb361]/50"
-              style={{ animationDuration: "1.5s" }}
-            />
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ffb361] shadow-[0_0_12px_#ffb361]" />
-          </div>
-
           <motion.p
             className="mb-6 font-mono text-xs tracking-[0.4em] text-[#a89880] uppercase"
             initial={{ opacity: 0, y: 8 }}
@@ -157,12 +140,18 @@ export function LoadingScreen() {
             Initializing workspace
           </motion.p>
           
-          <div className="h-px w-48 overflow-hidden bg-[#3a352d]">
-            <motion.div
-              className="h-full bg-[#ffb361]"
-              animate={{ width: `${Math.max(progress, 4)}%` }}
-              transition={{ ease: "easeOut", duration: 0.3 }}
-            />
+          {/* Progress as a blade igniting out of a hilt: amber, white-hot
+              at the tip — the same light as /brief's reading beam. */}
+          <div className="flex items-center" aria-hidden>
+            <span className="h-[7px] w-7 rounded-[2px] border border-[#5c5344] bg-[#1d1915]" />
+            <span className="h-[5px] w-[3px] bg-[#5c5344]" />
+            <div className="relative h-[3px] w-52">
+              <motion.div
+                className="boot-blade h-full rounded-full"
+                animate={{ width: `${Math.max(progress, 3)}%` }}
+                transition={{ ease: "easeOut", duration: 0.3 }}
+              />
+            </div>
           </div>
 
           <div className="relative mt-4 h-6 w-64 overflow-hidden">

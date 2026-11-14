@@ -328,3 +328,24 @@ button:disabled,
     padding: 8px 12px;
   }
 }
+
+/* Room loading screen: the progress blade (components/ui/LoadingScreen.tsx). */
+.boot-blade {
+  position: relative;
+  background: linear-gradient(90deg, #ffb361, #ffd3a0 80%, #fff6ea);
+  box-shadow:
+    0 0 6px rgba(255, 179, 97, 0.8),
+    0 0 18px rgba(255, 179, 97, 0.35);
+}
+.boot-blade::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: #fffaf2;
+  box-shadow: 0 0 8px 2px rgba(255, 214, 160, 0.9);
+}

@@ -48,6 +48,26 @@ html.lenis body {
   color: var(--text);
   min-height: 100dvh;
   overflow-x: clip;
+  position: relative;
+  isolation: isolate;
+}
+
+/* The backdrop: a faint dot grid that fades out toward the edges, and a
+   soft warm glow up top. Fixed to the viewport, so the page scrolls over
+   it — the black never reads as empty, and nothing moves. A fixed layer
+   (not background-attachment: fixed) so the browser composites it once
+   instead of repainting it on every scroll frame. */
+.brief::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(255, 179, 97, 0.09), transparent 70%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1.5px) 0 0 / 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 100%);
 }
 
 .brief ::selection {
@@ -774,6 +794,46 @@ html.lenis body {
 .brief-footer a {
   color: var(--amber);
 }
+/* pops toward you on hover: lifts, grows a touch, picks up the lamp's
+   glow, and the arrow steps forward. The link is a fixed hit area and
+   only its inner text moves — moving the link itself slid it out from
+   under the cursor, which ended the hover, which dropped it back: a
+   flicker loop. */
+.brief-footer-room {
+  display: inline-block;
+  padding: 6px 0;
+}
+.brief-footer-room-text,
+.brief-footer-room-text span {
+  display: inline-block;
+  transition:
+    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+    text-shadow 0.3s,
+    color 0.3s;
+}
+.brief-footer-room-text {
+  transform-origin: 100% 50%;
+}
+.brief-footer-room:hover .brief-footer-room-text,
+.brief-footer-room:focus-visible .brief-footer-room-text {
+  color: #ffd3a0;
+  transform: translateY(-2px) scale(1.08);
+  text-shadow: 0 0 14px rgba(255, 179, 97, 0.55);
+}
+.brief-footer-room:hover .brief-footer-room-text span,
+.brief-footer-room:focus-visible .brief-footer-room-text span {
+  transform: translateX(5px);
+}
+.brief-credit {
+  margin: -28px 0 0;
+  padding-bottom: 40px;
+  font-size: 11px;
+  color: var(--label);
+}
+.brief-credit a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .brief-marquee-track {
@@ -1419,129 +1479,81 @@ html.lenis body {
   transition: opacity 0.5s ease-out;
 }
 
-/* The flower, sitting in the bottom corner of the contact section. */
-.brief-contact {
-  position: relative;
+/* ---------------------------------------------------- section icons */
+
+/* Animated emoji beside each section title (components/brief/icons.tsx).
+   The box is sized up front so the title never shifts when the
+   animation loads into it. */
+.brief-icon {
+  display: inline-block;
+  width: 0.78em;
+  height: 0.78em;
+  margin-left: 0.25em;
+  vertical-align: -0.08em;
 }
-.brief-flower {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 84px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-@media (min-width: 900px) {
-  .brief-flower {
-    width: 124px;
-    bottom: 24px;
-  }
-}
-.brief-flower:focus-visible {
-  outline: 1px solid var(--amber);
-  outline-offset: 4px;
-  border-radius: 8px;
-}
-.brief-flower svg {
+.brief-icon svg {
   display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
 }
-.brief-flower svg * {
-  transform-box: view-box;
+
+/* ------------------------------------------------------ reading beam */
+
+/* Reading progress (components/brief/progress.tsx): a short fixed
+   track, centred on the left edge, that an amber blade fills from the
+   top as you read — white-hot at its leading tip. The track never moves
+   or grows; only the fill does. */
+.brief-beam {
+  position: fixed;
+  top: 50%;
+  left: 8px;
+  z-index: 15;
+  width: 2px;
+  height: 140px;
+  margin-top: -70px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  /* clip the blade to the track, but leave room for its glow */
+  clip-path: inset(-6px -12px -6px -12px);
 }
-.brief-flower-plant {
-  transform-origin: 60px 140px;
-  transform: rotate(-3deg);
-  transition: transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.brief-flower[data-open="true"] .brief-flower-plant {
-  transform: rotate(0deg);
-}
-/* toward the lamp, which hangs up and to the right */
-.brief-flower[data-lit="true"] .brief-flower-plant {
-  transform: rotate(7deg);
-}
-.brief-flower-stem {
-  fill: none;
-  stroke: var(--label);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-.brief-flower-leaf {
-  fill: rgba(255, 255, 255, 0.04);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.brief-flower-leaf-l {
-  transform-origin: 59px 120px;
-  transform: rotate(8deg);
-}
-.brief-flower-leaf-r {
-  transform-origin: 61px 102px;
-  transform: rotate(-8deg);
-}
-.brief-flower[data-open="true"] .brief-flower-leaf-l {
-  transform: rotate(-8deg);
-}
-.brief-flower[data-open="true"] .brief-flower-leaf-r {
-  transform: rotate(8deg);
-}
-/* each petal pivots on the flower's heart (60,52): folded up into a bud
-   when closed, fanned out to its own angle when open */
-.brief-flower-petal {
-  fill: rgba(255, 179, 97, 0.06);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  transform-origin: 60px 52px;
-  transform: rotate(calc(var(--angle) / 10 - 18deg)) scale(0.6);
-  transition:
-    transform 0.55s cubic-bezier(0.5, 0, 0.75, 0) calc((7 - var(--i)) * 25ms),
-    fill 0.4s,
-    stroke 0.4s;
-}
-.brief-flower[data-open="true"] .brief-flower-petal {
-  fill: rgba(255, 179, 97, 0.16);
-  stroke: var(--amber);
-  transform: rotate(var(--angle)) scale(1);
-  transition:
-    transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 45ms),
-    fill 0.4s,
-    stroke 0.4s;
-}
-.brief-flower[data-lit="true"] .brief-flower-petal {
-  fill: rgba(255, 179, 97, 0.32);
-}
-.brief-flower-heart {
-  fill: var(--raise);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  transform-origin: 60px 52px;
-  transform: scale(0.55);
-  transition:
-    transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
-    fill 0.4s,
-    stroke 0.4s;
-}
-.brief-flower[data-open="true"] .brief-flower-heart {
-  fill: var(--amber);
-  stroke: var(--amber);
-  transform: scale(1);
-}
-.brief-flower-pot {
-  fill: var(--raise);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-}
-@media (prefers-reduced-motion: reduce) {
-  .brief-flower svg * {
-    transition-duration: 0.01s !important;
-    transition-delay: 0s !important;
+@media (min-width: 640px) {
+  .brief-beam {
+    left: 16px;
+    height: 180px;
+    margin-top: -90px;
   }
+}
+@media (min-width: 1280px) {
+  .brief-beam {
+    left: 28px;
+  }
+}
+.brief-beam-blade {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  transform: translateY(-100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 179, 97, 0.25) 0%,
+    rgba(255, 179, 97, 0.9) 70%,
+    #ffd3a0 92%,
+    #fff3e0 100%
+  );
+  box-shadow: 0 0 8px rgba(255, 179, 97, 0.5);
+  will-change: transform;
+}
+/* the hot tip */
+.brief-beam-blade::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #fffaf2;
+  box-shadow:
+    0 0 5px 2px rgba(255, 210, 150, 0.9),
+    0 0 12px 3px rgba(255, 179, 97, 0.4);
 }

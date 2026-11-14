@@ -28,7 +28,7 @@ import {
   type Stat,
 } from "@/components/brief/effects";
 import { real } from "@/components/brief/util";
-import { Flower } from "@/components/brief/toys";
+import { SectionIcon, type IconName } from "@/components/brief/icons";
 
 /**
  * /brief — the room, flattened into one readable page.
@@ -53,14 +53,20 @@ export const metadata: Metadata = {
   },
 };
 
-const SECTIONS = [
-  { id: "experience", n: "01", object: "Whiteboard", title: "Experience" },
-  { id: "work", n: "02", object: "Monitor", title: "Selected work" },
-  { id: "open-source", n: "03", object: "Upstream", title: "Open source" },
-  { id: "record", n: "04", object: "Bookshelf", title: "Record" },
-  { id: "stack", n: "05", object: "Server rack", title: "Stack" },
-  { id: "contact", n: "06", object: "Laptop", title: "Contact" },
-] as const;
+const SECTIONS: readonly {
+  id: string;
+  n: string;
+  object: string;
+  title: string;
+  icon: IconName;
+}[] = [
+  { id: "experience", n: "01", object: "Whiteboard", title: "Experience", icon: "rocket" },
+  { id: "work", n: "02", object: "Monitor", title: "Selected work", icon: "sparkles" },
+  { id: "open-source", n: "03", object: "Upstream", title: "Open source", icon: "seedling" },
+  { id: "record", n: "04", object: "Bookshelf", title: "Record", icon: "trophy" },
+  { id: "stack", n: "05", object: "Server rack", title: "Stack", icon: "gear" },
+  { id: "contact", n: "06", object: "Laptop", title: "Contact", icon: "wave" },
+];
 
 /**
  * The numbers wall. Every figure is lifted from that project's `results`
@@ -311,7 +317,6 @@ export default function BriefPage() {
             ))}
           </p>
         </Reveal>
-        <Flower />
       </section>
     </main>
   );
@@ -406,11 +411,13 @@ function SectionHead({
   object,
   title,
   accent,
+  icon,
 }: {
   n: string;
   object: string;
   title: string;
   accent: string;
+  icon: IconName;
 }) {
   return (
     <header className="brief-head">
@@ -419,6 +426,7 @@ function SectionHead({
       </p>
       <MaskTitle className="brief-h2">
         {title} <span className="brief-hand">{accent}</span>
+        <SectionIcon name={icon} />
       </MaskTitle>
     </header>
   );
