@@ -1552,7 +1552,7 @@ export const MILESTONES: Milestone[] = [
       "Desi Agent — multilingual banking tool-calling agent on Tiny Aya (Lexsi hackathon, Track 3); built with a teammate as a team of two",
       "Docling (Linux Foundation AI & Data) — 3 merged PRs: HTML links and images outside the base directory no longer fail a conversion; EPUB images in single quotes, percent-escaped paths, or with a query or fragment now load",
       "docling-serve — merged PR: the default code/formula preset now points at a preset Docling actually ships",
-      "Meshery (CNCF) — merged docs PR: fixed the Helm Snapshot install URL and plugin usage",
+      "Meshery (CNCF) — 2 merged PRs: the Docker Extension proxy no longer hangs on login or logout without a websocket client, with a race fix and the auth token kept out of its logs; fixed the Helm Snapshot install URL and plugin usage in the docs",
       "Feast (Linux Foundation AI & Data) — merged PR: the DynamoDB online store now warms up its whole connection pool at startup instead of a single connection",
       "Placement preparation",
       "AI systems and distributed systems",

@@ -275,7 +275,7 @@ export const BOOT_NOTES: readonly string[] = [
 export const ACHIEVEMENTS: string[] = [
   "Sole selectee from IIT Madras, and the first across all IITs, for the Willings Programme — Japan industry placement, converted to Otsuka in Tokyo with the only intern Pre-Placement Offer",
   "Top 15 nationally — NCIIPC (Govt. of India) Startup India AI Grand Challenge, multilingual document understanding",
-  "Open-source contributor to Docling and Feast (Linux Foundation AI & Data) and Meshery (CNCF) — 6 merged PRs",
+  "Open-source contributor to Docling and Feast (Linux Foundation AI & Data) and Meshery (CNCF) — 7 merged PRs",
   "Selected from 200+ startups by IITM NIRMAAN (R.E.A.C.H.)",
   "98.61 percentile in JEE Mains among 1.2M+ candidates; Top 450 in WBJEE",
   "AIR 71 (Junior Squad) and City Topper — Technothlon Prelims",
@@ -313,16 +313,20 @@ export interface Contribution {
   merged: string | null;
 }
 
-// Pulled from GitHub (`gh search prs --author CyberRik`) on 2026-11-13.
+// Pulled from GitHub (`gh search prs --author CyberRik`) on 2026-11-16.
 // Merged PRs are claims; open ones are shown as "in review" and must be
 // flipped (or removed) when they land or close. Newest first.
 export const OPEN_SOURCE: Contribution[] = [
+  { project: "Meshery", org: "CNCF", repo: "meshery/meshery", pr: 23765, what: "Docker Extension proxy: login and logout no longer hang without a websocket client, a send-on-closed-channel race is gone, and the auth token is kept out of the logs", merged: "2026-11" },
   { project: "Docling", org: "LF AI & Data", repo: "docling-project/docling", pr: 4636, what: "EPUB images whose source carries a query string or #fragment now load", merged: "2026-11" },
   { project: "Feast", org: "LF AI & Data", repo: "feast-dev/feast", pr: 6985, what: "The DynamoDB online store warms up its whole connection pool at startup, not a single connection", merged: "2026-11" },
   { project: "Meshery", org: "CNCF", repo: "meshery/meshery", pr: 22574, what: "Docs: fixed the Helm Snapshot install URL and plugin usage", merged: "2026-10" },
   { project: "docling-serve", org: "LF AI & Data", repo: "docling-project/docling-serve", pr: 721, what: "The default code/formula preset now points at a preset Docling actually ships", merged: "2026-10" },
   { project: "Docling", org: "LF AI & Data", repo: "docling-project/docling", pr: 4602, what: "EPUB images in single quotes or percent-escaped paths now resolve", merged: "2026-10" },
   { project: "Docling", org: "LF AI & Data", repo: "docling-project/docling", pr: 4601, what: "HTML conversion keeps going when a link or image points outside the base directory", merged: "2026-10" },
+  { project: "Meshery", org: "CNCF", repo: "meshery/meshery", pr: 23780, what: "Docker Extension proxy: no more crash on concurrent websocket writes, logouts reach a reconnecting UI, and tokens are masked in error logs", merged: null },
+  { project: "Meshery", org: "CNCF", repo: "meshery/meshery", pr: 23766, what: "Helm chart: post-install notes and helm test point at the real service and port, and env values are quoted", merged: null },
+  { project: "Meshery", org: "CNCF", repo: "meshery/meshery", pr: 23764, what: "Docker Extension: removed dead service-mesh adapter code and ten unused icons", merged: null },
   { project: "docling-core", org: "LF AI & Data", repo: "docling-project/docling-core", pr: 932, what: "Chunker: only split Markdown tables by columns", merged: null },
   { project: "docling-core", org: "LF AI & Data", repo: "docling-project/docling-core", pr: 854, what: "Chunker: keep a table caption in the same window as its table", merged: null },
 ];
