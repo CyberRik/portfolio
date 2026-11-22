@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PROFILE } from "@/content/portfolio";
 import { TransitionLink } from "./motion";
+import { GitHubMark } from "./marks";
 
 /**
  * Section links glide in place on /brief (Lenis handles bare "#hash"
@@ -51,6 +52,15 @@ export function BriefNav() {
         <SectionLink hash="work" className="brief-hide-sm">
           Work
         </SectionLink>
+        <a
+          href={`https://github.com/${PROFILE.github}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="brief-nav-gh"
+        >
+          <GitHubMark />
+          GitHub
+        </a>
         <a href={PROFILE.resumeUrl} target="_blank" rel="noopener noreferrer">
           Resume
         </a>

@@ -11,6 +11,7 @@ import {
   ARCHIVE,
   FEATURED,
   PROJECT_DOCS,
+  isTodo,
   type ProjectDoc,
 } from "@/content/work";
 import {
@@ -30,6 +31,7 @@ import {
 import { real } from "@/components/brief/util";
 import { SectionIcon, type IconName } from "@/components/brief/icons";
 import { Flower } from "@/components/brief/toys";
+import { GitHubMark } from "@/components/brief/marks";
 
 /**
  * /brief — the room, flattened into one readable page.
@@ -118,6 +120,40 @@ const STATS: Stat[] = [
   },
 ];
 
+/* ------------------------------------------------------------------ */
+/* Proof you can click. Every link below is read off the content
+   files, so a repo or demo added there shows up here on its own.     */
+
+const GITHUB_URL = `https://github.com/${PROFILE.github}`;
+/** a repository root on the profile, not a file or doc inside one */
+const REPO_ROOT = new RegExp(
+  `^https://github\\.com/${PROFILE.github}/([^/#?]+)/?$`,
+  "i",
+);
+const ALL_PROJECTS = [...FEATURED, ...ARCHIVE].map((id) => PROJECT_DOCS[id]);
+
+const repoLinks = (p: ProjectDoc) =>
+  p.links.filter((l) => REPO_ROOT.test(l.href));
+const liveLink = (p: ProjectDoc) =>
+  p.links.find((l) => /live/i.test(l.label) && !isTodo(l.href));
+const youtubeUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
+
+/** the public repos, in the order the projects are featured */
+const REPOS = ALL_PROJECTS.flatMap((p) =>
+  repoLinks(p).map((l) => ({
+    project: p,
+    href: l.href,
+    name: l.href.match(REPO_ROOT)![1],
+    // "GitHub — reach-asr" → "reach-asr"; a bare "GitHub" adds nothing
+    note: l.label.includes("—") ? l.label.split("—")[1].trim() : null,
+  })),
+);
+const DEMOS = ALL_PROJECTS.filter((p) => p.demo);
+const LIVE = ALL_PROJECTS.flatMap((p) => {
+  const l = liveLink(p);
+  return l ? [{ project: p, href: l.href }] : [];
+});
+
 export default function BriefPage() {
   const featured = FEATURED.map((id) => PROJECT_DOCS[id]);
   // two columns that drift at different speeds on desktop
@@ -182,6 +218,7 @@ export default function BriefPage() {
       {/* ---------------------------------------------------- 02 */}
       <section id="work" className="brief-section">
         <SectionHead {...SECTIONS[1]} accent="what I built" />
+        <SeeItRun />
         <div className="brief-projects">
           <Parallax speed={-40} className="brief-col">
             {left.map((p, i) => (
@@ -312,7 +349,9 @@ export default function BriefPage() {
                 href={l.href}
                 target="_blank"
                 rel="noopener noreferrer"
+                className={l.href === GITHUB_URL ? "brief-links-gh" : undefined}
               >
+                {l.href === GITHUB_URL && <GitHubMark />}
                 {l.label} ↗
               </a>
             ))}
@@ -380,9 +419,34 @@ function Hero() {
               >
                 Download resume
               </a>
+              <a
+                className="brief-btn brief-btn-gh"
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <GitHubMark />
+                GitHub
+                <span className="brief-btn-handle">@{PROFILE.github}</span>
+              </a>
               <a className="brief-btn" href={`mailto:${PROFILE.email}`}>
                 Email me
               </a>
+            </p>
+            <p className="brief-profiles">
+              <span className="brief-label">Also on</span>
+              {PROFILE.links
+                .filter((l) => l.href !== GITHUB_URL)
+                .map((l) => (
+                  <a
+                    key={l.label}
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {l.label} ↗
+                  </a>
+                ))}
             </p>
           </BlurIn>
         </div>
@@ -437,20 +501,29 @@ function SectionHead({
 function ProjectCard({ p, n }: { p: ProjectDoc; n: number }) {
   const result = real(p.results)[0];
   const stack = p.stack.flatMap((g) => g.items).slice(0, 5);
+  const repo = repoLinks(p)[0];
+  const live = liveLink(p);
   return (
     // `order` restores reading order on phones, where the two parallax
     // columns dissolve into one grid (see .brief-col in brief.css)
+    //
+    // The case-study link is stretched over the whole card (its ::after),
+    // so the external links can sit inside the card without nesting <a>s.
     <Reveal style={{ order: n }}>
-      <TransitionLink
-        href={`/brief/work/${p.id}`}
-        className="brief-card"
-        aria-label={`${p.title} — read the case study`}
-      >
+      <article className="brief-card">
         <div className="brief-card-top">
           <span className="brief-label">{String(n).padStart(2, "0")}</span>
           <span className="brief-label">{p.period}</span>
         </div>
-        <h3 className="brief-card-title">{p.shortTitle ?? p.title}</h3>
+        <h3 className="brief-card-title">
+          <TransitionLink
+            href={`/brief/work/${p.id}`}
+            className="brief-card-link"
+            aria-label={`${p.title} — read the case study`}
+          >
+            {p.shortTitle ?? p.title}
+          </TransitionLink>
+        </h3>
         <p className="brief-dim brief-card-context">{p.context}</p>
         <p className="brief-card-tagline">{p.tagline}</p>
         {result && <p className="brief-card-result">{result}</p>}
@@ -459,8 +532,141 @@ function ProjectCard({ p, n }: { p: ProjectDoc; n: number }) {
             <li key={s}>{s}</li>
           ))}
         </ul>
-        <span className="brief-card-more">Read the case study →</span>
-      </TransitionLink>
+        <div className="brief-card-foot">
+          <span className="brief-card-more" aria-hidden>
+            Read the case study →
+          </span>
+          {(repo || live || p.demo) && (
+            <span className="brief-card-ext">
+              {live && (
+                <a href={live.href} target="_blank" rel="noopener noreferrer">
+                  Live demo ↗
+                </a>
+              )}
+              {p.demo && (
+                <a
+                  href={youtubeUrl(p.demo.youtube)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ▶ Video
+                </a>
+              )}
+              {repo && (
+                <a href={repo.href} target="_blank" rel="noopener noreferrer">
+                  <GitHubMark />
+                  Code
+                </a>
+              )}
+            </span>
+          )}
+        </div>
+      </article>
     </Reveal>
+  );
+}
+
+/**
+ * The shortest path from "sounds good" to "show me": the recorded demo,
+ * the live Space and the code, before anyone has to open a case study.
+ */
+function SeeItRun() {
+  return (
+    <div className="brief-run">
+      <p className="brief-label brief-run-kicker">See it run</p>
+      <div className="brief-run-media">
+        {DEMOS.map((p) => (
+          <Reveal key={p.id}>
+            <a
+              className="brief-run-card"
+              href={youtubeUrl(p.demo!.youtube)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="brief-run-poster">
+                {/* eslint-disable-next-line @next/next/no-img-element -- a static poster; next/image adds nothing here */}
+                <img src={p.demo!.poster} alt="" loading="lazy" />
+                <span className="brief-demo-play">
+                  ▶ Watch · {p.demo!.length}
+                </span>
+              </span>
+              <span className="brief-run-body">
+                <span className="brief-label">Watch · YouTube</span>
+                <span className="brief-run-title">
+                  {p.shortTitle ?? p.title}, end to end
+                </span>
+                <span className="brief-run-blurb">{p.demo!.blurb}</span>
+              </span>
+            </a>
+          </Reveal>
+        ))}
+        {LIVE.map(({ project: p, href }) => (
+          <Reveal key={p.id}>
+            <a
+              className="brief-run-card"
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="brief-run-poster brief-run-live" aria-hidden>
+                <span className="brief-run-url">
+                  <span className="brief-run-dot" />
+                  {href.replace(/^https:\/\//, "")}
+                </span>
+                <span className="brief-run-live-title">
+                  {p.shortTitle ?? p.title}{" "}
+                  <span className="brief-hand">Lab</span>
+                </span>
+                <span className="brief-demo-play">Open the Space ↗</span>
+              </span>
+              <span className="brief-run-body">
+                <span className="brief-label">Try it · Hugging Face Space</span>
+                <span className="brief-run-title">
+                  {p.shortTitle ?? p.title}, live
+                </span>
+                <span className="brief-run-blurb">{p.tagline}</span>
+              </span>
+            </a>
+          </Reveal>
+        ))}
+      </div>
+
+      <Reveal className="brief-repos">
+        <div className="brief-repos-head">
+          <p className="brief-label">Read the code · public repositories</p>
+          <a
+            className="brief-repos-all"
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <GitHubMark />
+            All of it on github.com/{PROFILE.github} ↗
+          </a>
+        </div>
+        <ul>
+          {REPOS.map((r) => (
+            <li key={r.href}>
+              <a href={r.href} target="_blank" rel="noopener noreferrer">
+                <span className="brief-repos-name">
+                  <GitHubMark />
+                  <span>
+                    <span className="brief-dim">{PROFILE.github}/</span>
+                    {r.name}
+                  </span>
+                </span>
+                <span className="brief-dim">
+                  {r.project.shortTitle ?? r.project.title}
+                  {r.note && ` · ${r.note}`}
+                </span>
+                <span className="brief-label" aria-hidden>
+                  ↗
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Reveal>
+    </div>
   );
 }

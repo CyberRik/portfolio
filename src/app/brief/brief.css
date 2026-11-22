@@ -535,6 +535,347 @@ html.lenis body {
   color: var(--label);
 }
 
+/* The card is an <article>; its title link stretches over all of it, and
+   the external links lift above that overlay so each stays its own target. */
+.brief-card {
+  position: relative;
+}
+.brief-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.brief-card-link:focus-visible {
+  outline: none;
+}
+.brief-card:has(.brief-card-link:focus-visible) {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+.brief-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+.brief-card-foot .brief-card-more {
+  margin-top: 0;
+}
+.brief-card-ext {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.brief-card-ext a {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper);
+  transition:
+    border-color 0.25s,
+    color 0.25s;
+}
+.brief-card-ext a:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.brief-mark {
+  flex: none;
+  vertical-align: -0.125em;
+}
+
+/* hero: the GitHub button and the other profiles */
+.brief-btn-gh {
+  gap: 9px;
+  border-color: color-mix(in srgb, var(--amber) 55%, transparent);
+}
+.brief-btn-gh .brief-mark {
+  font-size: 17px;
+}
+.brief-btn-handle {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--amber);
+}
+.brief-profiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+  margin: 18px 0 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.brief-profiles a {
+  transition: color 0.2s;
+}
+.brief-profiles a:hover {
+  color: var(--amber);
+}
+.brief-nav-gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--paper);
+}
+.brief-nav-gh .brief-mark {
+  font-size: 13px;
+}
+.brief-nav nav a {
+  white-space: nowrap;
+}
+/* name + GitHub + Resume + The room has to fit a 360px phone */
+@media (max-width: 639px) {
+  .brief-nav {
+    letter-spacing: 0.1em;
+  }
+  .brief-nav nav {
+    gap: 12px;
+  }
+}
+@media (max-width: 379px) {
+  .brief-nav {
+    gap: 10px;
+    letter-spacing: 0.05em;
+  }
+  .brief-nav nav {
+    gap: 10px;
+  }
+}
+.brief-links-gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--paper);
+}
+
+/* "See it run": demo, live Space, and the repositories */
+.brief-run {
+  margin-bottom: 72px;
+}
+.brief-run-kicker {
+  margin: 0 0 14px;
+}
+.brief-run-media {
+  display: grid;
+  gap: 20px;
+}
+@media (min-width: 768px) {
+  .brief-run-media {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+}
+.brief-run-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--raise);
+  border: 1px solid var(--line);
+  transition:
+    border-color 0.3s,
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.brief-run-card:hover {
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+  transform: translateY(-4px);
+}
+.brief-run-poster {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background: #050505;
+}
+.brief-run-poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.brief-run-card:hover .brief-run-poster img {
+  transform: scale(1.03);
+}
+.brief-run-card:hover .brief-demo-play {
+  color: var(--amber);
+}
+/* the Space has no poster frame, so it gets a drawn one: a browser bar
+   and the app's name over a warm glow */
+.brief-run-live {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background:
+    radial-gradient(60% 70% at 50% 60%, rgba(255, 179, 97, 0.16), transparent 70%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1.5px) 0 0 / 18px 18px,
+    #050505;
+}
+.brief-run-url {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.6);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brief-run-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+}
+.brief-run-live-title {
+  font-size: clamp(30px, 4.4vw, 46px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--paper);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.brief-run-card:hover .brief-run-live-title {
+  transform: scale(1.04);
+}
+.brief-run-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 26px 26px;
+}
+.brief-run-title {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--paper);
+}
+.brief-run-blurb {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.brief-repos {
+  margin-top: 40px;
+}
+.brief-repos-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+.brief-repos-head .brief-label {
+  margin: 0;
+}
+.brief-repos-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--amber);
+}
+.brief-repos-all:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.brief-repos ul {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.brief-repos li {
+  border-bottom: 1px solid var(--line);
+}
+.brief-repos li a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 24px;
+  padding: 14px 0;
+  font-size: 14.5px;
+  transition:
+    padding-left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.25s;
+}
+.brief-repos li a > .brief-dim {
+  grid-column: 1;
+}
+.brief-repos li a > .brief-label {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+@media (min-width: 768px) {
+  .brief-repos li a {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: baseline;
+  }
+  .brief-repos li a > .brief-dim {
+    grid-column: 2;
+  }
+  .brief-repos li a > .brief-label {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+.brief-repos li a:hover {
+  padding-left: 8px;
+}
+.brief-repos li a:hover .brief-repos-name,
+.brief-repos li a:hover > .brief-label {
+  color: var(--amber);
+}
+.brief-repos-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 13.5px;
+  color: var(--paper);
+  overflow-wrap: anywhere;
+  transition: color 0.25s;
+}
+
 .brief-archive {
   margin-top: 64px;
 }
@@ -840,6 +1181,7 @@ html.lenis body {
     animation: none;
   }
   .brief-card,
+  .brief-run-card,
   .brief-btn,
   .brief-contents li a {
     transition: none;
