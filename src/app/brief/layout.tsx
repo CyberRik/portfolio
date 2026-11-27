@@ -38,9 +38,10 @@ export default function BriefLayout({
   return (
     <SmoothScroll>
       <div className={`brief ${display.variable} ${text.variable}`}>
-        {/* one viewport-sized character field behind every section; the
-            hero draws its own (it hides the room), so this one yields there */}
-        <MatrixSpotlightBackground className="is-page" exclude=".b-hero" />
+        {/* one quiet, viewport-sized character field behind every section
+            (sparse, still, fainter, never under text); the hero draws its
+            own livelier one (it hides the room), so this one yields there */}
+        <MatrixSpotlightBackground className="is-page" exclude=".b-hero" calm />
         <BriefNav />
         <div className="brief-page">{children}</div>
         <BriefFooter />

@@ -239,10 +239,15 @@ const ROOM_ART = [
   String.raw`  ||                            ||  `,
 ];
 
-function makeRow(width: number) {
+function makeRow(width: number, keep = 1) {
   let s = "";
-  while (s.length < width)
-    s += TOKENS[rand(TOKENS.length)] + " ".repeat(1 + rand(2));
+  while (s.length < width) {
+    const t = TOKENS[rand(TOKENS.length)];
+    // sparse fields drop tokens to blank space, keeping the rhythm
+    s +=
+      (Math.random() < keep ? t : " ".repeat(t.length)) +
+      " ".repeat(1 + rand(2));
+  }
   return s.slice(0, width).split("");
 }
 
@@ -256,6 +261,7 @@ export function MatrixSpotlightBackground({
   className = "",
   room,
   exclude,
+  calm = false,
 }: {
   className?: string;
   /**
@@ -270,6 +276,12 @@ export function MatrixSpotlightBackground({
    * field is drawn there — the page-wide field yields to the hero's.
    */
   exclude?: string;
+  /**
+   * The quiet version for behind reading sections: about half the
+   * glyphs, a slower drift, and no scrambling — a still texture you
+   * uncover, not a second layer of motion under the text.
+   */
+  calm?: boolean;
 }) {
   const fine = useMedia(FINE);
   const reduced = useMedia(REDUCED);
@@ -305,7 +317,7 @@ export function MatrixSpotlightBackground({
       const r = el.getBoundingClientRect();
       cols = Math.ceil(r.width / cw) + 1;
       const count = Math.ceil(r.height / ch) + 1;
-      rows = Array.from({ length: count }, () => makeRow(cols));
+      rows = Array.from({ length: count }, () => makeRow(cols, calm ? 0.5 : 1));
 
       // carve the room into the field, snapped to the character grid,
       // and size the anchor to the drawing so its hit area matches
@@ -362,7 +374,7 @@ export function MatrixSpotlightBackground({
     // moving between places glides rather than jumps. The pointer is kept
     // in viewport coordinates and re-projected each frame, so scrolling
     // with a still mouse doesn't leave the light behind.
-    const EASE = 0.12;
+    const EASE = calm ? 0.07 : 0.12;
     const FADE = 0.08;
     let px = 0; // pointer, viewport coords
     let py = 0;
@@ -441,48 +453,49 @@ export function MatrixSpotlightBackground({
     // scramble: slow and sparse, only while the pointer is moving, only
     // cells inside the spotlight, only the rows it touched
     const RADIUS = 220;
-    const timer = reduced
-      ? 0
-      : window.setInterval(() => {
-          if (a < 0.2) return;
-          const touched = new Set<number>();
-          // at rest, the drawing's scrambled glyphs settle back, a few
-          // per tick, so the room resolves out of the noise
-          if (!moving && art.size && performance.now() - lastMove > 350) {
-            let n = 0;
-            for (const [k, g] of art) {
-              const r = Math.floor(k / cols);
-              const c = k % cols;
-              if (rows[r][c] !== g) {
-                rows[r][c] = g;
-                touched.add(r);
-                if (++n >= 24) break;
+    const timer =
+      reduced || calm
+        ? 0
+        : window.setInterval(() => {
+            if (a < 0.2) return;
+            const touched = new Set<number>();
+            // at rest, the drawing's scrambled glyphs settle back, a few
+            // per tick, so the room resolves out of the noise
+            if (!moving && art.size && performance.now() - lastMove > 350) {
+              let n = 0;
+              for (const [k, g] of art) {
+                const r = Math.floor(k / cols);
+                const c = k % cols;
+                if (rows[r][c] !== g) {
+                  rows[r][c] = g;
+                  touched.add(r);
+                  if (++n >= 24) break;
+                }
               }
             }
-          }
-          if (!moving) {
+            if (!moving) {
+              touched.forEach((r) => {
+                lines[r].textContent = rows[r].join("") + "\n";
+              });
+              return;
+            }
+            moving = false;
+            for (let i = 0; i < 10; i++) {
+              const ang = Math.random() * Math.PI * 2;
+              const d = Math.sqrt(Math.random()) * RADIUS * 0.8;
+              const c = Math.floor((mx + Math.cos(ang) * d) / cw);
+              const r = Math.floor((my + Math.sin(ang) * d) / ch);
+              if (r < 0 || r >= rows.length || c < 0 || c >= cols) continue;
+              if (rows[r][c] === " ") continue; // keep the token spacing
+              rows[r][c] = artRows.has(r)
+                ? ASCII_CHARS[rand(ASCII_CHARS.length)]
+                : CHARS[rand(CHARS.length)];
+              touched.add(r);
+            }
             touched.forEach((r) => {
               lines[r].textContent = rows[r].join("") + "\n";
             });
-            return;
-          }
-          moving = false;
-          for (let i = 0; i < 10; i++) {
-            const ang = Math.random() * Math.PI * 2;
-            const d = Math.sqrt(Math.random()) * RADIUS * 0.8;
-            const c = Math.floor((mx + Math.cos(ang) * d) / cw);
-            const r = Math.floor((my + Math.sin(ang) * d) / ch);
-            if (r < 0 || r >= rows.length || c < 0 || c >= cols) continue;
-            if (rows[r][c] === " ") continue; // keep the token spacing
-            rows[r][c] = artRows.has(r)
-              ? ASCII_CHARS[rand(ASCII_CHARS.length)]
-              : CHARS[rand(CHARS.length)];
-            touched.add(r);
-          }
-          touched.forEach((r) => {
-            lines[r].textContent = rows[r].join("") + "\n";
-          });
-        }, 140);
+          }, 140);
 
     return () => {
       alive = false;
@@ -494,7 +507,7 @@ export function MatrixSpotlightBackground({
       window.removeEventListener("blur", onOut);
       clearInterval(timer);
     };
-  }, [fine, reduced, room, exclude]);
+  }, [fine, reduced, room, exclude, calm]);
 
   return (
     <>
