@@ -399,6 +399,16 @@ html.lenis body {
   }
 }
 
+/* phones: a smaller light for a narrower screen and a fingertip */
+@media (max-width: 640px) {
+  .b-matrix {
+    --r: 170px;
+  }
+  .brief .b-matrix.is-page {
+    --r: 140px;
+  }
+}
+
 /* the page-wide field: fixed to the viewport, behind all content (the
    .brief stacking context keeps z-index:-1 above the paper) */
 .b-matrix.is-page {

@@ -289,8 +289,9 @@ export function MatrixSpotlightBackground({
   const pre = useRef<HTMLPreElement>(null);
   const roomRef = useRef<HTMLAnchorElement>(null);
 
+  // Runs on every device: a mouse drives it on desktop, a dragging
+  // finger on touch screens (see the touch handlers below).
   useEffect(() => {
-    if (!fine) return;
     const el = box.current;
     const out = pre.current;
     if (!el || !out) return;
@@ -442,6 +443,30 @@ export function MatrixSpotlightBackground({
       seen = false;
       kick();
     };
+    // touch: the spotlight follows a dragging finger (which is also the
+    // scroll gesture, so it trails the finger down the page) and fades a
+    // moment after the finger lifts
+    let lift = 0;
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      clearTimeout(lift);
+      px = t.clientX;
+      py = t.clientY;
+      seen = true;
+      moving = true;
+      lastMove = performance.now();
+      kick();
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length) return;
+      clearTimeout(lift);
+      lift = window.setTimeout(onOut, 450);
+    };
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("touchmove", onTouch, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("scroll", kick, { passive: true });
     const onWinOut = (e: MouseEvent) => {
@@ -501,13 +526,18 @@ export function MatrixSpotlightBackground({
       alive = false;
       ro.disconnect();
       cancelAnimationFrame(raf);
+      clearTimeout(lift);
+      window.removeEventListener("touchstart", onTouch);
+      window.removeEventListener("touchmove", onTouch);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("scroll", kick);
       document.removeEventListener("mouseout", onWinOut);
       window.removeEventListener("blur", onOut);
       clearInterval(timer);
     };
-  }, [fine, reduced, room, exclude, calm]);
+  }, [fine, reduced, room, exclude, calm]); // fine: the room link mounts with it
 
   return (
     <>
