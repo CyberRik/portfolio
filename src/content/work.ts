@@ -410,6 +410,22 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Aug 2026", what: "Benchmark suite (8 scripts) and full architecture docs; a pre-release self-audit found and fixed a real gap in admission control." },
     ],
     links: [{ label: "GitHub", href: "https://github.com/CyberRik/tinyserve" }],
+    demo: {
+      youtube: "ruPoUDw6xg4",
+      length: "0:45",
+      poster: "/demos/tinyserve.jpg",
+      blurb:
+        "The real server running on llama.cpp with 2 decode slots: a burst of 16 requests streams through continuous batching, then the same 6 requests run under FIFO, Priority and WFQ, the scheduler hot-swapped on the live server between runs.",
+      highlight: { at: 24, label: "FIFO vs Priority vs WFQ, on the same requests" },
+      chapters: [
+        { at: 0, label: "An LLM inference server on llama.cpp" },
+        { at: 6, label: "A burst of 16 requests, 2 decode slots" },
+        { at: 15, label: "Continuous batching — a finished stream hands its slot on" },
+        { at: 24, label: "Compare policies: the same 6 requests" },
+        { at: 30, label: "Scheduler hot-swapped on the live server" },
+        { at: 36, label: "FIFO makes the pair wait; Priority skips; WFQ lets it past part of the line" },
+      ],
+    },
     related: ["ancora", "toolcalllm"],
   },
 
@@ -1412,7 +1428,7 @@ export interface Milestone {
   alsoShipped: string[];
   tech: string[];
   lessons: string[];
-  impact: string;
+  impact?: string;
 }
 
 export const MILESTONES: Milestone[] = [
@@ -1439,7 +1455,6 @@ export const MILESTONES: Milestone[] = [
     lessons: [
       "A planner that works on a clean map and fails in a narrow passage isn't a working planner — the benchmark is the product.",
     ],
-    impact: "98.61 percentile in JEE Mains among 1.2M+ candidates; Top 450 in WBJEE; AIR 71 (Junior Squad), Technothlon.",
   },
   {
     id: "building",

@@ -16,7 +16,7 @@ import { WORLD_FADE } from "@/lib/design";
  */
 
 const STOPS = [
-  { x: 160, y: 640, place: "West Bengal, India", note: "roots · 98.61 %ile JEE among 1.2M" },
+  { x: 160, y: 640, place: "West Bengal, India", note: "roots" },
   { x: 430, y: 500, place: "IIT Madras", note: "b.tech 2023 – 2027" },
   { x: 700, y: 580, place: "San Francisco — remote", note: "OctonData · document intelligence" },
   { x: 950, y: 430, place: "Ontario — remote", note: "Gravton Labs · retrieval at scale" },

@@ -49,7 +49,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The four projects that get a full spread. Each cover figure is lifted
+ * The projects that get a full spread. Each cover figure is lifted
  * verbatim from that project's `results` in work.ts — this list selects
  * and shortens, it never computes or rounds. If a source line changes,
  * change the cover with it.
@@ -59,6 +59,8 @@ const SPOTLIGHT: {
   figure: string;
   caption: string;
   tone: "paper" | "ink" | "photo";
+  /** for tone "photo": a short loop cut from the project's own demo */
+  clip?: { src: string; poster: string };
 }[] = [
   {
     id: "desi-agent",
@@ -71,6 +73,21 @@ const SPOTLIGHT: {
     figure: "~60s → ~6s",
     caption: "Time to detect a killed worker",
     tone: "photo",
+    clip: {
+      src: "/brief/clips/ancora-chaos.mp4",
+      poster: "/brief/clips/ancora-chaos.jpg",
+    },
+  },
+  {
+    id: "tinyserve",
+    figure: "42/64",
+    caption:
+      "Requests admitted at exactly the KV-budget boundary under burst load",
+    tone: "photo",
+    clip: {
+      src: "/brief/clips/tinyserve-batch.mp4",
+      poster: "/brief/clips/tinyserve-batch.jpg",
+    },
   },
   {
     id: "senpai",
@@ -258,11 +275,11 @@ function Spread({ s, i }: { s: (typeof SPOTLIGHT)[number]; i: number }) {
           aria-label={`${p.title}: read the case study`}
           data-cursor="CASE STUDY"
         >
-          {s.tone === "photo" && p.demo ? (
+          {s.tone === "photo" && s.clip && p.demo ? (
             <>
               <Clip
-                src="/brief/clips/ancora-chaos.mp4"
-                poster="/brief/clips/ancora-chaos.jpg"
+                src={s.clip.src}
+                poster={s.clip.poster}
                 label={`${p.title} demo`}
                 className="b-cover-media"
               />

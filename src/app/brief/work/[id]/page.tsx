@@ -34,6 +34,20 @@ const CLIPS: Partial<Record<ProjectId, { demo?: ClipRef; hard?: ClipRef }>> = {
         "A chaos experiment: an activity worker is SIGKILLed mid-run, the run waits out detection, resumes from history, and the invariants are checked.",
     },
   },
+  tinyserve: {
+    demo: {
+      src: "/brief/clips/tinyserve-policies.mp4",
+      poster: "/brief/clips/tinyserve-policies.jpg",
+      label: "TinyServe: the same requests under FIFO, Priority and WFQ",
+    },
+    hard: {
+      src: "/brief/clips/tinyserve-batch.mp4",
+      poster: "/brief/clips/tinyserve-batch.jpg",
+      label: "TinyServe: a burst of 16 requests through continuous batching",
+      caption:
+        "Continuous batching on the live server: 16 requests, 2 decode slots — two stream at a time, and a finished stream hands its slot to the next request.",
+    },
+  },
 };
 
 /**
