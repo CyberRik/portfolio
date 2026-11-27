@@ -1,5 +1,5 @@
 /*
- * /brief — off-white paper, two typefaces, one ink.
+ * /brief — off-white paper, two typefaces plus a mono, one ink.
  *
  * Inter Tight for display (large, tight, weight 500), Inter for text.
  * Ink #0e0e0e and a single grey do all the work; there is no accent
@@ -374,7 +374,7 @@ html.lenis body {
 }
 .b-matrix pre {
   margin: 0;
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 18px;
   letter-spacing: 0.04em;
@@ -390,9 +390,10 @@ html.lenis body {
   right: max(var(--gutter), calc((100% - 1440px) / 2 + var(--gutter)));
   top: clamp(48px, 7vh, 96px);
 }
-/* only where the gap beside the title is wide enough (the title stops
-   growing at ~1285px, the wrap at 1440px) */
-@media (min-width: 1420px) {
+/* only where the gap beside the title is wide enough: the title stops
+   growing at ~1285px and the drawing is 36 Commit Mono cells (~300px),
+   which clears "Engineer" from a 1360px viewport up */
+@media (min-width: 1360px) {
   .b-hero-room {
     display: block;
   }
@@ -1439,4 +1440,44 @@ html.has-cursor .brief * {
   .b-float-tag {
     animation: none;
   }
+}
+
+/* ============================================================= mono */
+/* Commit Mono carries the small technical layer — labels, meta, dates,
+   statuses, figures — and nothing longer than a line. Headings and body
+   copy stay in Inter Tight / Inter. */
+.b-meta,
+.b-cue,
+.b-kicker,
+.brief-nav-links a,
+.b-hero-meta dt,
+.b-index-year,
+.b-oss-status,
+.b-oss-org,
+.b-facts dt,
+.b-case-timeline span,
+.b-tag,
+.brief-footer-links,
+.b-cover-num {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 400;
+}
+.b-cue,
+.b-kicker,
+.brief-nav-links a,
+.b-hero-meta dt,
+.b-facts dt,
+.brief-footer-links {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.b-meta,
+.b-oss-status,
+.b-index-year {
+  font-size: 12.5px;
+  letter-spacing: 0;
+}
+/* big figures: mono numerals, a touch of negative tracking only */
+.b-cover-num {
+  letter-spacing: -0.03em;
 }
