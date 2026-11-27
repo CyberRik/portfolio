@@ -130,7 +130,12 @@ export function CustomCursor() {
     const onUp = () => setDown(false);
 
     window.addEventListener("pointermove", onMove, { passive: true });
-    document.addEventListener("pointerleave", onLeave);
+    // pointerleave on document isn't fired everywhere; a mouseout with no
+    // relatedTarget is the portable "left the window" signal
+    const onWinOut = (e: MouseEvent) => {
+      if (!e.relatedTarget) onLeave();
+    };
+    document.addEventListener("mouseout", onWinOut);
     window.addEventListener("blur", onLeave);
     window.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
@@ -139,7 +144,7 @@ export function CustomCursor() {
       release();
       root.classList.remove("has-cursor");
       window.removeEventListener("pointermove", onMove);
-      document.removeEventListener("pointerleave", onLeave);
+      document.removeEventListener("mouseout", onWinOut);
       window.removeEventListener("blur", onLeave);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);
@@ -343,7 +348,10 @@ export function MatrixSpotlightBackground({
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("scroll", kick, { passive: true });
-    document.addEventListener("pointerleave", onOut);
+    const onWinOut = (e: MouseEvent) => {
+      if (!e.relatedTarget) onOut();
+    };
+    document.addEventListener("mouseout", onWinOut);
     window.addEventListener("blur", onOut);
 
     // scramble: slow and sparse, only while the pointer is moving, only
@@ -375,7 +383,7 @@ export function MatrixSpotlightBackground({
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("scroll", kick);
-      document.removeEventListener("pointerleave", onOut);
+      document.removeEventListener("mouseout", onWinOut);
       window.removeEventListener("blur", onOut);
       clearInterval(timer);
     };

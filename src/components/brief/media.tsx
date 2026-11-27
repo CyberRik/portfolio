@@ -69,14 +69,9 @@ const spring = (delay: number) => ({
 });
 
 /**
- * The reference site's entrance: a card rises from well below, a little
+ * The reference site's entrance: a card rises from below, a little
  * small, and settles with a soft spring as it scrolls into view. `delay`
  * staggers siblings so a group arrives one after another.
- *
- * Inside a <PopGroup>, pass `grouped`: the card then waits for the group
- * to enter instead of watching itself. That matters inside a clipping
- * parent (overflow: hidden) — a card that starts pushed below the clip
- * edge is invisible to its own observer and would never be revealed.
  */
 export function PopUp({
   children,
@@ -84,53 +79,23 @@ export function PopUp({
   delay = 0,
   distance = 120,
   as = "div",
-  grouped = false,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
   distance?: number;
   as?: "div" | "li";
-  grouped?: boolean;
 }) {
   const Tag = motion[as];
-  const variants = {
-    hidden: { opacity: 0, y: distance, scale: 0.94 },
-    shown: { opacity: 1, y: 0, scale: 1, transition: spring(delay) },
-  };
-  return grouped ? (
-    <Tag className={className} variants={variants}>
-      {children}
-    </Tag>
-  ) : (
+  return (
     <Tag
       className={className}
-      variants={variants}
-      initial="hidden"
-      whileInView="shown"
+      initial={{ opacity: 0, y: distance, scale: 0.94 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "-60px" }}
+      transition={spring(delay)}
     >
       {children}
     </Tag>
-  );
-}
-
-/** Reveals every grouped <PopUp> inside it once the group is on screen. */
-export function PopGroup({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      whileInView="shown"
-      viewport={{ once: true, margin: "-40px" }}
-    >
-      {children}
-    </motion.div>
   );
 }

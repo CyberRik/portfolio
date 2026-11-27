@@ -11,6 +11,30 @@ import {
 import { MaskTitle, Reveal, TransitionLink } from "@/components/brief/motion";
 import { real, realOne } from "@/components/brief/util";
 import { ArchDiagram } from "@/components/os/ArchDiagram";
+import { Clip } from "@/components/brief/media";
+
+/**
+ * Short muted loops cut from a project's own recording. `demo` replaces
+ * the static poster in the demo block (it still opens the full video);
+ * `hard` sits under "The hard parts", next to the problem it shows.
+ */
+type ClipRef = { src: string; poster: string; label: string; caption?: string };
+const CLIPS: Partial<Record<ProjectId, { demo?: ClipRef; hard?: ClipRef }>> = {
+  ancora: {
+    demo: {
+      src: "/brief/clips/ancora-dag.mp4",
+      poster: "/brief/clips/ancora-dag.jpg",
+      label: "Ancora: a run's DAG reconstructed live from Temporal history",
+    },
+    hard: {
+      src: "/brief/clips/ancora-chaos.mp4",
+      poster: "/brief/clips/ancora-chaos.jpg",
+      label: "Ancora: recovering after a worker is SIGKILLed mid-run",
+      caption:
+        "A chaos experiment: an activity worker is SIGKILLed mid-run, the run waits out detection, resumes from history, and the invariants are checked.",
+    },
+  },
+};
 
 /**
  * /brief/work/[id] — one case study per project, prerendered from
@@ -60,6 +84,7 @@ export default async function CaseStudy({
   if (!p) notFound();
 
   const results = real(p.results);
+  const clips = CLIPS[p.id];
   const challenges = p.challenges.filter(
     (c) => !isTodo(c.title) && !isTodo(c.body),
   );
@@ -134,8 +159,19 @@ export default async function CaseStudy({
               target="_blank"
               rel="noopener noreferrer"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- a static poster; next/image adds nothing here */}
-              <img src={p.demo.poster} alt="" loading="lazy" />
+              {clips?.demo ? (
+                <Clip
+                  src={clips.demo.src}
+                  poster={clips.demo.poster}
+                  label={clips.demo.label}
+                  className="b-demo-media"
+                />
+              ) : (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a static poster; next/image adds nothing here */}
+                  <img src={p.demo.poster} alt="" loading="lazy" />
+                </>
+              )}
               <span className="b-tag b-tag-solid b-demo-play">
                 ▶ Watch on YouTube · {p.demo.length}
               </span>
@@ -186,7 +222,26 @@ export default async function CaseStudy({
       )}
 
       {challenges.length > 0 && (
-        <Block title="The hard parts">
+        <Block
+          title="The hard parts"
+          wide={
+            clips?.hard && (
+              <Reveal>
+                <div className="b-figure">
+                  <Clip
+                    src={clips.hard.src}
+                    poster={clips.hard.poster}
+                    label={clips.hard.label}
+                    className="b-figure-media"
+                  />
+                </div>
+                {clips.hard.caption && (
+                  <p className="b-caption">{clips.hard.caption}</p>
+                )}
+              </Reveal>
+            )
+          }
+        >
           <ol className="b-hard">
             {challenges.map((c) => (
               <Reveal as="li" key={c.title}>

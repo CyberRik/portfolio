@@ -29,7 +29,7 @@ import { MatrixSpotlightBackground } from "@/components/brief/cursor";
  * the two can never drift), laid out for the visitor who has thirty
  * seconds, a phone, or no WebGL.
  *
- * Design rule for this page: white paper, two typefaces (Inter Tight for
+ * Design rule for this page: off-white paper, two typefaces (Inter Tight for
  * display, Inter for text), one ink colour and a grey. No icons, no
  * gradients, no handwriting, no glow. Hierarchy comes from size and
  * space alone, and the only imagery is real: the room, the recorded
@@ -133,12 +133,12 @@ export default function BriefPage() {
   return (
     <main id="top">
       <Hero />
-      <Showcase />
       <Work />
       <About />
       <OpenSource />
       <Recognition />
       <Stack />
+      <RoomInvite />
       <Contact />
     </main>
   );
@@ -196,16 +196,22 @@ function Hero() {
 }
 
 /**
- * The showcase: three real recordings rising into a black panel one
- * after another, after the reference site's phone mockups. The room tour
- * was recorded from the live 3D site; the two Ancora clips are cut from
- * its YouTube demo.
+ * The closing invitation to the 3D version: one recording of the room,
+ * captioned underneath. Project recordings live with their projects (the
+ * Ancora cover here, and its case study), never in a collage.
  */
-function Showcase() {
+function RoomInvite() {
   return (
     <section className="b-wrap b-feature" aria-label="The 3D room">
       <PopUp distance={40}>
-        <Link href="/" className="b-feature-link" data-cursor="ENTER ROOM">
+        {/* the caption's link below is the one in the tab order */}
+        <Link
+          href="/"
+          className="b-feature-link"
+          data-cursor="ENTER ROOM"
+          tabIndex={-1}
+          aria-hidden
+        >
           <Clip
             src="/brief/clips/room-tour.mp4"
             poster="/brief/clips/room-tour.jpg"
@@ -215,10 +221,10 @@ function Showcase() {
         </Link>
       </PopUp>
       <Reveal className="b-feature-cap">
-        <p className="b-meta">This site, in 3D</p>
+        <p className="b-meta">Prefer to explore?</p>
         <p className="b-feature-text">
-          The full portfolio is a room you can walk into: a desk, a monitor
-          running its own little OS, a whiteboard. Recorded live.
+          This whole portfolio is also a 3D room you can walk into: a desk,
+          a monitor running its own little OS, a whiteboard. Recorded live.
         </p>
         <Link href="/" className="b-textlink">
           Walk into the room →

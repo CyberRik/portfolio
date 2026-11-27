@@ -428,10 +428,10 @@ html.lenis body {
 }
 
 /* ========================================================== feature */
-/* One recording of the room, wide and quiet, captioned underneath. */
+/* The closing invitation: one recording of the room, captioned underneath. */
 
 .b-feature {
-  margin-top: clamp(56px, 7vw, 112px);
+  margin-top: clamp(140px, 16vw, 240px);
 }
 .b-feature-link {
   display: block;
@@ -1067,13 +1067,19 @@ html.lenis body {
   overflow: hidden;
   background: #000;
 }
-.b-demo img {
+.b-demo img,
+.b-demo .b-demo-media {
   display: block;
   width: 100%;
   height: auto;
   transition: transform 1.4s var(--ease);
 }
-.b-demo:hover img {
+.b-demo .b-demo-media {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.b-demo:hover img,
+.b-demo:hover .b-demo-media {
   transform: scale(1.02);
 }
 .b-demo-play {
@@ -1116,6 +1122,18 @@ html.lenis body {
 }
 .b-block-wide {
   margin-top: clamp(40px, 5vw, 64px);
+}
+/* a recording set into a case study, next to what it shows */
+.b-figure {
+  border-radius: clamp(14px, 1.6vw, 22px);
+  overflow: hidden;
+  background: #111;
+}
+.b-figure-media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
 }
 .b-arch {
   background: var(--ink);
