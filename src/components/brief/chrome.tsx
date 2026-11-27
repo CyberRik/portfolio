@@ -168,9 +168,12 @@ export function BriefFooter() {
             </a>
           ))}
         </nav>
-        <Link href="/" className="brief-footer-room">
-          The 3D room ↗
-        </Link>
+        <p className="brief-footer-room">
+          This is the flat edition. The original is{" "}
+          <Link href="/" prefetch={false}>
+            a room you can walk through ↗
+          </Link>
+        </p>
         <p>
           {PROFILE.name} {new Date().getFullYear()}©
         </p>
@@ -180,11 +183,9 @@ export function BriefFooter() {
 }
 
 /**
- * The two pills that float in the bottom-right corner, after the
- * reference site's "Purchase / Made in Framer" pair: the résumé and the
- * way into the room, always one click away. They pop in once the page
- * has settled and tuck away while the contact block (which repeats them)
- * is on screen.
+ * The résumé pill that floats in the bottom-right corner, always one
+ * click away. It pops in once the page has settled and tucks away while
+ * the contact block (which repeats it) is on screen.
  */
 export function FloatingTags() {
   const [tucked, setTucked] = useState(false);
@@ -213,10 +214,6 @@ export function FloatingTags() {
       >
         Download resume
       </a>
-      <Link className="b-float-tag" href="/">
-        <span className="b-float-dot" aria-hidden />
-        Walk into the 3D room
-      </Link>
     </div>
   );
 }

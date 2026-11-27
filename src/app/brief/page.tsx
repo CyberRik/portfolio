@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   ACHIEVEMENTS,
   EDUCATION,
@@ -138,7 +137,6 @@ export default function BriefPage() {
       <OpenSource />
       <Recognition />
       <Stack />
-      <RoomInvite />
       <Contact />
     </main>
   );
@@ -150,7 +148,7 @@ function Hero() {
   const [latest, ...earlier] = EXPERIENCE;
   return (
     <section className="b-hero">
-      <MatrixSpotlightBackground />
+      <MatrixSpotlightBackground room />
       <div className="b-wrap b-hero-inner">
         <h1 className="b-display b-hero-title">
           <MaskTitle as="span" immediate delay={0.05}>
@@ -191,45 +189,6 @@ function Hero() {
           </Reveal>
         </div>
       </div>
-    </section>
-  );
-}
-
-/**
- * The closing invitation to the 3D version: one recording of the room,
- * captioned underneath. Project recordings live with their projects (the
- * Ancora cover here, and its case study), never in a collage.
- */
-function RoomInvite() {
-  return (
-    <section className="b-wrap b-feature" aria-label="The 3D room">
-      <PopUp distance={40}>
-        {/* the caption's link below is the one in the tab order */}
-        <Link
-          href="/"
-          className="b-feature-link"
-          data-cursor="ENTER ROOM"
-          tabIndex={-1}
-          aria-hidden
-        >
-          <Clip
-            src="/brief/clips/room-tour.mp4"
-            poster="/brief/clips/room-tour.jpg"
-            label="A flight through the 3D room: the desk, the monitor, the whiteboard"
-            className="b-feature-media"
-          />
-        </Link>
-      </PopUp>
-      <Reveal className="b-feature-cap">
-        <p className="b-meta">Prefer to explore?</p>
-        <p className="b-feature-text">
-          This whole portfolio is also a 3D room you can walk into: a desk,
-          a monitor running its own little OS, a whiteboard. Recorded live.
-        </p>
-        <Link href="/" className="b-textlink">
-          Walk into the room →
-        </Link>
-      </Reveal>
     </section>
   );
 }
@@ -407,42 +366,45 @@ function About() {
           </Reveal>
         </div>
 
-        <ol className="b-timeline">
-          {EXPERIENCE.map((r) => (
-            <Reveal as="li" key={r.company} className="b-split">
-              <p className="b-year">{r.period}</p>
+        <div className="b-matrix-host">
+          <MatrixSpotlightBackground className="is-fill" />
+          <ol className="b-timeline">
+            {EXPERIENCE.map((r) => (
+              <Reveal as="li" key={r.company} className="b-split">
+                <p className="b-year">{r.period}</p>
+                <div>
+                  <h3 className="b-role">
+                    {r.company}, {r.title}.
+                  </h3>
+                  <p className="b-role-where">{r.location}</p>
+                  <p className="b-body b-muted">{r.bullets[0]}</p>
+                  {r.bullets.length > 1 && (
+                    <details className="b-details">
+                      <summary>
+                        <span className="b-details-open">
+                          {r.bullets.length - 1} more
+                        </span>
+                        <span className="b-details-close">Less</span>
+                      </summary>
+                      <ul>
+                        {r.bullets.slice(1).map((b) => (
+                          <li key={b}>{b}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              </Reveal>
+            ))}
+            <Reveal as="li" className="b-split">
+              <p className="b-year">{EDUCATION.period}</p>
               <div>
-                <h3 className="b-role">
-                  {r.company}, {r.title}.
-                </h3>
-                <p className="b-role-where">{r.location}</p>
-                <p className="b-body b-muted">{r.bullets[0]}</p>
-                {r.bullets.length > 1 && (
-                  <details className="b-details">
-                    <summary>
-                      <span className="b-details-open">
-                        {r.bullets.length - 1} more
-                      </span>
-                      <span className="b-details-close">Less</span>
-                    </summary>
-                    <ul>
-                      {r.bullets.slice(1).map((b) => (
-                        <li key={b}>{b}</li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
+                <h3 className="b-role">{EDUCATION.school}.</h3>
+                <p className="b-role-where">{EDUCATION.degree}</p>
               </div>
             </Reveal>
-          ))}
-          <Reveal as="li" className="b-split">
-            <p className="b-year">{EDUCATION.period}</p>
-            <div>
-              <h3 className="b-role">{EDUCATION.school}.</h3>
-              <p className="b-role-where">{EDUCATION.degree}</p>
-            </div>
-          </Reveal>
-        </ol>
+          </ol>
+        </div>
       </div>
     </section>
   );

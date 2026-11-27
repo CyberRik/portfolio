@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 /**
  * Desktop-only interaction layer for /brief: a custom cursor and the
@@ -31,7 +32,6 @@ function useMedia(query: string) {
 
 /* ------------------------------------------------------------------ */
 
-const LERP = 0.18;
 const MAGNET = 0.2;
 /** only small targets get pulled — a paragraph link should not wobble */
 const MAGNET_MAX = { w: 360, h: 72 };
@@ -40,7 +40,7 @@ const MAGNET_MAX = { w: 360, h: 72 };
  * An arrow pointer drawn at the real pointer position (no lag), inverted
  * against whatever is under it (mix-blend-mode: difference), a touch
  * larger over links and buttons. Over anything carrying data-cursor="…"
- * a labelled pill trails just behind the arrow with a little lag.
+ * a small uppercase label sits beside the arrow — text only, no shape.
  */
 export function CustomCursor() {
   const fine = useMedia(FINE);
@@ -48,7 +48,6 @@ export function CustomCursor() {
   const enabled = fine && !reduced;
 
   const dot = useRef<HTMLDivElement>(null);
-  const pill = useRef<HTMLDivElement>(null);
   const [label, setLabel] = useState<string | null>(null);
   const [mode, setMode] = useState<"idle" | "link">("idle");
   const [hidden, setHidden] = useState(true);
@@ -60,7 +59,6 @@ export function CustomCursor() {
     root.classList.add("has-cursor");
 
     const target = { x: -100, y: -100 };
-    const pos = { x: -100, y: -100 };
     let raf = 0;
     let magnet: HTMLElement | null = null;
 
@@ -79,23 +77,19 @@ export function CustomCursor() {
       magnet = null;
     };
 
+    // one write per frame, however many pointer events arrive
     const tick = () => {
-      pos.x += (target.x - pos.x) * LERP;
-      pos.y += (target.y - pos.y) * LERP;
+      raf = 0;
       if (dot.current) {
         dot.current.style.transform = `translate3d(${target.x}px, ${target.y}px, 0)`;
       }
-      if (pill.current) {
-        pill.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
-      }
-      raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
 
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== "mouse") return;
       target.x = e.clientX;
       target.y = e.clientY;
+      if (!raf) raf = requestAnimationFrame(tick);
       setHidden(false);
 
       const el = e.target instanceof Element ? e.target : null;
@@ -153,26 +147,22 @@ export function CustomCursor() {
 
   if (!enabled) return null;
 
-  const flags = `${hidden ? "is-hidden" : ""} ${down ? "is-down" : ""}`;
   return (
-    <>
-      <div
-        ref={dot}
-        className={`b-cursor ${mode === "link" && !label ? "is-link" : ""} ${flags}`}
-        aria-hidden
+    <div
+      ref={dot}
+      className={`b-cursor ${mode === "link" && !label ? "is-link" : ""} ${label ? "is-label" : ""} ${hidden ? "is-hidden" : ""} ${down ? "is-down" : ""}`}
+      aria-hidden
+    >
+      <svg
+        className="b-cursor-arrow"
+        viewBox="0 0 20 24"
+        width="20"
+        height="24"
       >
-        <svg className="b-cursor-arrow" viewBox="0 0 20 24" width="20" height="24">
-          <path d="M2 1.5 L2 19.5 L6.8 15.1 L9.9 22.2 L13 20.8 L9.9 13.9 L16.4 13.6 Z" />
-        </svg>
-      </div>
-      <div
-        ref={pill}
-        className={`b-cursor-pill ${label ? "is-on" : ""} ${flags}`}
-        aria-hidden
-      >
-        <span className="b-cursor-label">{label}</span>
-      </div>
-    </>
+        <path d="M2 1.5 L2 19.5 L6.8 15.1 L9.9 22.2 L13 20.8 L9.9 13.9 L16.4 13.6 Z" />
+      </svg>
+      <span className="b-cursor-label">{label}</span>
+    </div>
   );
 }
 
@@ -227,7 +217,30 @@ const TOKENS = [
   "←",
 ];
 const CHARS = "0123456789abcdef<>/\\{}[]()=+*#%&λΣ∂∇→";
+/** what the mono font itself draws at one cell wide */
+const ASCII_CHARS = "0123456789abcdef<>/\\{}[]()=+*#%&~^";
 const rand = (n: number) => Math.floor(Math.random() * n);
+const isAscii = (ch: string) => ch.charCodeAt(0) < 128;
+
+/**
+ * The room, drawn in the field's own characters: lamp, monitor, desk,
+ * mug. Spaces stay blank (they never scramble), so the shape holds even
+ * while the spotlight churns the glyphs; at rest the glyphs settle back.
+ */
+const ROOM_ART = [
+  String.raw`   ___                              `,
+  String.raw`  /   \                             `,
+  String.raw`  \___/     .--------------------.  `,
+  String.raw`      \     | ~/room $ ./walk-in |  `,
+  String.raw`       \    |  ==== ===== ==     |  `,
+  String.raw`        \   |  ====== == ====    |  `,
+  String.raw`        /   |  === ====== =      |  `,
+  String.raw`       /    '--------.  .--------'  `,
+  String.raw`     _/_             |  |    c[]    `,
+  String.raw` ____________________|__|__________ `,
+  String.raw`|__________________________________|`,
+  String.raw`  ||                            ||  `,
+];
 
 function makeRow(width: number) {
   let s = "";
@@ -244,13 +257,22 @@ function makeRow(width: number) {
  */
 export function MatrixSpotlightBackground({
   className = "",
+  room,
 }: {
   className?: string;
+  /**
+   * Hide the room in the field: ROOM_ART is drawn into the box of an
+   * invisible link (placed by .b-hero-room), which leads into the room.
+   * Only found by someone sweeping the spotlight over empty space; the
+   * footer carries the plain, accessible link.
+   */
+  room?: boolean;
 }) {
   const fine = useMedia(FINE);
   const reduced = useMedia(REDUCED);
   const box = useRef<HTMLDivElement>(null);
   const pre = useRef<HTMLPreElement>(null);
+  const roomRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     if (!fine) return;
@@ -264,6 +286,10 @@ export function MatrixSpotlightBackground({
     let cols = 0;
     let rows: string[][] = [];
     let lines: HTMLSpanElement[] = [];
+    /** cell index → the art's glyph, for cells the drawing owns */
+    let art = new Map<number, string>();
+    /** rows the drawing crosses: kept ASCII so nothing shifts its columns */
+    let artRows = new Set<number>();
 
     const build = () => {
       const probe = document.createElement("span");
@@ -277,6 +303,39 @@ export function MatrixSpotlightBackground({
       cols = Math.ceil(r.width / cw) + 1;
       const count = Math.ceil(r.height / ch) + 1;
       rows = Array.from({ length: count }, () => makeRow(cols));
+
+      // carve the room into the field, snapped to the character grid,
+      // and size the anchor to the drawing so its hit area matches
+      art = new Map();
+      artRows = new Set();
+      const anchor = room ? roomRef.current : null;
+      if (anchor) {
+        const w = Math.max(...ROOM_ART.map((l) => l.length));
+        anchor.style.width = `${w * cw}px`;
+        anchor.style.height = `${ROOM_ART.length * ch}px`;
+        const ar = anchor.getBoundingClientRect();
+        if (ar.width > 0) {
+          const c0 = Math.round((ar.left - r.left) / cw);
+          const r0 = Math.round((ar.top - r.top) / ch);
+          ROOM_ART.forEach((line, dy) => {
+            const rr = r0 + dy;
+            if (rr < 0 || rr >= count) return;
+            // symbols like λ ∑ come from a fallback font at another width,
+            // which would push the drawing off the grid
+            artRows.add(rr);
+            rows[rr] = rows[rr].map((g) =>
+              isAscii(g) ? g : ASCII_CHARS[rand(ASCII_CHARS.length)],
+            );
+            for (let dx = -1; dx <= w; dx++) {
+              const cc = c0 + dx;
+              if (cc < 0 || cc >= cols) continue;
+              const g = line[dx] ?? " ";
+              rows[rr][cc] = g;
+              art.set(rr * cols + cc, g);
+            }
+          });
+        }
+      }
       out.textContent = "";
       lines = rows.map((row) => {
         const s = document.createElement("span");
@@ -288,6 +347,12 @@ export function MatrixSpotlightBackground({
     build();
     const ro = new ResizeObserver(build);
     ro.observe(el);
+    if (room && roomRef.current) ro.observe(roomRef.current);
+    // the cell size is measured from the mono font; if it was still
+    // loading at mount, the grid (and the room) would sit on the
+    // fallback's metrics — rebuild once real fonts are in
+    let alive = true;
+    document.fonts?.ready.then(() => alive && build());
 
     // The spotlight eases toward the pointer instead of snapping to it,
     // and fades in/out (--a) as the pointer enters or leaves the box, so
@@ -304,6 +369,7 @@ export function MatrixSpotlightBackground({
     let a = 0; // spotlight strength (eased)
     let raf = 0;
     let moving = false;
+    let lastMove = 0;
 
     const frame = () => {
       raf = 0;
@@ -340,6 +406,7 @@ export function MatrixSpotlightBackground({
       py = e.clientY;
       seen = true;
       moving = true;
+      lastMove = performance.now();
       kick();
     };
     const onOut = () => {
@@ -360,9 +427,29 @@ export function MatrixSpotlightBackground({
     const timer = reduced
       ? 0
       : window.setInterval(() => {
-          if (!moving || a < 0.2) return;
-          moving = false;
+          if (a < 0.2) return;
           const touched = new Set<number>();
+          // at rest, the drawing's scrambled glyphs settle back, a few
+          // per tick, so the room resolves out of the noise
+          if (!moving && art.size && performance.now() - lastMove > 350) {
+            let n = 0;
+            for (const [k, g] of art) {
+              const r = Math.floor(k / cols);
+              const c = k % cols;
+              if (rows[r][c] !== g) {
+                rows[r][c] = g;
+                touched.add(r);
+                if (++n >= 24) break;
+              }
+            }
+          }
+          if (!moving) {
+            touched.forEach((r) => {
+              lines[r].textContent = rows[r].join("") + "\n";
+            });
+            return;
+          }
+          moving = false;
           for (let i = 0; i < 10; i++) {
             const ang = Math.random() * Math.PI * 2;
             const d = Math.sqrt(Math.random()) * RADIUS * 0.8;
@@ -370,7 +457,9 @@ export function MatrixSpotlightBackground({
             const r = Math.floor((my + Math.sin(ang) * d) / ch);
             if (r < 0 || r >= rows.length || c < 0 || c >= cols) continue;
             if (rows[r][c] === " ") continue; // keep the token spacing
-            rows[r][c] = CHARS[rand(CHARS.length)];
+            rows[r][c] = artRows.has(r)
+              ? ASCII_CHARS[rand(ASCII_CHARS.length)]
+              : CHARS[rand(CHARS.length)];
             touched.add(r);
           }
           touched.forEach((r) => {
@@ -379,6 +468,7 @@ export function MatrixSpotlightBackground({
         }, 140);
 
     return () => {
+      alive = false;
       ro.disconnect();
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
@@ -387,11 +477,24 @@ export function MatrixSpotlightBackground({
       window.removeEventListener("blur", onOut);
       clearInterval(timer);
     };
-  }, [fine, reduced]);
+  }, [fine, reduced, room]);
 
   return (
-    <div ref={box} className={`b-matrix ${className}`} aria-hidden>
-      <pre ref={pre} />
-    </div>
+    <>
+      <div ref={box} className={`b-matrix ${className}`} aria-hidden>
+        <pre ref={pre} />
+      </div>
+      {room && fine && (
+        <Link
+          ref={roomRef}
+          href="/"
+          prefetch={false}
+          className="b-hero-room"
+          data-cursor="ENTER ROOM"
+          tabIndex={-1}
+          aria-hidden
+        />
+      )}
+    </>
   );
 }
