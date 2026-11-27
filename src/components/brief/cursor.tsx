@@ -255,6 +255,7 @@ function makeRow(width: number) {
 export function MatrixSpotlightBackground({
   className = "",
   room,
+  exclude,
 }: {
   className?: string;
   /**
@@ -264,6 +265,11 @@ export function MatrixSpotlightBackground({
    * footer carries the plain, accessible link.
    */
   room?: boolean;
+  /**
+   * Elements (a selector) where this field stands aside, because another
+   * field is drawn there — the page-wide field yields to the hero's.
+   */
+  exclude?: string;
 }) {
   const fine = useMedia(FINE);
   const reduced = useMedia(REDUCED);
@@ -373,8 +379,22 @@ export function MatrixSpotlightBackground({
       const r = el.getBoundingClientRect();
       const tx = px - r.left;
       const ty = py - r.top;
-      const inside =
+      let inside =
         seen && tx >= 0 && ty >= 0 && tx <= r.width && ty <= r.height;
+      if (inside && exclude) {
+        for (const x of document.querySelectorAll(exclude)) {
+          const xr = x.getBoundingClientRect();
+          if (
+            px >= xr.left &&
+            px <= xr.right &&
+            py >= xr.top &&
+            py <= xr.bottom
+          ) {
+            inside = false;
+            break;
+          }
+        }
+      }
       // while fully faded, jump to the pointer so it fades in where you are
       if (a < 0.01) {
         mx = tx;
@@ -474,7 +494,7 @@ export function MatrixSpotlightBackground({
       window.removeEventListener("blur", onOut);
       clearInterval(timer);
     };
-  }, [fine, reduced, room]);
+  }, [fine, reduced, room, exclude]);
 
   return (
     <>

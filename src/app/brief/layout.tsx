@@ -1,12 +1,11 @@
 import type { Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import { SmoothScroll } from "@/components/brief/motion";
+import { BriefFooter, BriefNav, FloatingTags } from "@/components/brief/chrome";
 import {
-  BriefFooter,
-  BriefNav,
-  FloatingTags,
-} from "@/components/brief/chrome";
-import { CustomCursor } from "@/components/brief/cursor";
+  CustomCursor,
+  MatrixSpotlightBackground,
+} from "@/components/brief/cursor";
 import "./brief.css";
 
 /**
@@ -39,6 +38,9 @@ export default function BriefLayout({
   return (
     <SmoothScroll>
       <div className={`brief ${display.variable} ${text.variable}`}>
+        {/* one viewport-sized character field behind every section; the
+            hero draws its own (it hides the room), so this one yields there */}
+        <MatrixSpotlightBackground className="is-page" exclude=".b-hero" />
         <BriefNav />
         <div className="brief-page">{children}</div>
         <BriefFooter />

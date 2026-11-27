@@ -366,45 +366,42 @@ function About() {
           </Reveal>
         </div>
 
-        <div className="b-matrix-host">
-          <MatrixSpotlightBackground className="is-fill" />
-          <ol className="b-timeline">
-            {EXPERIENCE.map((r) => (
-              <Reveal as="li" key={r.company} className="b-split">
-                <p className="b-year">{r.period}</p>
-                <div>
-                  <h3 className="b-role">
-                    {r.company}, {r.title}.
-                  </h3>
-                  <p className="b-role-where">{r.location}</p>
-                  <p className="b-body b-muted">{r.bullets[0]}</p>
-                  {r.bullets.length > 1 && (
-                    <details className="b-details">
-                      <summary>
-                        <span className="b-details-open">
-                          {r.bullets.length - 1} more
-                        </span>
-                        <span className="b-details-close">Less</span>
-                      </summary>
-                      <ul>
-                        {r.bullets.slice(1).map((b) => (
-                          <li key={b}>{b}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
-                </div>
-              </Reveal>
-            ))}
-            <Reveal as="li" className="b-split">
-              <p className="b-year">{EDUCATION.period}</p>
+        <ol className="b-timeline">
+          {EXPERIENCE.map((r) => (
+            <Reveal as="li" key={r.company} className="b-split">
+              <p className="b-year">{r.period}</p>
               <div>
-                <h3 className="b-role">{EDUCATION.school}.</h3>
-                <p className="b-role-where">{EDUCATION.degree}</p>
+                <h3 className="b-role">
+                  {r.company}, {r.title}.
+                </h3>
+                <p className="b-role-where">{r.location}</p>
+                <p className="b-body b-muted">{r.bullets[0]}</p>
+                {r.bullets.length > 1 && (
+                  <details className="b-details">
+                    <summary>
+                      <span className="b-details-open">
+                        {r.bullets.length - 1} more
+                      </span>
+                      <span className="b-details-close">Less</span>
+                    </summary>
+                    <ul>
+                      {r.bullets.slice(1).map((b) => (
+                        <li key={b}>{b}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </div>
             </Reveal>
-          </ol>
-        </div>
+          ))}
+          <Reveal as="li" className="b-split">
+            <p className="b-year">{EDUCATION.period}</p>
+            <div>
+              <h3 className="b-role">{EDUCATION.school}.</h3>
+              <p className="b-role-where">{EDUCATION.degree}</p>
+            </div>
+          </Reveal>
+        </ol>
       </div>
     </section>
   );

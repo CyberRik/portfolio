@@ -44,6 +44,10 @@ html.lenis body {
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --gutter: clamp(20px, 3.6vw, 52px);
 
+  /* its own stacking context, so the page-wide field (z-index: -1)
+     paints above this background and below every section */
+  position: relative;
+  isolation: isolate;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-text), ui-sans-serif, system-ui, sans-serif;
@@ -261,6 +265,12 @@ html.lenis body {
 .brief-nav-pill {
   justify-self: end;
 }
+/* the nav's small "Email" pill: the one emphasised action, kept quiet */
+.brief-pill.is-short {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 12px;
+}
 @media (min-width: 768px) {
   .brief-nav-inner {
     grid-template-columns: 1fr auto 1fr;
@@ -387,18 +397,12 @@ html.lenis body {
   }
 }
 
-/* the same field behind other sections: host positions it, content
-   sits above it */
-.b-matrix-host {
-  position: relative;
-  isolation: isolate;
-}
-.b-matrix.is-fill {
+/* the page-wide field: fixed to the viewport, behind all content (the
+   .brief stacking context keeps z-index:-1 above the paper) */
+.b-matrix.is-page {
+  position: fixed;
   inset: 0;
-}
-.b-matrix-host > :not(.b-matrix) {
-  position: relative;
-  z-index: 1;
+  z-index: -1;
 }
 
 .b-hero-title {
@@ -1308,6 +1312,12 @@ html.has-cursor .brief * {
   transition:
     opacity 0.4s,
     transform 0.6s var(--ease);
+}
+/* wider screens have Resume in the nav */
+@media (min-width: 768px) {
+  .b-float {
+    display: none;
+  }
 }
 .b-float.is-tucked {
   opacity: 0;

@@ -33,16 +33,19 @@ function SectionLink({
 }
 
 /**
- * The email as a button: one click copies it, and the label flips to a
- * confirmation for a moment. A real mailto stays one modifier-click away
- * for anyone who wants their mail client instead.
+ * The email as a button. With a mouse, one click copies the address (a
+ * mailto with no mail client configured silently does nothing, which is
+ * common on desktops) and the label flips to a confirmation; a
+ * modifier-click still opens the mail client. On touch screens, where
+ * mailto reliably opens the mail app, it just follows the link. The full
+ * address is always in the title tooltip and the accessible name.
  */
 export function CopyEmail({
   className = "",
   short = false,
 }: {
   className?: string;
-  /** phones: "Email" instead of the whole address */
+  /** a small "Email" pill instead of the whole address (the nav) */
   short?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
@@ -52,6 +55,7 @@ export function CopyEmail({
   const onClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     if (!navigator.clipboard) return; // let the mailto open instead
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     e.preventDefault();
     try {
       await navigator.clipboard.writeText(PROFILE.email);
@@ -67,22 +71,24 @@ export function CopyEmail({
     <a
       href={`mailto:${PROFILE.email}`}
       onClick={onClick}
-      className={`brief-pill ${copied ? "is-copied" : ""} ${className}`}
-      aria-label={`Copy email address ${PROFILE.email}`}
+      className={`brief-pill ${short ? "is-short" : ""} ${copied ? "is-copied" : ""} ${className}`}
+      title={PROFILE.email}
+      aria-label={`Email ${PROFILE.email} (click copies the address)`}
     >
       <span className="brief-pill-track" aria-hidden>
         <span className="brief-pill-label">
           {short ? (
-            <>
-              <span className="brief-hide-md">Email</span>
-              <span className="brief-show-md">{PROFILE.email}</span>
-            </>
+            "Email"
           ) : (
-            PROFILE.email
+            <>
+              {PROFILE.email}
+              <CopyGlyph />
+            </>
           )}
-          <CopyGlyph />
         </span>
-        <span className="brief-pill-label">Email copied!</span>
+        <span className="brief-pill-label">
+          {short ? "Copied" : "Email copied!"}
+        </span>
       </span>
       <span className="brief-sr" aria-live="polite">
         {copied ? "Email copied" : ""}
@@ -134,8 +140,13 @@ export function BriefNav() {
         <nav className="brief-nav-links" aria-label="Sections">
           <SectionLink hash="work">Work</SectionLink>
           <SectionLink hash="about">About</SectionLink>
-          <a href={PROFILE.resumeUrl} target="_blank" rel="noopener noreferrer">
-            Resume
+          <a
+            href={PROFILE.resumeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Resume (opens in a new tab)"
+          >
+            Resume ↗
           </a>
         </nav>
         <CopyEmail short className="brief-nav-pill" />
@@ -183,8 +194,9 @@ export function BriefFooter() {
 }
 
 /**
- * The résumé pill that floats in the bottom-right corner, always one
- * click away. It pops in once the page has settled and tucks away while
+ * The résumé pill that floats in the bottom-right corner on phones,
+ * where the nav has no room for it (on wider screens the nav carries
+ * Resume, so the pill is hidden there). It pops in once the page has settled and tucks away while
  * the contact block (which repeats it) is on screen.
  */
 export function FloatingTags() {
