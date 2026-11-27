@@ -1,7 +1,12 @@
 import type { Viewport } from "next";
 import { Inter, Inter_Tight } from "next/font/google";
 import { SmoothScroll } from "@/components/brief/motion";
-import { BriefFooter, BriefNav } from "@/components/brief/chrome";
+import {
+  BriefFooter,
+  BriefNav,
+  FloatingTags,
+} from "@/components/brief/chrome";
+import { CustomCursor } from "@/components/brief/cursor";
 import "./brief.css";
 
 /**
@@ -37,6 +42,8 @@ export default function BriefLayout({
         <BriefNav />
         <div className="brief-page">{children}</div>
         <BriefFooter />
+        <FloatingTags />
+        <CustomCursor />
       </div>
     </SmoothScroll>
   );

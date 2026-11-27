@@ -172,9 +172,51 @@ export function BriefFooter() {
           The 3D room ↗
         </Link>
         <p>
-          {PROFILE.name} — {new Date().getFullYear()}©
+          {PROFILE.name} {new Date().getFullYear()}©
         </p>
       </div>
     </footer>
+  );
+}
+
+/**
+ * The two pills that float in the bottom-right corner, after the
+ * reference site's "Purchase / Made in Framer" pair: the résumé and the
+ * way into the room, always one click away. They pop in once the page
+ * has settled and tuck away while the contact block (which repeats them)
+ * is on screen.
+ */
+export function FloatingTags() {
+  const [tucked, setTucked] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const contact = document.getElementById("contact");
+    if (!contact) {
+      setTucked(false);
+      return;
+    }
+    const io = new IntersectionObserver(([e]) => setTucked(e.isIntersecting), {
+      threshold: 0.2,
+    });
+    io.observe(contact);
+    return () => io.disconnect();
+  }, [pathname]);
+
+  return (
+    <div className={`b-float ${tucked ? "is-tucked" : ""}`}>
+      <a
+        className="b-float-tag is-solid"
+        href={PROFILE.resumeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Download resume
+      </a>
+      <Link className="b-float-tag" href="/">
+        <span className="b-float-dot" aria-hidden />
+        Walk into the 3D room
+      </Link>
+    </div>
   );
 }

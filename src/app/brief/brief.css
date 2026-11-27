@@ -224,7 +224,7 @@ html.lenis body {
     border-color 0.4s;
 }
 .brief-nav.is-scrolled {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.96);
   border-bottom-color: var(--line);
   -webkit-backdrop-filter: saturate(1.4) blur(14px);
   backdrop-filter: saturate(1.4) blur(14px);
@@ -336,7 +336,37 @@ html.lenis body {
 /* ============================================================= hero */
 
 .b-hero {
+  position: relative;
+  isolation: isolate;
+}
+.b-hero-inner {
+  position: relative;
+  z-index: 1;
   padding-top: clamp(56px, 9vh, 120px);
+}
+
+/* the character field: invisible except inside a soft circle around
+   the pointer (the mask), which --x/--y follow */
+.b-matrix {
+  position: absolute;
+  inset: -64px 0 -40px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  --x: -9999px;
+  --y: -9999px;
+  -webkit-mask-image: radial-gradient(250px circle at var(--x) var(--y), #000 0%, transparent 100%);
+  mask-image: radial-gradient(250px circle at var(--x) var(--y), #000 0%, transparent 100%);
+}
+.b-matrix pre {
+  margin: 0;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  color: rgba(14, 14, 14, 0.34);
+  white-space: pre;
 }
 .b-hero-title {
   font-size: clamp(60px, 16.5vw, 212px);
@@ -396,58 +426,101 @@ html.lenis body {
 }
 
 /* ========================================================= showcase */
+/* A black panel; three recordings rise into it one after another. */
 
 .b-showcase {
   position: relative;
-  display: block;
   margin-top: clamp(64px, 8vw, 120px);
   border-radius: clamp(16px, 2vw, 28px);
-  overflow: hidden;
   background: #000;
-  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  padding: clamp(16px, 4vw, 64px) clamp(12px, 3vw, 48px);
+  display: grid;
+  gap: 14px;
+}
+.b-shot {
+  position: relative;
+}
+.b-shot-link {
+  position: relative;
+  display: block;
+  border-radius: clamp(10px, 1.2vw, 16px);
+  overflow: hidden;
+  background: #111;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 30px 80px rgba(0, 0, 0, 0.6);
   isolation: isolate;
 }
-.b-showcase img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.b-shot-media {
   display: block;
-  transition: transform 1.6s var(--ease);
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  transition: transform 1.4s var(--ease);
 }
-.b-showcase:hover img {
-  transform: scale(1.025);
+.b-shot-link:hover .b-shot-media {
+  transform: scale(1.03);
 }
-.b-showcase-tags {
-  position: absolute;
-  top: clamp(12px, 2vw, 24px);
-  right: clamp(12px, 2vw, 24px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
+/* small floating labels on media, after the reference's pills */
 .b-tag {
   display: inline-block;
-  padding: 7px 12px;
+  padding: 7px 11px;
   border-radius: 9px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  color: var(--ink);
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 .b-tag-solid {
-  background: #fff;
-  color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 6px 20px rgba(0, 0, 0, 0.25);
 }
-@media (max-width: 599px) {
+.b-shot-tag {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 2;
+}
+@media (min-width: 900px) {
+  /* the room large in the middle; the two Ancora clips overlap its
+     lower-left and upper-right corners */
   .b-showcase {
-    aspect-ratio: 4 / 3;
+    display: block;
+    aspect-ratio: 16 / 8.2;
+    padding: 0;
   }
-  .b-showcase-tags .b-tag:not(.b-tag-solid) {
-    display: none;
+  .b-shot {
+    position: absolute;
+  }
+  .b-shot-main {
+    left: 50%;
+    top: 9%;
+    width: 60%;
+    margin-left: -30%;
+    z-index: 1;
+  }
+  .b-shot-a {
+    left: 3.5%;
+    bottom: 7%;
+    width: 31%;
+    z-index: 2;
+  }
+  .b-shot-b {
+    right: 3.5%;
+    top: 7%;
+    width: 31%;
+    z-index: 2;
+  }
+  .b-shot-tag {
+    left: 14px;
+    top: 14px;
   }
 }
 
@@ -475,7 +548,7 @@ html.lenis body {
     gap: 32px;
     align-items: end;
   }
-  .b-spread .b-cover {
+  .b-spread .b-cover-wrap {
     grid-column: 1 / span 7;
     grid-row: 1;
   }
@@ -483,7 +556,7 @@ html.lenis body {
     grid-column: 9 / span 4;
     grid-row: 1;
   }
-  .b-spread.is-flip .b-cover {
+  .b-spread.is-flip .b-cover-wrap {
     grid-column: 6 / span 7;
   }
   .b-spread.is-flip .b-spread-text {
@@ -511,7 +584,7 @@ html.lenis body {
   color: #fff;
 }
 /* the recorded demo, set into the cover like a screen */
-.b-cover img {
+.b-cover .b-cover-media {
   position: absolute;
   top: 7%;
   left: 7%;
@@ -539,7 +612,7 @@ html.lenis body {
   transition: transform 1.4s var(--ease);
 }
 .b-cover:hover .b-cover-art,
-.b-cover:hover img {
+.b-cover:hover .b-cover-media {
   transform: scale(1.035);
 }
 .b-cover-figure {
@@ -1204,6 +1277,157 @@ html.lenis body {
   max-width: 34em;
 }
 
+/* ========================================================== cursor */
+
+/* the native cursor goes only once the custom one is mounted */
+html.has-cursor .brief,
+html.has-cursor .brief * {
+  cursor: none !important;
+}
+.b-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  will-change: transform;
+  mix-blend-mode: difference;
+}
+.b-cursor-shape {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  transition:
+    width 0.35s var(--ease),
+    height 0.35s var(--ease),
+    padding 0.35s var(--ease),
+    background-color 0.25s,
+    opacity 0.25s,
+    scale 0.2s;
+  white-space: nowrap;
+}
+.b-cursor.is-link .b-cursor-shape {
+  width: 44px;
+  height: 44px;
+}
+.b-cursor.is-down .b-cursor-shape {
+  scale: 0.8;
+}
+.b-cursor.is-hidden .b-cursor-shape {
+  opacity: 0;
+}
+.b-cursor-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #000;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+/* a labelled pill reads as itself — no inversion — so the label stays
+   legible over photos and video */
+.b-cursor.is-label {
+  mix-blend-mode: normal;
+}
+.b-cursor.is-label .b-cursor-shape {
+  width: auto;
+  height: 38px;
+  padding: 0 18px;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.b-cursor.is-label .b-cursor-label {
+  opacity: 1;
+  color: var(--ink, #0e0e0e);
+  transition-delay: 0.08s;
+}
+
+/* ================================================== floating tags */
+/* After the reference's corner pair: they pop up once the page settles. */
+
+.b-float {
+  position: fixed;
+  right: clamp(12px, 1.6vw, 20px);
+  bottom: clamp(12px, 1.6vw, 20px);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  transition:
+    opacity 0.4s,
+    transform 0.6s var(--ease);
+}
+.b-float.is-tucked {
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+}
+.b-float-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  background: #fff;
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+  animation: b-pop 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 1.4s;
+}
+.b-float-tag + .b-float-tag {
+  animation-delay: 1.55s;
+}
+.b-float-tag.is-solid {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.b-float-tag:hover {
+  background: var(--paper);
+}
+.b-float-tag.is-solid:hover {
+  background: #2a2a2a;
+}
+.b-float-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+}
+@keyframes b-pop {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.85);
+  }
+}
+@media (max-width: 599px) {
+  .b-float-tag {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  /* phones: one pill, not a stack over the content */
+  .b-float-tag:not(.is-solid) {
+    display: none;
+  }
+}
+
 /* ================================================= page transitions */
 /* The old page fades out; the new one fades in a short way up. The nav
    is its own layer so it holds still across the change. */
@@ -1246,5 +1470,8 @@ html.lenis body {
   .brief *::before,
   .brief *::after {
     transition-duration: 0.01ms !important;
+  }
+  .b-float-tag {
+    animation: none;
   }
 }

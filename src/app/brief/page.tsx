@@ -19,6 +19,8 @@ import {
 import { MaskTitle, Reveal, TransitionLink } from "@/components/brief/motion";
 import { CopyEmail } from "@/components/brief/chrome";
 import { Schematic } from "@/components/brief/schematic";
+import { Clip, PopGroup, PopUp } from "@/components/brief/media";
+import { MatrixSpotlightBackground } from "@/components/brief/cursor";
 
 /**
  * /brief — the room, flattened into one readable page.
@@ -37,11 +39,11 @@ import { Schematic } from "@/components/brief/schematic";
  */
 
 export const metadata: Metadata = {
-  title: "Ritankar Mondal — AI Engineer",
+  title: "Ritankar Mondal | AI Engineer",
   description: PROFILE.summary,
   alternates: { canonical: "/brief" },
   openGraph: {
-    title: "Ritankar Mondal — AI Engineer",
+    title: "Ritankar Mondal | AI Engineer",
     description: PROFILE.summary,
     type: "profile",
   },
@@ -147,69 +149,109 @@ export default function BriefPage() {
 function Hero() {
   const [latest, ...earlier] = EXPERIENCE;
   return (
-    <section className="b-wrap b-hero">
-      <h1 className="b-display b-hero-title">
-        <MaskTitle as="span" immediate delay={0.05}>
-          AI Engineer
-        </MaskTitle>
-      </h1>
+    <section className="b-hero">
+      <MatrixSpotlightBackground />
+      <div className="b-wrap b-hero-inner">
+        <h1 className="b-display b-hero-title">
+          <MaskTitle as="span" immediate delay={0.05}>
+            AI Engineer
+          </MaskTitle>
+        </h1>
 
-      <div className="b-hero-grid">
-        <Reveal immediate delay={0.35} className="b-hero-meta">
-          <dl>
-            <div>
-              <dt>Now</dt>
-              <dd>Final year, IIT Madras</dd>
-            </div>
-            <div>
-              <dt>Latest</dt>
-              <dd>
-                {latest.company}, {latest.location.split(" · ")[0]}
-              </dd>
-            </div>
-            <div>
-              <dt>Before</dt>
-              <dd>{earlier.map((r) => r.company).join(", ")}</dd>
-            </div>
-          </dl>
-        </Reveal>
+        <div className="b-hero-grid">
+          <Reveal immediate delay={0.35} className="b-hero-meta">
+            <dl>
+              <div>
+                <dt>Now</dt>
+                <dd>Final year, IIT Madras</dd>
+              </div>
+              <div>
+                <dt>Latest</dt>
+                <dd>
+                  {latest.company}, {latest.location.split(" · ")[0]}
+                </dd>
+              </div>
+              <div>
+                <dt>Before</dt>
+                <dd>{earlier.map((r) => r.company).join(", ")}</dd>
+              </div>
+            </dl>
+          </Reveal>
 
-        <Reveal immediate delay={0.25} className="b-hero-copy">
-          <p>
-            I fine-tune, benchmark and serve LLMs, and build the
-            fault-tolerant systems underneath them. Most recently that meant
-            tool-calling models at {latest.company} in Tokyo.
-          </p>
-          <p>
-            Ten months across four industry internships, and{" "}
-            {MERGED.length} merged pull requests upstream in{" "}
-            {list(UPSTREAMS)}.
-          </p>
-        </Reveal>
+          <Reveal immediate delay={0.25} className="b-hero-copy">
+            <p>
+              I fine-tune, benchmark and serve LLMs, and build the
+              fault-tolerant systems underneath them. Most recently that meant
+              tool-calling models at {latest.company} in Tokyo.
+            </p>
+            <p>
+              Ten months across four industry internships, and {MERGED.length}{" "}
+              merged pull requests upstream in {list(UPSTREAMS)}.
+            </p>
+          </Reveal>
+        </div>
       </div>
     </section>
   );
 }
 
-/** The room, framed — the one big picture on the page. */
+/**
+ * The showcase: three real recordings rising into a black panel one
+ * after another, after the reference site's phone mockups. The room tour
+ * was recorded from the live 3D site; the two Ancora clips are cut from
+ * its YouTube demo.
+ */
 function Showcase() {
   return (
-    <section className="b-wrap" aria-label="The 3D room">
-      <Reveal immediate delay={0.45}>
-        <Link href="/" className="b-showcase">
-          {/* eslint-disable-next-line @next/next/no-img-element -- a static render; next/image adds nothing here */}
-          <img
-            src="/brief/room.webp"
-            srcSet="/brief/room-960.webp 960w, /brief/room.webp 1920w"
-            sizes="(min-width: 1280px) 1200px, 100vw"
-            alt="A rendered 3D workspace: a desk with a monitor, a server rack, a whiteboard and a bookshelf in a warmly lit room"
-            fetchPriority="high"
-          />
-          <span className="b-showcase-tags" aria-hidden>
-            <span className="b-tag b-tag-solid">This page, as a room ↗</span>
-            <span className="b-tag">Three.js · React Three Fiber</span>
-          </span>
-        </Link>
+    <section className="b-wrap" aria-label="Recordings">
+      <Reveal immediate delay={0.4}>
+        <PopGroup className="b-showcase">
+          <PopUp className="b-shot b-shot-main" delay={0.15} distance={160} grouped>
+            <Link href="/" className="b-shot-link" data-cursor="ENTER ROOM">
+              <Clip
+                src="/brief/clips/room-tour.mp4"
+                poster="/brief/clips/room-tour.jpg"
+                label="A flight through the 3D room: the desk, the monitor, the whiteboard"
+                className="b-shot-media"
+              />
+              <span className="b-tag b-shot-tag">
+                The 3D room, recorded live
+              </span>
+            </Link>
+          </PopUp>
+          <PopUp className="b-shot b-shot-a" delay={0.35} distance={180} grouped>
+            <TransitionLink
+              href="/brief/work/ancora"
+              className="b-shot-link"
+              data-cursor="CASE STUDY"
+            >
+              <Clip
+                src="/brief/clips/ancora-dag.mp4"
+                poster="/brief/clips/ancora-dag.jpg"
+                label="Ancora: a run's DAG reconstructed live from Temporal history"
+                className="b-shot-media"
+              />
+              <span className="b-tag b-shot-tag">Ancora · live run DAG</span>
+            </TransitionLink>
+          </PopUp>
+          <PopUp className="b-shot b-shot-b" delay={0.55} distance={200} grouped>
+            <TransitionLink
+              href="/brief/work/ancora"
+              className="b-shot-link"
+              data-cursor="CASE STUDY"
+            >
+              <Clip
+                src="/brief/clips/ancora-chaos.mp4"
+                poster="/brief/clips/ancora-chaos.jpg"
+                label="Ancora: recovering after a worker is SIGKILLed mid-run"
+                className="b-shot-media"
+              />
+              <span className="b-tag b-shot-tag">
+                Ancora · SIGKILL recovery
+              </span>
+            </TransitionLink>
+          </PopUp>
+        </PopGroup>
       </Reveal>
     </section>
   );
@@ -241,7 +283,7 @@ function Work() {
               const p = PROJECT_DOCS[id];
               return (
                 <li key={id}>
-                  <TransitionLink href={`/brief/work/${id}`}>
+                  <TransitionLink href={`/brief/work/${id}`} data-cursor="VIEW">
                     <span className="b-index-title">
                       {p.shortTitle ?? p.title}
                     </span>
@@ -272,34 +314,44 @@ function Spread({ s, i }: { s: (typeof SPOTLIGHT)[number]; i: number }) {
   const live = liveOf(p);
   const flip = i % 2 === 1;
   return (
-    <Reveal as="li" className={`b-spread ${flip ? "is-flip" : ""}`}>
-      <TransitionLink
-        href={`/brief/work/${p.id}`}
-        className={`b-cover is-${s.tone}`}
-        aria-label={`${p.title} — read the case study`}
-      >
-        {s.tone === "photo" && p.demo ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- a static poster */}
-            <img src={p.demo.poster} alt="" loading="lazy" />
-            <span className="b-tag b-cover-play">
-              ▶ Demo · {p.demo.length}
-            </span>
-          </>
-        ) : (
-          p.architecture.diagram && (
-            <Schematic spec={p.architecture.diagram} className="b-cover-art" />
-          )
-        )}
-        <span className="b-cover-figure">
-          <span className="b-cover-num">{s.figure}</span>
-          <span className="b-cover-cap">{s.caption}</span>
-        </span>
-      </TransitionLink>
+    <li className={`b-spread ${flip ? "is-flip" : ""}`}>
+      <PopUp className="b-cover-wrap">
+        <TransitionLink
+          href={`/brief/work/${p.id}`}
+          className={`b-cover is-${s.tone}`}
+          aria-label={`${p.title}: read the case study`}
+          data-cursor="CASE STUDY"
+        >
+          {s.tone === "photo" && p.demo ? (
+            <>
+              <Clip
+                src="/brief/clips/ancora-chaos.mp4"
+                poster="/brief/clips/ancora-chaos.jpg"
+                label={`${p.title} demo`}
+                className="b-cover-media"
+              />
+              <span className="b-tag b-tag-solid b-cover-play">
+                ▶ Demo · {p.demo.length}
+              </span>
+            </>
+          ) : (
+            p.architecture.diagram && (
+              <Schematic
+                spec={p.architecture.diagram}
+                className="b-cover-art"
+              />
+            )
+          )}
+          <span className="b-cover-figure">
+            <span className="b-cover-num">{s.figure}</span>
+            <span className="b-cover-cap">{s.caption}</span>
+          </span>
+        </TransitionLink>
+      </PopUp>
 
-      <div className="b-spread-text">
+      <PopUp className="b-spread-text" delay={0.12} distance={60}>
         <p className="b-meta">
-          {String(i + 1).padStart(2, "0")} — {p.context}
+          {String(i + 1).padStart(2, "0")} / {p.context}
         </p>
         <h3 className="b-title">
           <TransitionLink href={`/brief/work/${p.id}`}>
@@ -345,8 +397,8 @@ function Spread({ s, i }: { s: (typeof SPOTLIGHT)[number]; i: number }) {
             </a>
           )}
         </p>
-      </div>
-    </Reveal>
+      </PopUp>
+    </li>
   );
 }
 
@@ -368,12 +420,12 @@ function About() {
           </Reveal>
           <Reveal delay={0.08}>
             <p className="b-body">
-              I’m Ritankar, an AI and LLM engineer studying at IIT
-              Madras. Across four industry internships I’ve shipped both
-              the model and the systems that keep it running: fine-tuning,
-              benchmarking and serving tool-calling LLMs on constrained GPU
-              hardware, and building the fault-tolerant, observable
-              distributed infrastructure underneath them.
+              I’m Ritankar, an AI and LLM engineer studying at IIT Madras.
+              Across four industry internships I’ve shipped both the model and
+              the systems that keep it running: fine-tuning, benchmarking and
+              serving tool-calling LLMs on constrained GPU hardware, and
+              building the fault-tolerant, observable distributed infrastructure
+              underneath them.
             </p>
           </Reveal>
         </div>
@@ -436,8 +488,8 @@ function OpenSource() {
           <Reveal>
             <p className="b-body b-muted">
               {MERGED.length} pull requests merged into {list(UPSTREAMS)}, and{" "}
-              {OPEN_SOURCE.length - MERGED.length} more in review. Small,
-              real fixes in tools other people run in production.
+              {OPEN_SOURCE.length - MERGED.length} more in review. Small, real
+              fixes in tools other people run in production.
             </p>
           </Reveal>
         </div>

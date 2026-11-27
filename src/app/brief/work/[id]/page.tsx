@@ -42,7 +42,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const p = docFor((await params).id);
   if (!p) return {};
-  const title = `${p.shortTitle ?? p.title} — Ritankar Mondal`;
+  const title = `${p.shortTitle ?? p.title} | Ritankar Mondal`;
   return {
     title,
     description: p.tagline,
@@ -238,7 +238,11 @@ export default async function CaseStudy({
 
       <nav className="b-next" aria-label="Next project">
         <div className="b-wrap">
-          <TransitionLink href={`/brief/work/${next.id}`} className="b-next-link">
+          <TransitionLink
+            href={`/brief/work/${next.id}`}
+            className="b-next-link"
+            data-cursor="NEXT"
+          >
             <span className="b-cue">(next project)</span>
             <span className="b-display b-next-title">
               {next.shortTitle ?? next.title}

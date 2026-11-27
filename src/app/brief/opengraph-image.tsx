@@ -1,7 +1,7 @@
 import { OG_SIZE, ogCard } from "../_og/card";
 
 export const alt =
-  "Ritankar Mondal — AI Engineer. The brief: experience, work and results.";
+  "Ritankar Mondal, AI Engineer: experience, work and results.";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 

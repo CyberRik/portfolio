@@ -85,7 +85,9 @@ export function Schematic({
               strokeWidth="1.5"
             />
           );
-        return <circle key={n.id} cx={p.x} cy={p.y} r="4" fill="currentColor" />;
+        return (
+          <circle key={n.id} cx={p.x} cy={p.y} r="4" fill="currentColor" />
+        );
       })}
     </svg>
   );
