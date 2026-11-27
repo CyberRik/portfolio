@@ -356,8 +356,9 @@ html.lenis body {
   user-select: none;
   --x: -9999px;
   --y: -9999px;
-  -webkit-mask-image: radial-gradient(250px circle at var(--x) var(--y), #000 0%, transparent 100%);
-  mask-image: radial-gradient(250px circle at var(--x) var(--y), #000 0%, transparent 100%);
+  --a: 0;
+  -webkit-mask-image: radial-gradient(260px circle at var(--x) var(--y), rgba(0, 0, 0, var(--a)) 0%, rgba(0, 0, 0, calc(var(--a) * 0.45)) 45%, transparent 100%);
+  mask-image: radial-gradient(260px circle at var(--x) var(--y), rgba(0, 0, 0, var(--a)) 0%, rgba(0, 0, 0, calc(var(--a) * 0.45)) 45%, transparent 100%);
 }
 .b-matrix pre {
   margin: 0;
@@ -489,34 +490,30 @@ html.lenis body {
   z-index: 2;
 }
 @media (min-width: 900px) {
-  /* the room large in the middle; the two Ancora clips overlap its
-     lower-left and upper-right corners */
+  /* a quiet grid: the room large on the left, the two Ancora clips
+     stacked on the right, every edge on the same lines */
   .b-showcase {
-    display: block;
-    aspect-ratio: 16 / 8.2;
-    padding: 0;
-  }
-  .b-shot {
-    position: absolute;
+    grid-template-columns: 1.94fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: clamp(12px, 1.4vw, 20px);
+    padding: clamp(20px, 2.6vw, 40px);
   }
   .b-shot-main {
-    left: 50%;
-    top: 9%;
-    width: 60%;
-    margin-left: -30%;
-    z-index: 1;
+    grid-row: 1 / span 2;
   }
-  .b-shot-a {
-    left: 3.5%;
-    bottom: 7%;
-    width: 31%;
-    z-index: 2;
-  }
+  .b-shot-a,
   .b-shot-b {
-    right: 3.5%;
-    top: 7%;
-    width: 31%;
-    z-index: 2;
+    min-height: 0;
+  }
+  .b-shot-a .b-shot-link,
+  .b-shot-b .b-shot-link {
+    height: 100%;
+  }
+  .b-shot-a .b-shot-media,
+  .b-shot-b .b-shot-media {
+    height: 100%;
+    aspect-ratio: auto;
+    object-position: top left;
   }
   .b-shot-tag {
     left: 14px;
@@ -1284,72 +1281,72 @@ html.has-cursor .brief,
 html.has-cursor .brief * {
   cursor: none !important;
 }
-.b-cursor {
+.b-cursor,
+.b-cursor-pill {
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1000;
   pointer-events: none;
   will-change: transform;
+}
+/* the arrow: white, inverted against the page, tip on the hotspot */
+.b-cursor {
   mix-blend-mode: difference;
 }
-.b-cursor-shape {
-  position: absolute;
-  left: 0;
-  top: 0;
+.b-cursor-arrow {
+  display: block;
+  margin: -2px 0 0 -2px;
+  fill: #fff;
+  stroke: #fff;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  transform-origin: 2px 2px;
+  transition:
+    scale 0.3s var(--ease),
+    opacity 0.2s;
+}
+.b-cursor.is-link .b-cursor-arrow {
+  scale: 1.2;
+}
+.b-cursor.is-down .b-cursor-arrow {
+  scale: 0.88;
+}
+.b-cursor.is-hidden .b-cursor-arrow {
+  opacity: 0;
+}
+/* the label pill trails a little below-right of the arrow */
+.b-cursor-pill {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 10px;
-  height: 10px;
+  height: 34px;
+  padding: 0 16px;
+  margin: 26px 0 0 18px;
   border-radius: 999px;
   background: #fff;
-  transform: translate(-50%, -50%);
-  transition:
-    width 0.35s var(--ease),
-    height 0.35s var(--ease),
-    padding 0.35s var(--ease),
-    background-color 0.25s,
-    opacity 0.25s,
-    scale 0.2s;
-  white-space: nowrap;
-}
-.b-cursor.is-link .b-cursor-shape {
-  width: 44px;
-  height: 44px;
-}
-.b-cursor.is-down .b-cursor-shape {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 10px 30px rgba(0, 0, 0, 0.18);
+  opacity: 0;
   scale: 0.8;
+  transform-origin: 0 0;
+  transition:
+    opacity 0.2s,
+    scale 0.3s var(--ease);
 }
-.b-cursor.is-hidden .b-cursor-shape {
+.b-cursor-pill.is-on {
+  opacity: 1;
+  scale: 1;
+}
+.b-cursor-pill.is-hidden {
   opacity: 0;
 }
 .b-cursor-label {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: #000;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-/* a labelled pill reads as itself — no inversion — so the label stays
-   legible over photos and video */
-.b-cursor.is-label {
-  mix-blend-mode: normal;
-}
-.b-cursor.is-label .b-cursor-shape {
-  width: auto;
-  height: 38px;
-  padding: 0 18px;
-  background: #fff;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.06),
-    0 10px 30px rgba(0, 0, 0, 0.18);
-}
-.b-cursor.is-label .b-cursor-label {
-  opacity: 1;
+  white-space: nowrap;
   color: var(--ink, #0e0e0e);
-  transition-delay: 0.08s;
 }
 
 /* ================================================== floating tags */

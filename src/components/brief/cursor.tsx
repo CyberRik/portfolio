@@ -37,9 +37,10 @@ const MAGNET = 0.2;
 const MAGNET_MAX = { w: 360, h: 72 };
 
 /**
- * A dot that trails the pointer with a little lag, inverts whatever is
- * under it (mix-blend-mode: difference), grows over links and buttons,
- * and becomes a labelled pill over anything carrying data-cursor="…".
+ * An arrow pointer drawn at the real pointer position (no lag), inverted
+ * against whatever is under it (mix-blend-mode: difference), a touch
+ * larger over links and buttons. Over anything carrying data-cursor="…"
+ * a labelled pill trails just behind the arrow with a little lag.
  */
 export function CustomCursor() {
   const fine = useMedia(FINE);
@@ -47,6 +48,7 @@ export function CustomCursor() {
   const enabled = fine && !reduced;
 
   const dot = useRef<HTMLDivElement>(null);
+  const pill = useRef<HTMLDivElement>(null);
   const [label, setLabel] = useState<string | null>(null);
   const [mode, setMode] = useState<"idle" | "link">("idle");
   const [hidden, setHidden] = useState(true);
@@ -81,7 +83,10 @@ export function CustomCursor() {
       pos.x += (target.x - pos.x) * LERP;
       pos.y += (target.y - pos.y) * LERP;
       if (dot.current) {
-        dot.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+        dot.current.style.transform = `translate3d(${target.x}px, ${target.y}px, 0)`;
+      }
+      if (pill.current) {
+        pill.current.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
       }
       raf = requestAnimationFrame(tick);
     };
@@ -143,17 +148,26 @@ export function CustomCursor() {
 
   if (!enabled) return null;
 
-  const state = label ? "is-label" : mode === "link" ? "is-link" : "";
+  const flags = `${hidden ? "is-hidden" : ""} ${down ? "is-down" : ""}`;
   return (
-    <div
-      ref={dot}
-      className={`b-cursor ${state} ${hidden ? "is-hidden" : ""} ${down ? "is-down" : ""}`}
-      aria-hidden
-    >
-      <span className="b-cursor-shape">
+    <>
+      <div
+        ref={dot}
+        className={`b-cursor ${mode === "link" && !label ? "is-link" : ""} ${flags}`}
+        aria-hidden
+      >
+        <svg className="b-cursor-arrow" viewBox="0 0 20 24" width="20" height="24">
+          <path d="M2 1.5 L2 19.5 L6.8 15.1 L9.9 22.2 L13 20.8 L9.9 13.9 L16.4 13.6 Z" />
+        </svg>
+      </div>
+      <div
+        ref={pill}
+        className={`b-cursor-pill ${label ? "is-on" : ""} ${flags}`}
+        aria-hidden
+      >
         <span className="b-cursor-label">{label}</span>
-      </span>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -270,42 +284,82 @@ export function MatrixSpotlightBackground({
     const ro = new ResizeObserver(build);
     ro.observe(el);
 
-    // spotlight position, written straight to CSS variables
-    let mx = -9999;
-    let my = -9999;
+    // The spotlight eases toward the pointer instead of snapping to it,
+    // and fades in/out (--a) as the pointer enters or leaves the box, so
+    // moving between places glides rather than jumps. The pointer is kept
+    // in viewport coordinates and re-projected each frame, so scrolling
+    // with a still mouse doesn't leave the light behind.
+    const EASE = 0.12;
+    const FADE = 0.08;
+    let px = 0; // pointer, viewport coords
+    let py = 0;
+    let seen = false;
+    let mx = 0; // spotlight, box coords (eased)
+    let my = 0;
+    let a = 0; // spotlight strength (eased)
+    let raf = 0;
     let moving = false;
-    let pending = false;
-    const paint = () => {
-      pending = false;
-      el.style.setProperty("--x", `${mx}px`);
-      el.style.setProperty("--y", `${my}px`);
+
+    const frame = () => {
+      raf = 0;
+      const r = el.getBoundingClientRect();
+      const tx = px - r.left;
+      const ty = py - r.top;
+      const inside =
+        seen && tx >= 0 && ty >= 0 && tx <= r.width && ty <= r.height;
+      // while fully faded, jump to the pointer so it fades in where you are
+      if (a < 0.01) {
+        mx = tx;
+        my = ty;
+      } else {
+        mx += (tx - mx) * EASE;
+        my += (ty - my) * EASE;
+      }
+      a += ((inside ? 1 : 0) - a) * FADE;
+      if (!inside && a < 0.005) a = 0;
+      el.style.setProperty("--x", `${mx.toFixed(1)}px`);
+      el.style.setProperty("--y", `${my.toFixed(1)}px`);
+      el.style.setProperty("--a", a.toFixed(3));
+      const settled =
+        Math.abs(tx - mx) < 0.5 &&
+        Math.abs(ty - my) < 0.5 &&
+        Math.abs((inside ? 1 : 0) - a) < 0.005;
+      if (!settled) raf = requestAnimationFrame(frame);
+    };
+    const kick = () => {
+      if (!raf) raf = requestAnimationFrame(frame);
     };
     const onMove = (e: PointerEvent) => {
-      const r = el.getBoundingClientRect();
-      mx = e.clientX - r.left;
-      my = e.clientY - r.top;
+      if (e.pointerType !== "mouse") return;
+      px = e.clientX;
+      py = e.clientY;
+      seen = true;
       moving = true;
-      if (!pending) {
-        pending = true;
-        requestAnimationFrame(paint);
-      }
+      kick();
+    };
+    const onOut = () => {
+      seen = false;
+      kick();
     };
     window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("scroll", kick, { passive: true });
+    document.addEventListener("pointerleave", onOut);
+    window.addEventListener("blur", onOut);
 
-    // scramble: a throttled interval, only while the pointer is moving,
-    // only cells inside the spotlight, only the rows it touched
-    const RADIUS = 250;
+    // scramble: slow and sparse, only while the pointer is moving, only
+    // cells inside the spotlight, only the rows it touched
+    const RADIUS = 220;
     const timer = reduced
       ? 0
       : window.setInterval(() => {
-          if (!moving) return;
+          if (!moving || a < 0.2) return;
           moving = false;
           const touched = new Set<number>();
-          for (let i = 0; i < 26; i++) {
-            const a = Math.random() * Math.PI * 2;
+          for (let i = 0; i < 10; i++) {
+            const ang = Math.random() * Math.PI * 2;
             const d = Math.sqrt(Math.random()) * RADIUS * 0.8;
-            const c = Math.floor((mx + Math.cos(a) * d) / cw);
-            const r = Math.floor((my + Math.sin(a) * d) / ch);
+            const c = Math.floor((mx + Math.cos(ang) * d) / cw);
+            const r = Math.floor((my + Math.sin(ang) * d) / ch);
             if (r < 0 || r >= rows.length || c < 0 || c >= cols) continue;
             if (rows[r][c] === " ") continue; // keep the token spacing
             rows[r][c] = CHARS[rand(CHARS.length)];
@@ -314,11 +368,15 @@ export function MatrixSpotlightBackground({
           touched.forEach((r) => {
             lines[r].textContent = rows[r].join("") + "\n";
           });
-        }, 70);
+        }, 140);
 
     return () => {
       ro.disconnect();
+      cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("scroll", kick);
+      document.removeEventListener("pointerleave", onOut);
+      window.removeEventListener("blur", onOut);
       clearInterval(timer);
     };
   }, [fine, reduced]);

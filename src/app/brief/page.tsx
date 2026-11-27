@@ -206,7 +206,7 @@ function Showcase() {
     <section className="b-wrap" aria-label="Recordings">
       <Reveal immediate delay={0.4}>
         <PopGroup className="b-showcase">
-          <PopUp className="b-shot b-shot-main" delay={0.15} distance={160} grouped>
+          <PopUp className="b-shot b-shot-main" delay={0.05} distance={36} grouped>
             <Link href="/" className="b-shot-link" data-cursor="ENTER ROOM">
               <Clip
                 src="/brief/clips/room-tour.mp4"
@@ -219,7 +219,7 @@ function Showcase() {
               </span>
             </Link>
           </PopUp>
-          <PopUp className="b-shot b-shot-a" delay={0.35} distance={180} grouped>
+          <PopUp className="b-shot b-shot-a" delay={0.18} distance={36} grouped>
             <TransitionLink
               href="/brief/work/ancora"
               className="b-shot-link"
@@ -234,7 +234,7 @@ function Showcase() {
               <span className="b-tag b-shot-tag">Ancora · live run DAG</span>
             </TransitionLink>
           </PopUp>
-          <PopUp className="b-shot b-shot-b" delay={0.55} distance={200} grouped>
+          <PopUp className="b-shot b-shot-b" delay={0.3} distance={36} grouped>
             <TransitionLink
               href="/brief/work/ancora"
               className="b-shot-link"
