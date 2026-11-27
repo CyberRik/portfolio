@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   ACHIEVEMENTS,
   EDUCATION,
@@ -13,40 +14,30 @@ import {
   PROJECT_DOCS,
   isTodo,
   type ProjectDoc,
+  type ProjectId,
 } from "@/content/work";
-import {
-  Marquee,
-  MaskTitle,
-  Parallax,
-  Reveal,
-  TransitionLink,
-} from "@/components/brief/motion";
-import {
-  BlurIn,
-  HeroArt,
-  NumbersWall,
-  PopChips,
-  type Stat,
-} from "@/components/brief/effects";
-import { real } from "@/components/brief/util";
-import { SectionIcon, type IconName } from "@/components/brief/icons";
-import { Flower } from "@/components/brief/toys";
-import { GitHubMark } from "@/components/brief/marks";
+import { MaskTitle, Reveal, TransitionLink } from "@/components/brief/motion";
+import { CopyEmail } from "@/components/brief/chrome";
+import { Schematic } from "@/components/brief/schematic";
 
 /**
  * /brief — the room, flattened into one readable page.
  *
  * Same content as the 3D workspace (it reads the same content files, so
  * the two can never drift), laid out for the visitor who has thirty
- * seconds, a phone, or no WebGL. Each section is headed by the room
- * object that holds it, so someone who has seen the room recognises the
- * map, and someone who hasn't just gets a clean page.
+ * seconds, a phone, or no WebGL.
+ *
+ * Design rule for this page: white paper, two typefaces (Inter Tight for
+ * display, Inter for text), one ink colour and a grey. No icons, no
+ * gradients, no handwriting, no glow. Hierarchy comes from size and
+ * space alone, and the only imagery is real: the room, the recorded
+ * demo, and each project's own architecture graph.
  *
  * Server-rendered: none of three.js ships here.
  */
 
 export const metadata: Metadata = {
-  title: "Ritankar Mondal — AI Engineer · The Brief",
+  title: "Ritankar Mondal — AI Engineer",
   description: PROFILE.summary,
   alternates: { canonical: "/brief" },
   openGraph: {
@@ -56,154 +47,357 @@ export const metadata: Metadata = {
   },
 };
 
-const SECTIONS: readonly {
-  id: string;
-  n: string;
-  object: string;
-  title: string;
-  icon: IconName;
-}[] = [
-  { id: "experience", n: "01", object: "Whiteboard", title: "Experience", icon: "rocket" },
-  { id: "work", n: "02", object: "Monitor", title: "Selected work", icon: "sparkles" },
-  { id: "open-source", n: "03", object: "Upstream", title: "Open source", icon: "seedling" },
-  { id: "record", n: "04", object: "Bookshelf", title: "Record", icon: "trophy" },
-  { id: "stack", n: "05", object: "Server rack", title: "Stack", icon: "gear" },
-  { id: "contact", n: "06", object: "Laptop", title: "Contact", icon: "wave" },
-];
-
 /**
- * The numbers wall. Every figure is lifted from that project's `results`
- * (or, for OctonData, the EXPERIENCE bullet) in the content files — this
- * list selects and shortens, it never computes or rounds. If a source
- * line changes, change the card with it.
- *
- * Kept to six on purpose: the wall sits between the hero and Experience,
- * and every extra card is another half-screen a recruiter scrolls before
- * reaching the work history. Only figures that land without context.
+ * The four projects that get a full spread. Each cover figure is lifted
+ * verbatim from that project's `results` in work.ts — this list selects
+ * and shortens, it never computes or rounds. If a source line changes,
+ * change the cover with it.
  */
-const STATS: Stat[] = [
+const SPOTLIGHT: {
+  id: ProjectId;
+  figure: string;
+  caption: string;
+  tone: "paper" | "ink" | "photo";
+}[] = [
   {
-    value: "45.9% → 97.7%",
-    label: "task success for a 3.35B banking agent across five languages",
-    href: "/brief/work/desi-agent",
-    project: "Desi Agent",
+    id: "desi-agent",
+    figure: "45.9% → 97.7%",
+    caption: "Task success on 486 held-out banking conversations",
+    tone: "paper",
   },
   {
-    value: "97%",
-    label: "BFCL accuracy on single-turn function calling, fine-tuned Qwen3-8B",
-    href: "/brief/work/toolcalllm",
-    project: "ToolCallLM",
+    id: "ancora",
+    figure: "~60s → ~6s",
+    caption: "Time to detect a killed worker",
+    tone: "photo",
   },
   {
-    value: "11 → 55 tok/s",
-    label: "5× inference throughput via prefix and persistent context caching",
-    href: "/brief/work/senpai",
-    project: "Senpai",
+    id: "senpai",
+    figure: "11 → 55 tok/s",
+    caption: "Inference throughput, via prefix and context caching",
+    tone: "ink",
   },
   {
-    value: "10K+",
-    label: "pages processed per month, end to end",
-    href: "/brief/work/tax-cpa-parser",
-    project: "Tax CPA Parser",
-  },
-  {
-    value: "40%+",
-    label: "less manual review time across 10+ U.S. CPA firms",
-    href: "/brief/work/tax-cpa-parser",
-    project: "OctonData",
-  },
-  {
-    value: "9.5×",
-    label: "faster worker-death detection — ~60s down to ~6s",
-    href: "/brief/work/ancora",
-    project: "Ancora",
+    id: "toolcalllm",
+    figure: "97%",
+    caption: "BFCL accuracy on single-turn function calling",
+    tone: "paper",
   },
 ];
 
-/* ------------------------------------------------------------------ */
-/* Proof you can click. Every link below is read off the content
-   files, so a repo or demo added there shows up here on its own.     */
+const SPOTLIT = new Set(SPOTLIGHT.map((s) => s.id));
+const MORE: ProjectId[] = [...FEATURED, ...ARCHIVE].filter(
+  (id) => !SPOTLIT.has(id),
+);
 
 const GITHUB_URL = `https://github.com/${PROFILE.github}`;
-/** a repository root on the profile, not a file or doc inside one */
 const REPO_ROOT = new RegExp(
   `^https://github\\.com/${PROFILE.github}/([^/#?]+)/?$`,
   "i",
 );
-const ALL_PROJECTS = [...FEATURED, ...ARCHIVE].map((id) => PROJECT_DOCS[id]);
-
-const repoLinks = (p: ProjectDoc) =>
-  p.links.filter((l) => REPO_ROOT.test(l.href));
-const liveLink = (p: ProjectDoc) =>
+const repoOf = (p: ProjectDoc) => p.links.find((l) => REPO_ROOT.test(l.href));
+const liveOf = (p: ProjectDoc) =>
   p.links.find((l) => /live/i.test(l.label) && !isTodo(l.href));
 const youtubeUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 
-/** the public repos, in the order the projects are featured */
-const REPOS = ALL_PROJECTS.flatMap((p) =>
-  repoLinks(p).map((l) => ({
-    project: p,
-    href: l.href,
-    name: l.href.match(REPO_ROOT)![1],
-    // "GitHub — reach-asr" → "reach-asr"; a bare "GitHub" adds nothing
-    note: l.label.includes("—") ? l.label.split("—")[1].trim() : null,
-  })),
-);
-const DEMOS = ALL_PROJECTS.filter((p) => p.demo);
-const LIVE = ALL_PROJECTS.flatMap((p) => {
-  const l = liveLink(p);
-  return l ? [{ project: p, href: l.href }] : [];
-});
+const MERGED = OPEN_SOURCE.filter((c) => c.merged);
+/** "docling-serve" and "Docling" are one upstream: Docling */
+const upstreamOf = (project: string) => {
+  const base = project.split("-")[0];
+  return base[0].toUpperCase() + base.slice(1);
+};
+const UPSTREAMS = [...new Set(MERGED.map((c) => upstreamOf(c.project)))];
+const UPSTREAMS_ALL = [
+  ...new Set(OPEN_SOURCE.map((c) => upstreamOf(c.project))),
+];
+
+const monthName = (ym: string) => {
+  const [y, m] = ym.split("-").map(Number);
+  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
+};
+
+/** "May 2026 – Jul 2026" → "2026"; "Feb 2026 – May 2026" → "2026" */
+const years = (period: string) => {
+  const ys = [...new Set(period.match(/\d{4}/g) ?? [])];
+  return ys.join(" – ");
+};
+
+const list = (xs: string[]) =>
+  xs.length < 2
+    ? xs.join("")
+    : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
 
 export default function BriefPage() {
-  const featured = FEATURED.map((id) => PROJECT_DOCS[id]);
-  // two columns that drift at different speeds on desktop
-  const left = featured.filter((_, i) => i % 2 === 0);
-  const right = featured.filter((_, i) => i % 2 === 1);
-
   return (
-    <main className="brief-wrap">
+    <main id="top">
       <Hero />
+      <Showcase />
+      <Work />
+      <About />
+      <OpenSource />
+      <Recognition />
+      <Stack />
+      <Contact />
+    </main>
+  );
+}
 
-      <NumbersWall
-        stats={STATS}
-        heading={
-          <MaskTitle className="brief-h2">
-            The work, <span className="brief-hand">in numbers</span>
+/* ------------------------------------------------------------------ */
+
+function Hero() {
+  const [latest, ...earlier] = EXPERIENCE;
+  return (
+    <section className="b-wrap b-hero">
+      <h1 className="b-display b-hero-title">
+        <MaskTitle as="span" immediate delay={0.05}>
+          AI Engineer
+        </MaskTitle>
+      </h1>
+
+      <div className="b-hero-grid">
+        <Reveal immediate delay={0.35} className="b-hero-meta">
+          <dl>
+            <div>
+              <dt>Now</dt>
+              <dd>Final year, IIT Madras</dd>
+            </div>
+            <div>
+              <dt>Latest</dt>
+              <dd>
+                {latest.company}, {latest.location.split(" · ")[0]}
+              </dd>
+            </div>
+            <div>
+              <dt>Before</dt>
+              <dd>{earlier.map((r) => r.company).join(", ")}</dd>
+            </div>
+          </dl>
+        </Reveal>
+
+        <Reveal immediate delay={0.25} className="b-hero-copy">
+          <p>
+            I fine-tune, benchmark and serve LLMs, and build the
+            fault-tolerant systems underneath them. Most recently that meant
+            tool-calling models at {latest.company} in Tokyo.
+          </p>
+          <p>
+            Ten months across four industry internships, and{" "}
+            {MERGED.length} merged pull requests upstream in{" "}
+            {list(UPSTREAMS)}.
+          </p>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/** The room, framed — the one big picture on the page. */
+function Showcase() {
+  return (
+    <section className="b-wrap" aria-label="The 3D room">
+      <Reveal immediate delay={0.45}>
+        <Link href="/" className="b-showcase">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a static render; next/image adds nothing here */}
+          <img
+            src="/brief/room.webp"
+            srcSet="/brief/room-960.webp 960w, /brief/room.webp 1920w"
+            sizes="(min-width: 1280px) 1200px, 100vw"
+            alt="A rendered 3D workspace: a desk with a monitor, a server rack, a whiteboard and a bookshelf in a warmly lit room"
+            fetchPriority="high"
+          />
+          <span className="b-showcase-tags" aria-hidden>
+            <span className="b-tag b-tag-solid">This page, as a room ↗</span>
+            <span className="b-tag">Three.js · React Three Fiber</span>
+          </span>
+        </Link>
+      </Reveal>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function Work() {
+  return (
+    <section id="work" className="b-section">
+      <div className="b-wrap">
+        <header className="b-work-head">
+          <MaskTitle as="h2" className="b-display b-giant">
+            Featured work
           </MaskTitle>
-        }
-        sub="Every figure here was measured, and every card opens the case study behind it."
-      />
+          <p className="b-cue">(scroll to explore)</p>
+        </header>
 
-      {/* ---------------------------------------------------- 01 */}
-      <section id="experience" className="brief-section">
-        <SectionHead {...SECTIONS[0]} accent="where it shipped" />
-        <ol className="brief-roles">
-          {EXPERIENCE.map((r, i) => (
-            <Reveal
-              as="li"
-              key={r.company}
-              delay={i * 0.05}
-              className="brief-role"
+        <ol className="b-spreads">
+          {SPOTLIGHT.map((s, i) => (
+            <Spread key={s.id} s={s} i={i} />
+          ))}
+        </ol>
+
+        <Reveal className="b-more">
+          <h3 className="b-kicker">More work</h3>
+          <ul className="b-index">
+            {MORE.map((id) => {
+              const p = PROJECT_DOCS[id];
+              return (
+                <li key={id}>
+                  <TransitionLink href={`/brief/work/${id}`}>
+                    <span className="b-index-title">
+                      {p.shortTitle ?? p.title}
+                    </span>
+                    <span className="b-index-line">{p.tagline}</span>
+                    <span className="b-index-year">{years(p.period)}</span>
+                  </TransitionLink>
+                </li>
+              );
+            })}
+          </ul>
+          <a
+            className="b-textlink"
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Everything public is on github.com/{PROFILE.github} ↗
+          </a>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function Spread({ s, i }: { s: (typeof SPOTLIGHT)[number]; i: number }) {
+  const p = PROJECT_DOCS[s.id];
+  const repo = repoOf(p);
+  const live = liveOf(p);
+  const flip = i % 2 === 1;
+  return (
+    <Reveal as="li" className={`b-spread ${flip ? "is-flip" : ""}`}>
+      <TransitionLink
+        href={`/brief/work/${p.id}`}
+        className={`b-cover is-${s.tone}`}
+        aria-label={`${p.title} — read the case study`}
+      >
+        {s.tone === "photo" && p.demo ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a static poster */}
+            <img src={p.demo.poster} alt="" loading="lazy" />
+            <span className="b-tag b-cover-play">
+              ▶ Demo · {p.demo.length}
+            </span>
+          </>
+        ) : (
+          p.architecture.diagram && (
+            <Schematic spec={p.architecture.diagram} className="b-cover-art" />
+          )
+        )}
+        <span className="b-cover-figure">
+          <span className="b-cover-num">{s.figure}</span>
+          <span className="b-cover-cap">{s.caption}</span>
+        </span>
+      </TransitionLink>
+
+      <div className="b-spread-text">
+        <p className="b-meta">
+          {String(i + 1).padStart(2, "0")} — {p.context}
+        </p>
+        <h3 className="b-title">
+          <TransitionLink href={`/brief/work/${p.id}`}>
+            {p.shortTitle ?? p.title}
+          </TransitionLink>
+        </h3>
+        <p className="b-body">{p.tagline}</p>
+        <p className="b-meta">
+          {p.role} · {p.period}
+        </p>
+        <p className="b-links">
+          <TransitionLink href={`/brief/work/${p.id}`} className="b-textlink">
+            Read the case study →
+          </TransitionLink>
+          {p.demo && (
+            <a
+              className="b-textlink is-quiet"
+              href={youtubeUrl(p.demo.youtube)}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <div className="brief-role-meta">
-                <p className="brief-label">{r.period}</p>
-                <p className="brief-dim">{r.location}</p>
-              </div>
+              Watch the demo · {p.demo.length} ↗
+            </a>
+          )}
+          {live && (
+            <a
+              className="b-textlink is-quiet"
+              href={live.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Try it live ↗
+            </a>
+          )}
+          {repo && (
+            <a
+              className="b-textlink is-quiet"
+              href={repo.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Code ↗
+            </a>
+          )}
+        </p>
+      </div>
+    </Reveal>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function About() {
+  return (
+    <section id="about" className="b-section">
+      <div className="b-wrap">
+        <MaskTitle as="h2" className="b-display b-large">
+          About
+        </MaskTitle>
+
+        <div className="b-split b-about">
+          <Reveal>
+            <p className="b-lede">
+              Chemical engineering by degree; AI engineering by obsession.
+            </p>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <p className="b-body">
+              I’m Ritankar, an AI and LLM engineer studying at IIT
+              Madras. Across four industry internships I’ve shipped both
+              the model and the systems that keep it running: fine-tuning,
+              benchmarking and serving tool-calling LLMs on constrained GPU
+              hardware, and building the fault-tolerant, observable
+              distributed infrastructure underneath them.
+            </p>
+          </Reveal>
+        </div>
+
+        <ol className="b-timeline">
+          {EXPERIENCE.map((r) => (
+            <Reveal as="li" key={r.company} className="b-split">
+              <p className="b-year">{r.period}</p>
               <div>
-                <h3 className="brief-h3">
-                  {r.company}
-                  <span className="brief-dim"> — {r.title}</span>
+                <h3 className="b-role">
+                  {r.company}, {r.title}.
                 </h3>
-                <ul className="brief-bullets">
-                  {r.bullets.slice(0, 2).map((b) => (
-                    <li key={b}>{b}</li>
-                  ))}
-                </ul>
-                {r.bullets.length > 2 && (
-                  <details className="brief-more">
-                    <summary>{r.bullets.length - 2} more</summary>
-                    <ul className="brief-bullets">
-                      {r.bullets.slice(2).map((b) => (
+                <p className="b-role-where">{r.location}</p>
+                <p className="b-body b-muted">{r.bullets[0]}</p>
+                {r.bullets.length > 1 && (
+                  <details className="b-details">
+                    <summary>
+                      <span className="b-details-open">
+                        {r.bullets.length - 1} more
+                      </span>
+                      <span className="b-details-close">Less</span>
+                    </summary>
+                    <ul>
+                      {r.bullets.slice(1).map((b) => (
                         <li key={b}>{b}</li>
                       ))}
                     </ul>
@@ -212,461 +406,146 @@ export default function BriefPage() {
               </div>
             </Reveal>
           ))}
-        </ol>
-      </section>
-
-      {/* ---------------------------------------------------- 02 */}
-      <section id="work" className="brief-section">
-        <SectionHead {...SECTIONS[1]} accent="what I built" />
-        <SeeItRun />
-        <div className="brief-projects">
-          <Parallax speed={-40} className="brief-col">
-            {left.map((p, i) => (
-              <ProjectCard key={p.id} p={p} n={i * 2 + 1} />
-            ))}
-          </Parallax>
-          <Parallax speed={-140} className="brief-col brief-col-offset">
-            {right.map((p, i) => (
-              <ProjectCard key={p.id} p={p} n={i * 2 + 2} />
-            ))}
-          </Parallax>
-        </div>
-
-        <Reveal>
-          <div className="brief-archive">
-            <p className="brief-label">Earlier</p>
-            <ul>
-              {ARCHIVE.map((id) => {
-                const p = PROJECT_DOCS[id];
-                return (
-                  <li key={id}>
-                    <TransitionLink href={`/brief/work/${id}`}>
-                      <span className="brief-archive-title">{p.title}</span>
-                      <span className="brief-dim">{p.tagline}</span>
-                      <span className="brief-label">{p.period}</span>
-                    </TransitionLink>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ---------------------------------------------------- 03 */}
-      <section id="open-source" className="brief-section">
-        <SectionHead {...SECTIONS[2]} accent="merged upstream" />
-        <ol className="brief-oss">
-          {OPEN_SOURCE.map((c, i) => (
-            <Reveal as="li" key={c.repo + c.pr} delay={Math.min(i, 5) * 0.04}>
-              <a
-                href={`https://github.com/${c.repo}/pull/${c.pr}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className="brief-oss-project">
-                  {c.project}
-                  {c.org && <span className="brief-dim"> · {c.org}</span>}
-                </span>
-                <span className="brief-oss-what">{c.what}</span>
-                <span className="brief-oss-meta">
-                  <span className="brief-label">#{c.pr}</span>
-                  <span
-                    className={
-                      c.merged ? "brief-oss-status" : "brief-oss-status is-open"
-                    }
-                  >
-                    {c.merged ? `Merged ${monthName(c.merged)}` : "In review"}
-                  </span>
-                </span>
-              </a>
-            </Reveal>
-          ))}
-        </ol>
-      </section>
-
-      {/* ---------------------------------------------------- 04 */}
-      <section id="record" className="brief-section">
-        <SectionHead {...SECTIONS[3]} accent="on the shelf" />
-        <div className="brief-record">
-          <ol className="brief-achievements">
-            {ACHIEVEMENTS.map((a, i) => (
-              <Reveal as="li" key={a} delay={i * 0.04}>
-                <span className="brief-label">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <p>{a}</p>
-              </Reveal>
-            ))}
-          </ol>
-          <Reveal className="brief-edu">
-            <p className="brief-label">Education</p>
-            <p className="brief-h3">{EDUCATION.school}</p>
-            <p className="brief-dim">{EDUCATION.degree}</p>
-            <p className="brief-dim">{EDUCATION.period}</p>
+          <Reveal as="li" className="b-split">
+            <p className="b-year">{EDUCATION.period}</p>
+            <div>
+              <h3 className="b-role">{EDUCATION.school}.</h3>
+              <p className="b-role-where">{EDUCATION.degree}</p>
+            </div>
           </Reveal>
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------- 05 */}
-      <section id="stack" className="brief-section">
-        <SectionHead {...SECTIONS[4]} accent="what it runs on" />
-        <Marquee items={SKILLS.flatMap((g) => g.items)} />
-        <div className="brief-skills">
-          {SKILLS.map((g, i) => (
-            <Reveal key={g.label} delay={(i % 4) * 0.05}>
-              <div>
-                <p className="brief-label">{g.label}</p>
-                <PopChips
-                  items={g.items}
-                  className="brief-chips brief-skill-chips"
-                />
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------------------------------------------------- 06 */}
-      <section id="contact" className="brief-section brief-contact">
-        <SectionHead {...SECTIONS[5]} accent="say hello" />
-        <Reveal>
-          <a className="brief-email" href={`mailto:${PROFILE.email}`}>
-            {PROFILE.email}
-            <span aria-hidden> ↗</span>
-          </a>
-          <p className="brief-links">
-            <a
-              href={PROFILE.resumeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Resume ↓
-            </a>
-            {PROFILE.links.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={l.href === GITHUB_URL ? "brief-links-gh" : undefined}
-              >
-                {l.href === GITHUB_URL && <GitHubMark />}
-                {l.label} ↗
-              </a>
-            ))}
-          </p>
-        </Reveal>
-        <Flower />
-      </section>
-    </main>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-
-const monthName = (ym: string) => {
-  const [y, m] = ym.split("-").map(Number);
-  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
-};
-
-function Hero() {
-  // Order of arrival, after the reference site's hero timeline: the room
-  // settles in behind, the name rises line by line, then everything else
-  // pulls into focus out of a blur.
-  return (
-    <section id="top" className="brief-hero">
-      <HeroArt />
-
-      <BlurIn delay={0.05}>
-        <p className="brief-label">{PROFILE.tagline} · The brief</p>
-      </BlurIn>
-
-      <h1 className="brief-h1">
-        <MaskTitle as="span" immediate delay={0.1} className="brief-h1-line">
-          Ritankar Mondal
-        </MaskTitle>
-        <MaskTitle
-          as="span"
-          immediate
-          delay={0.22}
-          className="brief-h1-line brief-h1-sub"
-        >
-          builds models, <span className="brief-hand">and the systems</span>
-        </MaskTitle>
-        <MaskTitle
-          as="span"
-          immediate
-          delay={0.34}
-          className="brief-h1-line brief-h1-sub"
-        >
-          that keep them running.
-        </MaskTitle>
-      </h1>
-
-      <div className="brief-hero-foot">
-        <div>
-          <BlurIn delay={0.45}>
-            <p className="brief-summary">{PROFILE.summary}</p>
-          </BlurIn>
-          <BlurIn delay={0.53}>
-            <p className="brief-cta">
-              <a
-                className="brief-btn brief-btn-solid"
-                href={PROFILE.resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Download resume
-              </a>
-              <a
-                className="brief-btn brief-btn-gh"
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <GitHubMark />
-                GitHub
-                <span className="brief-btn-handle">@{PROFILE.github}</span>
-              </a>
-              <a className="brief-btn" href={`mailto:${PROFILE.email}`}>
-                Email me
-              </a>
-            </p>
-            <p className="brief-profiles">
-              <span className="brief-label">Also on</span>
-              {PROFILE.links
-                .filter((l) => l.href !== GITHUB_URL)
-                .map((l) => (
-                  <a
-                    key={l.label}
-                    href={l.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {l.label} ↗
-                  </a>
-                ))}
-            </p>
-          </BlurIn>
-        </div>
-
-        <BlurIn delay={0.61}>
-          <nav className="brief-contents" aria-label="Contents">
-            <p className="brief-label">Contents</p>
-            <ol>
-              {SECTIONS.map((s) => (
-                <li key={s.id}>
-                  <a href={`#${s.id}`}>
-                    <span className="brief-label">{s.n}</span>
-                    <span>{s.title}</span>
-                    <span className="brief-dim">{s.object}</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        </BlurIn>
+        </ol>
       </div>
     </section>
   );
 }
 
-function SectionHead({
-  n,
-  object,
-  title,
-  accent,
-  icon,
-}: {
-  n: string;
-  object: string;
-  title: string;
-  accent: string;
-  icon: IconName;
-}) {
+function OpenSource() {
+  // one row per upstream, newest work first within it
+  const groups = UPSTREAMS_ALL.map((name) => ({
+    name,
+    org: OPEN_SOURCE.find((c) => upstreamOf(c.project) === name)?.org,
+    prs: OPEN_SOURCE.filter((c) => upstreamOf(c.project) === name),
+  }));
   return (
-    <header className="brief-head">
-      <p className="brief-label">
-        {n} · {object}
-      </p>
-      <MaskTitle className="brief-h2">
-        {title} <span className="brief-hand">{accent}</span>
-        <SectionIcon name={icon} />
-      </MaskTitle>
-    </header>
-  );
-}
-
-function ProjectCard({ p, n }: { p: ProjectDoc; n: number }) {
-  const result = real(p.results)[0];
-  const stack = p.stack.flatMap((g) => g.items).slice(0, 5);
-  const repo = repoLinks(p)[0];
-  const live = liveLink(p);
-  return (
-    // `order` restores reading order on phones, where the two parallax
-    // columns dissolve into one grid (see .brief-col in brief.css)
-    //
-    // The case-study link is stretched over the whole card (its ::after),
-    // so the external links can sit inside the card without nesting <a>s.
-    <Reveal style={{ order: n }}>
-      <article className="brief-card">
-        <div className="brief-card-top">
-          <span className="brief-label">{String(n).padStart(2, "0")}</span>
-          <span className="brief-label">{p.period}</span>
+    <section id="open-source" className="b-section">
+      <div className="b-wrap">
+        <div className="b-split b-section-head">
+          <MaskTitle as="h2" className="b-display b-medium">
+            Open source
+          </MaskTitle>
+          <Reveal>
+            <p className="b-body b-muted">
+              {MERGED.length} pull requests merged into {list(UPSTREAMS)}, and{" "}
+              {OPEN_SOURCE.length - MERGED.length} more in review. Small,
+              real fixes in tools other people run in production.
+            </p>
+          </Reveal>
         </div>
-        <h3 className="brief-card-title">
-          <TransitionLink
-            href={`/brief/work/${p.id}`}
-            className="brief-card-link"
-            aria-label={`${p.title} — read the case study`}
-          >
-            {p.shortTitle ?? p.title}
-          </TransitionLink>
-        </h3>
-        <p className="brief-dim brief-card-context">{p.context}</p>
-        <p className="brief-card-tagline">{p.tagline}</p>
-        {result && <p className="brief-card-result">{result}</p>}
-        <ul className="brief-chips">
-          {stack.map((s) => (
-            <li key={s}>{s}</li>
+
+        <ul className="b-oss">
+          {groups.map((g) => (
+            <Reveal as="li" key={g.name}>
+              <h3 className="b-oss-name">
+                {g.name}
+                {g.org && <span className="b-oss-org">{g.org}</span>}
+              </h3>
+              <ul className="b-oss-prs">
+                {g.prs.map((c) => (
+                  <li key={c.repo + c.pr}>
+                    <a
+                      href={`https://github.com/${c.repo}/pull/${c.pr}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span className="b-oss-what">{c.what}</span>
+                      {c.merged ? (
+                        <span className="b-oss-status">
+                          Merged {monthName(c.merged)}
+                        </span>
+                      ) : (
+                        <span className="b-oss-status is-open">In review</span>
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
           ))}
         </ul>
-        <div className="brief-card-foot">
-          <span className="brief-card-more" aria-hidden>
-            Read the case study →
-          </span>
-          {(repo || live || p.demo) && (
-            <span className="brief-card-ext">
-              {live && (
-                <a href={live.href} target="_blank" rel="noopener noreferrer">
-                  Live demo ↗
-                </a>
-              )}
-              {p.demo && (
-                <a
-                  href={youtubeUrl(p.demo.youtube)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  ▶ Video
-                </a>
-              )}
-              {repo && (
-                <a href={repo.href} target="_blank" rel="noopener noreferrer">
-                  <GitHubMark />
-                  Code
-                </a>
-              )}
-            </span>
-          )}
-        </div>
-      </article>
-    </Reveal>
+      </div>
+    </section>
   );
 }
 
-/**
- * The shortest path from "sounds good" to "show me": the recorded demo,
- * the live Space and the code, before anyone has to open a case study.
- */
-function SeeItRun() {
+function Recognition() {
   return (
-    <div className="brief-run">
-      <p className="brief-label brief-run-kicker">See it run</p>
-      <div className="brief-run-media">
-        {DEMOS.map((p) => (
-          <Reveal key={p.id}>
-            <a
-              className="brief-run-card"
-              href={youtubeUrl(p.demo!.youtube)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span className="brief-run-poster">
-                {/* eslint-disable-next-line @next/next/no-img-element -- a static poster; next/image adds nothing here */}
-                <img src={p.demo!.poster} alt="" loading="lazy" />
-                <span className="brief-demo-play">
-                  ▶ Watch · {p.demo!.length}
-                </span>
-              </span>
-              <span className="brief-run-body">
-                <span className="brief-label">Watch · YouTube</span>
-                <span className="brief-run-title">
-                  {p.shortTitle ?? p.title}, end to end
-                </span>
-                <span className="brief-run-blurb">{p.demo!.blurb}</span>
-              </span>
-            </a>
-          </Reveal>
-        ))}
-        {LIVE.map(({ project: p, href }) => (
-          <Reveal key={p.id}>
-            <a
-              className="brief-run-card"
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span className="brief-run-poster brief-run-live" aria-hidden>
-                <span className="brief-run-url">
-                  <span className="brief-run-dot" />
-                  {href.replace(/^https:\/\//, "")}
-                </span>
-                <span className="brief-run-live-title">
-                  {p.shortTitle ?? p.title}{" "}
-                  <span className="brief-hand">Lab</span>
-                </span>
-                <span className="brief-demo-play">Open the Space ↗</span>
-              </span>
-              <span className="brief-run-body">
-                <span className="brief-label">Try it · Hugging Face Space</span>
-                <span className="brief-run-title">
-                  {p.shortTitle ?? p.title}, live
-                </span>
-                <span className="brief-run-blurb">{p.tagline}</span>
-              </span>
-            </a>
-          </Reveal>
-        ))}
+    <section id="record" className="b-section">
+      <div className="b-wrap b-split">
+        <div className="b-sticky-head">
+          <MaskTitle as="h2" className="b-display b-medium">
+            Recognition
+          </MaskTitle>
+        </div>
+        <ol className="b-awards">
+          {ACHIEVEMENTS.map((a) => (
+            <Reveal as="li" key={a}>
+              {a}
+            </Reveal>
+          ))}
+        </ol>
       </div>
+    </section>
+  );
+}
 
-      <Reveal className="brief-repos">
-        <div className="brief-repos-head">
-          <p className="brief-label">Read the code · public repositories</p>
+function Stack() {
+  return (
+    <section id="stack" className="b-section">
+      <div className="b-wrap">
+        <div className="b-split b-section-head">
+          <MaskTitle as="h2" className="b-display b-medium">
+            Stack
+          </MaskTitle>
+        </div>
+        <Reveal>
+          <dl className="b-stack">
+            {SKILLS.map((g) => (
+              <div key={g.label}>
+                <dt>{g.label}</dt>
+                {g.items.map((s) => (
+                  <dd key={s}>{s}</dd>
+                ))}
+              </div>
+            ))}
+          </dl>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function Contact() {
+  return (
+    <section id="contact" className="b-contact">
+      <div className="b-wrap">
+        <h2 className="b-display b-contact-title">
+          <MaskTitle as="span">Let’s build something</MaskTitle>
+          <MaskTitle as="span" delay={0.08}>
+            that holds up.
+          </MaskTitle>
+        </h2>
+        <Reveal className="b-contact-actions">
+          <CopyEmail />
           <a
-            className="brief-repos-all"
-            href={GITHUB_URL}
+            className="b-pill-ghost"
+            href={PROFILE.resumeUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <GitHubMark />
-            All of it on github.com/{PROFILE.github} ↗
+            Resume ↓
           </a>
-        </div>
-        <ul>
-          {REPOS.map((r) => (
-            <li key={r.href}>
-              <a href={r.href} target="_blank" rel="noopener noreferrer">
-                <span className="brief-repos-name">
-                  <GitHubMark />
-                  <span>
-                    <span className="brief-dim">{PROFILE.github}/</span>
-                    {r.name}
-                  </span>
-                </span>
-                <span className="brief-dim">
-                  {r.project.shortTitle ?? r.project.title}
-                  {r.note && ` · ${r.note}`}
-                </span>
-                <span className="brief-label" aria-hidden>
-                  ↗
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </Reveal>
-    </div>
+        </Reveal>
+      </div>
+    </section>
   );
 }

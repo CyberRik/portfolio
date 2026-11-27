@@ -1,8 +1,11 @@
 /*
- * /brief — the room's palette on paper.
- * Same warm dark, same paper tone, amber as the only accent, Geist Mono
- * for every label (the HUD's voice), Caveat for one handwritten accent
- * per heading (the whiteboard's voice).
+ * /brief — white paper, two typefaces, one ink.
+ *
+ * Inter Tight for display (large, tight, weight 500), Inter for text.
+ * Ink #0e0e0e and a single grey do all the work; there is no accent
+ * colour, no gradient, no glow and no icon set. Hierarchy is size and
+ * space. If something new needs emphasis, make it bigger or give it more
+ * room — don't give it a colour.
  */
 
 /* The room locks the document (html/body overflow:hidden). This page is
@@ -13,8 +16,7 @@ html:has(.brief) body {
   height: auto;
   overflow: visible;
   overscroll-behavior: auto;
-  /* overscroll and the page-transition backdrop show this, not the room's brown */
-  background: #000;
+  background: #fff;
 }
 
 /* Lenis' recommended base styles */
@@ -33,1507 +35,1178 @@ html.lenis body {
 }
 
 .brief {
-  /* True black with neutral greys — the room is warm, the brief is
-     print-sharp. Amber is the only colour on the page. */
-  --bg: #000;
-  --raise: #0e0e0e;
-  --paper: #f5f5f4;
-  --text: #e7e5e4;
-  --dim: #a1a1aa;
-  --label: #8b8b93;
-  --amber: #ffb361;
-  --line: rgba(255, 255, 255, 0.1);
+  --ink: #0e0e0e;
+  --grey: #6d6d6d;
+  --soft: #a3a3a3;
+  --line: #e7e7e7;
+  --paper: #f2f2f0;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --gutter: clamp(20px, 3.6vw, 52px);
 
-  background: var(--bg);
-  color: var(--text);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-text), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   min-height: 100dvh;
   overflow-x: clip;
-  position: relative;
-  isolation: isolate;
-}
-
-/* The backdrop: a faint dot grid that fades out toward the edges, and a
-   soft warm glow up top. Fixed to the viewport, so the page scrolls over
-   it — the black never reads as empty, and nothing moves. A fixed layer
-   (not background-attachment: fixed) so the browser composites it once
-   instead of repainting it on every scroll frame. */
-.brief::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(255, 179, 97, 0.09), transparent 70%),
-    radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1.5px) 0 0 / 28px 28px;
-  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 100%);
-  mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .brief ::selection {
-  background: var(--amber);
-  color: var(--bg);
+  background: var(--ink);
+  color: #fff;
 }
-
-.brief a {
+:where(.brief) a {
   color: inherit;
   text-decoration: none;
 }
-.brief a:focus-visible,
-.brief summary:focus-visible {
-  outline: 2px solid var(--amber);
+.brief :focus-visible {
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
   border-radius: 4px;
 }
-
-.brief-wrap {
-  max-width: 1120px;
-  margin-inline: auto;
-  padding-inline: 16px;
+/* zero-specificity resets, so any class below can set its own margins */
+:where(.brief) :where(h1, h2, h3, p, ol, ul, dl, dd, figure) {
+  margin: 0;
 }
-@media (min-width: 640px) {
-  .brief-wrap {
-    padding-inline: 32px;
+:where(.brief) :where(ol, ul) {
+  list-style: none;
+  padding: 0;
+}
+
+.brief-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.brief-hide-md {
+  display: inline;
+}
+.brief-show-md {
+  display: none;
+}
+@media (min-width: 768px) {
+  .brief-hide-md {
+    display: none;
+  }
+  .brief-show-md {
+    display: inline;
   }
 }
 
-/* ------------------------------------------------------------ type */
-
-.brief-label {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--label);
-}
-.brief-dim {
-  color: var(--dim);
-}
-.brief-hand {
-  font-family: var(--font-caveat), cursive;
-  font-weight: 500;
-  color: var(--amber);
-  letter-spacing: 0;
-}
-
-/* the mask that headings rise out of */
+/* MaskTitle: the line rises from behind its own baseline. The padding
+   keeps descenders (g, y, p) inside the mask; the negative margin gives
+   that space back to the layout. */
 .brief-mask {
   display: block;
   overflow: hidden;
-  /* room for descenders, so the clip doesn't eat the g in "running" */
-  padding-bottom: 0.08em;
-  margin-bottom: -0.08em;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
 }
 .brief-mask > * {
   display: block;
-  transform-origin: 0 100%;
 }
 
-.brief-h1 {
-  margin: 28px 0 0;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 0.98;
-  color: var(--paper);
+/* ============================================================ layout */
+
+.b-wrap {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
 }
-.brief-h1-line {
-  font-size: clamp(44px, 9vw, 112px);
+.b-section {
+  padding-top: clamp(120px, 15vw, 220px);
 }
-.brief-h1-sub {
-  font-size: clamp(28px, 5.2vw, 64px);
+
+/* two columns that split at the middle, like a spread */
+.b-split {
+  display: grid;
+  gap: 16px 32px;
+}
+@media (min-width: 900px) {
+  .b-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ======================================================= typography */
+
+.b-display {
+  font-family: var(--font-display), var(--font-text), sans-serif;
   font-weight: 500;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-  color: var(--text);
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+  color: var(--ink);
 }
-.brief-h1-sub .brief-hand {
-  font-size: 1.12em;
+.b-giant {
+  font-size: clamp(48px, 13.4vw, 208px);
+  letter-spacing: -0.045em;
+  text-align: center;
+}
+.b-large {
+  font-size: clamp(56px, 8vw, 128px);
+  letter-spacing: -0.04em;
+}
+.b-medium {
+  font-size: clamp(44px, 5.4vw, 84px);
 }
 
-.brief-h2 {
-  margin: 0;
-  font-size: clamp(34px, 5.5vw, 64px);
+.b-lede {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.22;
+  max-width: 18em;
+}
+.b-body {
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 38em;
+}
+.b-muted {
+  color: var(--grey);
+}
+.b-meta {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey);
+}
+.b-cue,
+.b-kicker {
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  color: var(--paper);
-}
-.brief-h2 .brief-hand {
-  font-size: 0.72em;
-  margin-left: 0.15em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--grey);
 }
 
-.brief-h3 {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--paper);
+/* an underline that draws in from the left */
+.b-textlink {
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px
+    no-repeat;
+  padding-bottom: 2px;
+  transition:
+    background-size 0.5s var(--ease),
+    color 0.25s;
+}
+.b-textlink:hover {
+  background-size: 100% 1px;
+}
+.b-textlink.is-quiet {
+  color: var(--grey);
+}
+.b-textlink.is-quiet:hover {
+  color: var(--ink);
 }
 
-/* ------------------------------------------------------------- nav */
+/* ============================================================== nav */
 
 .brief-nav {
   position: sticky;
   top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  background: color-mix(in srgb, var(--bg) 78%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line);
+  z-index: 50;
+  background: rgba(255, 255, 255, 0);
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.4s,
+    border-color 0.4s;
 }
-@media (min-width: 640px) {
-  .brief-nav {
-    padding: 16px 32px;
-  }
+.brief-nav.is-scrolled {
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom-color: var(--line);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
+}
+.brief-nav-inner {
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: 14px var(--gutter);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 .brief-nav-name {
-  color: var(--paper);
+  justify-self: start;
   white-space: nowrap;
 }
-.brief-nav nav {
+.brief-nav-links {
+  display: none;
+  gap: 28px;
+}
+.brief-nav-links a {
+  color: var(--grey);
+  transition: color 0.25s;
+}
+.brief-nav-links a:hover {
+  color: var(--ink);
+}
+.brief-nav-pill {
+  justify-self: end;
+}
+@media (min-width: 768px) {
+  .brief-nav-inner {
+    grid-template-columns: 1fr auto 1fr;
+    padding-block: 16px;
+  }
+  .brief-nav-links {
+    display: flex;
+  }
+}
+
+/* ===================================================== pill buttons */
+
+.brief-pill,
+.b-pill-ghost {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    transform 0.4s var(--ease),
+    background-color 0.25s,
+    color 0.25s,
+    border-color 0.25s;
+}
+.brief-pill {
+  background: var(--ink);
+  color: #fff !important;
+}
+.brief-pill:hover {
+  background: #2a2a2a;
+}
+.brief-pill:active,
+.b-pill-ghost:active {
+  transform: scale(0.97);
+}
+.b-pill-ghost {
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.b-pill-ghost:hover {
+  border-color: var(--ink);
+}
+
+/* two labels stacked in a one-line window; copying slides the second up */
+.brief-pill-track {
   display: flex;
-  gap: 20px;
-  color: var(--label);
+  flex-direction: column;
+  height: 1.3em;
+  line-height: 1.3em;
+  overflow: hidden;
 }
-.brief-nav nav a {
-  transition: color 0.2s;
+.brief-pill-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 1.3em;
+  flex-shrink: 0;
+  transition: transform 0.55s var(--ease);
 }
-.brief-nav nav a:hover {
-  color: var(--amber);
+.brief-pill.is-copied .brief-pill-label {
+  transform: translateY(-100%);
 }
-.brief-nav-room {
-  color: var(--amber);
+.brief-pill svg {
+  opacity: 0.7;
 }
-@media (max-width: 639px) {
-  .brief-hide-sm {
+
+/* ============================================================= hero */
+
+.b-hero {
+  padding-top: clamp(56px, 9vh, 120px);
+}
+.b-hero-title {
+  font-size: clamp(60px, 16.5vw, 212px);
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+  margin-left: -0.04em; /* optical: pull the A's overhang to the margin */
+}
+.b-hero-grid {
+  display: grid;
+  gap: 40px 32px;
+  margin-top: clamp(36px, 5vw, 64px);
+}
+.b-hero-copy p {
+  font-size: clamp(18px, 1.5vw, 21px);
+  font-weight: 500;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+  max-width: 28em;
+}
+.b-hero-copy p + p {
+  margin-top: 1em;
+}
+.b-hero-meta dl {
+  display: grid;
+  gap: 14px;
+}
+.b-hero-meta div {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 16px;
+  font-size: 14px;
+}
+.b-hero-meta dt {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--grey);
+  padding-top: 1px;
+}
+.b-hero-meta dd {
+  font-weight: 500;
+}
+@media (min-width: 900px) {
+  .b-hero-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+  .b-hero-copy {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .b-hero-meta {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
+/* ========================================================= showcase */
+
+.b-showcase {
+  position: relative;
+  display: block;
+  margin-top: clamp(64px, 8vw, 120px);
+  border-radius: clamp(16px, 2vw, 28px);
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 16 / 9;
+  isolation: isolate;
+}
+.b-showcase img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 1.6s var(--ease);
+}
+.b-showcase:hover img {
+  transform: scale(1.025);
+}
+.b-showcase-tags {
+  position: absolute;
+  top: clamp(12px, 2vw, 24px);
+  right: clamp(12px, 2vw, 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.b-tag {
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.b-tag-solid {
+  background: #fff;
+  color: var(--ink);
+}
+@media (max-width: 599px) {
+  .b-showcase {
+    aspect-ratio: 4 / 3;
+  }
+  .b-showcase-tags .b-tag:not(.b-tag-solid) {
     display: none;
   }
 }
 
-/* ------------------------------------------------------------ hero */
+/* ============================================================= work */
 
-.brief-hero {
-  position: relative;
-  isolation: isolate;
-  padding: 72px 0 96px;
-  min-height: calc(100dvh - 50px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.b-work-head {
+  text-align: center;
 }
-/* full-bleed out of the centred column, tucked under the sticky nav */
-.brief-hero-art {
-  position: absolute;
-  z-index: -1;
-  top: -50px;
-  bottom: 0;
-  left: 50%;
-  width: 100vw;
-  margin-left: -50vw;
-  overflow: hidden;
-  pointer-events: none;
+.b-work-head .b-cue {
+  margin-top: clamp(12px, 1.6vw, 24px);
 }
-.brief-hero-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 60% 40%;
-  opacity: 0.5;
-}
-/* black from the left (behind the text) and from the bottom (into the page) */
-.brief-hero-art::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.6) 30%, transparent 60%),
-    linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.2) 75%, rgba(0, 0, 0, 0.35) 100%);
-}
-@media (max-width: 899px) {
-  .brief-hero-art img {
-    opacity: 0.32;
-  }
-}
-.brief-hero-foot {
-  margin-top: 56px;
+
+.b-spreads {
+  margin-top: clamp(72px, 10vw, 160px);
   display: grid;
-  gap: 48px;
+  gap: clamp(88px, 11vw, 180px);
+}
+.b-spread {
+  display: grid;
+  gap: 24px;
 }
 @media (min-width: 900px) {
-  .brief-hero-foot {
-    grid-template-columns: 1.4fr 1fr;
-    gap: 80px;
+  .b-spread {
+    grid-template-columns: repeat(12, 1fr);
+    gap: 32px;
     align-items: end;
   }
-}
-.brief-summary {
-  max-width: 56ch;
-  margin: 0;
-  font-size: 17px;
-  line-height: 1.6;
-  color: var(--dim);
-}
-.brief-cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 28px 0 0;
-}
-.brief-btn {
-  display: inline-flex;
-  align-items: center;
-  height: 44px;
-  padding: 0 20px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--paper);
-  transition:
-    background 0.25s,
-    color 0.25s,
-    border-color 0.25s,
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-btn:hover {
-  border-color: var(--amber);
-  transform: translateY(-2px);
-}
-.brief-btn-solid {
-  background: var(--paper);
-  color: var(--bg) !important;
-  border-color: var(--paper);
-}
-.brief-btn-solid:hover {
-  background: var(--amber);
-  border-color: var(--amber);
-}
-
-.brief-contents ol {
-  list-style: none;
-  margin: 14px 0 0;
-  padding: 0;
-  border-top: 1px solid var(--line);
-}
-.brief-contents li a {
-  display: grid;
-  grid-template-columns: 36px 1fr auto;
-  align-items: baseline;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 15px;
-  color: var(--paper);
-  transition:
-    color 0.25s,
-    padding-left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-contents li a:hover {
-  color: var(--amber);
-  padding-left: 8px;
-}
-.brief-contents li a .brief-dim {
-  font-size: 13px;
-}
-
-/* -------------------------------------------------------- sections */
-
-.brief-section {
-  padding: 96px 0;
-  border-top: 1px solid var(--line);
-}
-@media (min-width: 900px) {
-  .brief-section {
-    padding: 140px 0;
+  .b-spread .b-cover {
+    grid-column: 1 / span 7;
+    grid-row: 1;
+  }
+  .b-spread .b-spread-text {
+    grid-column: 9 / span 4;
+    grid-row: 1;
+  }
+  .b-spread.is-flip .b-cover {
+    grid-column: 6 / span 7;
+  }
+  .b-spread.is-flip .b-spread-text {
+    grid-column: 1 / span 4;
   }
 }
-.brief-head {
-  margin-bottom: 56px;
-}
-.brief-head .brief-label {
-  margin: 0 0 16px;
-}
 
-/* experience */
-.brief-roles {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.b-cover {
+  --cover-bg: var(--paper);
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: clamp(14px, 1.6vw, 22px);
+  overflow: hidden;
+  background: var(--cover-bg);
+  color: var(--ink);
+  isolation: isolate;
 }
-.brief-role {
-  display: grid;
-  gap: 12px;
-  padding: 32px 0;
-  border-top: 1px solid var(--line);
+.b-cover.is-ink {
+  --cover-bg: var(--ink);
+  color: #fff;
 }
-.brief-role:first-child {
-  border-top: 0;
-  padding-top: 0;
+.b-cover.is-photo {
+  --cover-bg: #161616;
+  color: #fff;
 }
-@media (min-width: 900px) {
-  .brief-role {
-    grid-template-columns: 260px 1fr;
-    gap: 48px;
-  }
+/* the recorded demo, set into the cover like a screen */
+.b-cover img {
+  position: absolute;
+  top: 7%;
+  left: 7%;
+  width: 86%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: clamp(6px, 0.8vw, 12px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.5);
+  transition: transform 1.4s var(--ease);
 }
-.brief-role-meta p {
-  margin: 0 0 6px;
+.b-cover-play {
+  position: absolute;
+  top: calc(7% + 12px);
+  right: calc(7% + 12px);
 }
-.brief-role-meta .brief-dim {
-  font-size: 14px;
+.b-cover-art {
+  position: absolute;
+  top: 9%;
+  left: 8%;
+  width: 84%;
+  height: 56%;
+  opacity: 0.85;
+  transition: transform 1.4s var(--ease);
 }
-.brief-bullets {
-  list-style: disc;
-  margin: 14px 0 0;
-  padding-left: 18px;
+.b-cover:hover .b-cover-art,
+.b-cover:hover img {
+  transform: scale(1.035);
+}
+.b-cover-figure {
+  position: absolute;
+  left: clamp(18px, 2.2vw, 32px);
+  right: clamp(18px, 2.2vw, 32px);
+  bottom: clamp(16px, 2vw, 28px);
   display: grid;
   gap: 10px;
-  font-size: 15.5px;
-  line-height: 1.6;
-  color: var(--dim);
 }
-.brief-bullets li::marker {
-  color: var(--amber);
+.b-cover-num {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 500;
+  font-size: clamp(34px, 4.4vw, 68px);
+  letter-spacing: -0.045em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
-.brief-more {
-  margin-top: 10px;
+.b-cover-cap {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.62;
 }
-.brief-more summary {
+
+.b-spread-text {
+  display: grid;
+  gap: 12px;
+  align-content: end;
+}
+.b-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(32px, 3.2vw, 48px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  margin-top: 4px;
+}
+.b-spread-text .b-body {
+  max-width: 30em;
+}
+.b-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 8px;
+}
+
+/* the rest of the work, as an index */
+.b-more {
+  margin-top: clamp(120px, 14vw, 220px);
+}
+.b-index {
+  margin-top: 20px;
+  margin-bottom: 28px;
+  border-top: 1px solid var(--line);
+}
+.b-index li {
+  border-bottom: 1px solid var(--line);
+}
+.b-index a {
+  display: grid;
+  gap: 4px 32px;
+  padding: 22px 0;
+  transition:
+    color 0.3s,
+    padding 0.5s var(--ease);
+}
+.b-index-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.b-index-line {
+  color: var(--grey);
+  font-size: 15px;
+  line-height: 1.5;
+  transition: color 0.3s;
+}
+.b-index-year {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 900px) {
+  .b-index a {
+    grid-template-columns: minmax(200px, 3fr) 6fr 1fr;
+    align-items: baseline;
+  }
+  .b-index-year {
+    text-align: right;
+  }
+  /* hovering one row quiets the others */
+  .b-index:hover a {
+    color: var(--soft);
+  }
+  .b-index:hover a .b-index-line {
+    color: var(--soft);
+  }
+  .b-index a:hover {
+    color: var(--ink);
+    padding-left: 12px;
+  }
+  .b-index a:hover .b-index-line {
+    color: var(--grey);
+  }
+}
+
+/* ============================================================ about */
+
+.b-about {
+  margin-top: clamp(40px, 5vw, 72px);
+}
+.b-timeline {
+  margin-top: clamp(80px, 10vw, 140px);
+}
+.b-timeline > li {
+  padding: clamp(32px, 4vw, 48px) 0;
+  border-top: 1px solid var(--line);
+}
+.b-timeline > li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.b-year,
+.b-role {
+  font-family: var(--font-display), sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+.b-year {
+  font-variant-numeric: tabular-nums;
+}
+.b-role-where {
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 2px;
+  margin-bottom: 14px;
+}
+.b-timeline .b-body {
+  max-width: 40em;
+}
+
+.b-details {
+  margin-top: 14px;
+}
+.b-details summary {
   display: inline-block;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--label);
+  cursor: pointer;
   list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+  transition: border-color 0.25s;
 }
-.brief-more summary::-webkit-details-marker {
+.b-details summary:hover {
+  border-color: var(--ink);
+}
+.b-details summary::-webkit-details-marker {
   display: none;
 }
-.brief-more summary::before {
+.b-details-open::before {
   content: "+ ";
-  color: var(--amber);
 }
-.brief-more[open] summary::before {
-  content: "− ";
+.b-details-close {
+  display: none;
 }
-.brief-more summary:hover {
-  color: var(--amber);
+.b-details[open] .b-details-open {
+  display: none;
 }
-
-/* projects */
-.brief-projects {
-  display: grid;
-  gap: 20px;
+.b-details[open] .b-details-close {
+  display: inline;
 }
-/* Below 768px the columns dissolve (display: contents) so every card is a
-   direct child of one grid, sorted by the `order` each card carries —
-   otherwise phones would read 01, 03, 05 … then 02, 04 …. */
-.brief-col {
-  display: contents;
-}
-@media (min-width: 768px) {
-  .brief-col {
-    display: grid;
-    align-content: start;
-    gap: 24px;
-  }
-  .brief-projects {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-  }
-  /* the right column starts lower, then the parallax lets it catch up */
-  .brief-col-offset {
-    padding-top: 120px;
-  }
-}
-.brief-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 28px;
-  border-radius: 20px;
-  background: var(--raise);
-  border: 1px solid var(--line);
-  transition:
-    border-color 0.3s,
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-card:hover {
-  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
-  transform: translateY(-4px);
-}
-.brief-card-top {
-  display: flex;
-  justify-content: space-between;
-}
-.brief-card-title {
-  margin: 18px 0 0;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  color: var(--paper);
-}
-.brief-card-context {
-  margin: 0;
-  font-size: 13.5px;
-}
-.brief-card-tagline {
-  margin: 8px 0 0;
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--text);
-}
-.brief-card-result {
-  margin: 4px 0 0;
-  padding-left: 14px;
-  border-left: 2px solid var(--amber);
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--dim);
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.brief-chips {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding: 0;
-}
-.brief-card-more {
+.b-details ul {
   margin-top: 14px;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--label);
-  transition: color 0.25s;
+  max-width: 40em;
 }
-.brief-card:hover .brief-card-more {
-  color: var(--amber);
-}
-.brief-chips li {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  color: var(--label);
-}
-
-/* The card is an <article>; its title link stretches over all of it, and
-   the external links lift above that overlay so each stays its own target. */
-.brief-card {
+.b-details li {
   position: relative;
+  padding-left: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--grey);
 }
-.brief-card-link::after {
-  content: "";
+.b-details li + li {
+  margin-top: 10px;
+}
+.b-details li::before {
+  content: "–";
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-}
-.brief-card-link:focus-visible {
-  outline: none;
-}
-.brief-card:has(.brief-card-link:focus-visible) {
-  outline: 2px solid var(--amber);
-  outline-offset: 3px;
-}
-.brief-card-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-}
-.brief-card-foot .brief-card-more {
-  margin-top: 0;
-}
-.brief-card-ext {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.brief-card-ext a {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--bg);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--paper);
-  transition:
-    border-color 0.25s,
-    color 0.25s;
-}
-.brief-card-ext a:hover {
-  border-color: var(--amber);
-  color: var(--amber);
+  left: 0;
 }
 
-.brief-mark {
-  flex: none;
-  vertical-align: -0.125em;
+/* ================================================== list-type rows */
+
+.b-section-head {
+  align-items: end;
+  margin-bottom: clamp(36px, 4vw, 56px);
 }
 
-/* hero: the GitHub button and the other profiles */
-.brief-btn-gh {
-  gap: 9px;
-  border-color: color-mix(in srgb, var(--amber) 55%, transparent);
-}
-.brief-btn-gh .brief-mark {
-  font-size: 17px;
-}
-.brief-btn-handle {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 12px;
-  color: var(--amber);
-}
-.brief-profiles {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 18px;
-  margin: 18px 0 0;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-.brief-profiles a {
-  transition: color 0.2s;
-}
-.brief-profiles a:hover {
-  color: var(--amber);
-}
-.brief-nav-gh {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--paper);
-}
-.brief-nav-gh .brief-mark {
-  font-size: 13px;
-}
-.brief-nav nav a {
-  white-space: nowrap;
-}
-/* name + GitHub + Resume + The room has to fit a 360px phone */
-@media (max-width: 639px) {
-  .brief-nav {
-    letter-spacing: 0.1em;
-  }
-  .brief-nav nav {
-    gap: 12px;
-  }
-}
-@media (max-width: 379px) {
-  .brief-nav {
-    gap: 10px;
-    letter-spacing: 0.05em;
-  }
-  .brief-nav nav {
-    gap: 10px;
-  }
-}
-.brief-links-gh {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--paper);
-}
-
-/* "See it run": demo, live Space, and the repositories */
-.brief-run {
-  margin-bottom: 72px;
-}
-.brief-run-kicker {
-  margin: 0 0 14px;
-}
-.brief-run-media {
-  display: grid;
-  gap: 20px;
-}
-@media (min-width: 768px) {
-  .brief-run-media {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-  }
-}
-.brief-run-card {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 20px;
-  background: var(--raise);
-  border: 1px solid var(--line);
-  transition:
-    border-color 0.3s,
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-run-card:hover {
-  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
-  transform: translateY(-4px);
-}
-.brief-run-poster {
-  position: relative;
-  display: block;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border-bottom: 1px solid var(--line);
-  background: #050505;
-}
-.brief-run-poster img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-run-card:hover .brief-run-poster img {
-  transform: scale(1.03);
-}
-.brief-run-card:hover .brief-demo-play {
-  color: var(--amber);
-}
-/* the Space has no poster frame, so it gets a drawn one: a browser bar
-   and the app's name over a warm glow */
-.brief-run-live {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background:
-    radial-gradient(60% 70% at 50% 60%, rgba(255, 179, 97, 0.16), transparent 70%),
-    radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1.5px) 0 0 / 18px 18px,
-    #050505;
-}
-.brief-run-url {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.6);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  color: var(--label);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.brief-run-dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 8px #4ade80;
-}
-.brief-run-live-title {
-  font-size: clamp(30px, 4.4vw, 46px);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--paper);
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-run-card:hover .brief-run-live-title {
-  transform: scale(1.04);
-}
-.brief-run-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 22px 26px 26px;
-}
-.brief-run-title {
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--paper);
-}
-.brief-run-blurb {
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--dim);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.brief-repos {
-  margin-top: 40px;
-}
-.brief-repos-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px 24px;
-}
-.brief-repos-head .brief-label {
-  margin: 0;
-}
-.brief-repos-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 12px;
-  color: var(--amber);
-}
-.brief-repos-all:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.brief-repos ul {
-  list-style: none;
-  margin: 14px 0 0;
-  padding: 0;
+/* open source, grouped by upstream */
+.b-oss {
   border-top: 1px solid var(--line);
 }
-.brief-repos li {
+.b-oss > li {
+  display: grid;
+  gap: 12px 32px;
+  padding: 28px 0;
   border-bottom: 1px solid var(--line);
 }
-.brief-repos li a {
+.b-oss-name {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(24px, 2.2vw, 32px);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.b-oss-org {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-text), sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--grey);
+}
+.b-oss-prs li + li {
+  border-top: 1px solid var(--line);
+}
+.b-oss-prs a {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 4px 24px;
-  padding: 14px 0;
-  font-size: 14.5px;
-  transition:
-    padding-left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    color 0.25s;
-}
-.brief-repos li a > .brief-dim {
-  grid-column: 1;
-}
-.brief-repos li a > .brief-label {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-}
-@media (min-width: 768px) {
-  .brief-repos li a {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-    align-items: baseline;
-  }
-  .brief-repos li a > .brief-dim {
-    grid-column: 2;
-  }
-  .brief-repos li a > .brief-label {
-    grid-column: 3;
-    grid-row: 1;
-  }
-}
-.brief-repos li a:hover {
-  padding-left: 8px;
-}
-.brief-repos li a:hover .brief-repos-name,
-.brief-repos li a:hover > .brief-label {
-  color: var(--amber);
-}
-.brief-repos-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 13.5px;
-  color: var(--paper);
-  overflow-wrap: anywhere;
-  transition: color 0.25s;
-}
-
-.brief-archive {
-  margin-top: 64px;
-}
-.brief-archive ul {
-  list-style: none;
-  margin: 14px 0 0;
-  padding: 0;
-  border-top: 1px solid var(--line);
-}
-.brief-archive li {
-  border-bottom: 1px solid var(--line);
-}
-.brief-archive li a {
-  display: grid;
-  gap: 4px 24px;
-  padding: 16px 0;
-  font-size: 15px;
-  transition:
-    padding-left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    color 0.25s;
-}
-.brief-archive li a:hover {
-  padding-left: 8px;
-}
-.brief-archive li a:hover .brief-archive-title {
-  color: var(--amber);
-}
-@media (min-width: 768px) {
-  .brief-archive li a {
-    grid-template-columns: 200px 1fr auto;
-    align-items: baseline;
-  }
-}
-.brief-archive-title {
-  color: var(--paper);
-  font-weight: 500;
-}
-
-/* open source */
-.brief-oss {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--line);
-}
-.brief-oss li {
-  border-bottom: 1px solid var(--line);
-}
-.brief-oss a {
-  display: grid;
-  gap: 6px 32px;
-  padding: 20px 0;
-  transition: padding-left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@media (min-width: 900px) {
-  .brief-oss a {
-    grid-template-columns: 260px 1fr auto;
-    align-items: baseline;
-  }
-}
-.brief-oss a:hover {
-  padding-left: 8px;
-}
-.brief-oss-project {
-  font-weight: 600;
-  color: var(--paper);
-}
-.brief-oss-project .brief-dim {
-  font-weight: 400;
-  font-size: 13px;
-}
-.brief-oss-what {
-  font-size: 15.5px;
-  line-height: 1.55;
-  color: var(--text);
-  transition: color 0.25s;
-}
-.brief-oss a:hover .brief-oss-what {
-  color: var(--amber);
-}
-.brief-oss-meta {
-  display: flex;
   align-items: baseline;
-  gap: 14px;
-  white-space: nowrap;
+  padding: 12px 0;
+  transition: opacity 0.3s;
 }
-.brief-oss-status {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #7fd49b;
-}
-.brief-oss-status.is-open {
-  color: var(--dim);
-}
-
-/* record */
-.brief-record {
-  display: grid;
-  gap: 48px;
-}
-@media (min-width: 900px) {
-  .brief-record {
-    grid-template-columns: 1fr 300px;
-    gap: 80px;
+@media (max-width: 599px) {
+  .b-oss-prs a {
+    grid-template-columns: 1fr;
+  }
+  .b-oss-status {
+    justify-self: start;
   }
 }
-.brief-achievements {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.brief-achievements li {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
-}
-.brief-achievements li:first-child {
-  border-top: 1px solid var(--line);
-}
-.brief-achievements p {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.55;
-  color: var(--text);
-}
-.brief-achievements .brief-label {
+.b-oss-prs li:first-child a {
   padding-top: 4px;
 }
-.brief-edu p {
-  margin: 0 0 6px;
+.b-oss-what {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
 }
-.brief-edu .brief-label {
-  margin-bottom: 14px;
-}
-
-/* stack */
-.brief-marquee {
-  /* full-bleed out of the centred column */
-  margin-inline: calc(50% - 50vw);
-  overflow: hidden;
-  padding: 22px 0;
-  border-block: 1px solid var(--line);
-  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-}
-.brief-marquee-track {
-  display: flex;
-  width: max-content;
-  animation: brief-marquee 70s linear infinite;
-}
-.brief-marquee:hover .brief-marquee-track {
-  animation-play-state: paused;
-}
-.brief-marquee-item {
-  padding-inline: 18px;
-  font-size: clamp(22px, 3vw, 34px);
+.b-oss-status {
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: -0.02em;
-  color: var(--paper);
+  color: var(--grey);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-.brief-marquee-item::after {
-  content: "✦";
-  margin-left: 36px;
-  font-size: 0.5em;
-  vertical-align: middle;
-  color: var(--amber);
+.b-oss-status.is-open {
+  display: inline-block;
+  padding: 1px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
 }
-@keyframes brief-marquee {
-  to {
-    transform: translateX(-50%);
-  }
+.b-oss-what::after {
+  content: " ↗";
+  color: var(--soft);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
-.brief-skills {
-  display: grid;
-  gap: 28px 40px;
-  margin-top: 56px;
+.b-oss-prs a:hover .b-oss-what::after {
+  opacity: 1;
 }
-@media (min-width: 640px) {
-  .brief-skills {
+@media (min-width: 900px) {
+  .b-oss > li {
     grid-template-columns: 1fr 1fr;
   }
+  .b-oss:hover .b-oss-prs a {
+    opacity: 0.4;
+  }
+  .b-oss .b-oss-prs a:hover {
+    opacity: 1;
+  }
 }
-@media (min-width: 1000px) {
-  .brief-skills {
+
+/* recognition: heading holds still on the left while the list scrolls */
+.b-sticky-head {
+  align-self: start;
+}
+@media (min-width: 900px) {
+  .b-sticky-head {
+    position: sticky;
+    top: 96px;
+  }
+}
+.b-awards {
+  counter-reset: a;
+  border-top: 1px solid var(--line);
+}
+.b-awards li {
+  counter-increment: a;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.b-awards li::before {
+  content: counter(a, decimal-leading-zero);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey);
+  padding-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================ stack */
+
+.b-stack {
+  display: grid;
+  gap: 40px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  padding-top: 32px;
+}
+@media (min-width: 1024px) {
+  .b-stack {
     grid-template-columns: repeat(4, 1fr);
   }
 }
-.brief-skills .brief-label {
-  margin: 0 0 10px;
-}
-.brief-skill-chips {
-  margin-top: 4px;
-}
-.brief-skill-chips li {
+.b-stack dt {
   font-size: 12px;
-  color: var(--text);
-  background: var(--raise);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--grey);
+  margin-bottom: 12px;
 }
-.brief-skill-items {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.65;
-  color: var(--dim);
+.b-stack dd {
+  font-size: 16px;
+  line-height: 1.75;
 }
 
-/* contact */
-.brief-email {
-  display: inline-block;
-  font-size: clamp(24px, 5.4vw, 64px);
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  color: var(--paper);
-  overflow-wrap: anywhere;
-  background: linear-gradient(var(--amber), var(--amber)) 0 100% / 0 2px no-repeat;
-  transition:
-    background-size 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-    color 0.3s;
+/* ========================================================== contact */
+
+.b-contact {
+  margin-top: clamp(140px, 16vw, 240px);
+  padding: clamp(96px, 12vw, 180px) 0 clamp(88px, 10vw, 150px);
+  border-top: 1px solid var(--line);
+  text-align: center;
 }
-.brief-email:hover {
-  color: var(--amber);
-  background-size: 100% 2px;
+.b-contact-title {
+  font-size: clamp(42px, 8vw, 128px);
+  letter-spacing: -0.045em;
+  line-height: 0.98;
 }
-.brief-links {
+.b-contact-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
-  margin: 32px 0 0;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--label);
+  justify-content: center;
+  gap: 10px;
+  margin-top: clamp(36px, 4vw, 56px);
 }
-.brief-links a:hover {
-  color: var(--amber);
-}
+
+/* =========================================================== footer */
 
 .brief-footer {
+  padding-bottom: 28px;
+}
+.brief-footer-inner {
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-block: 32px 48px;
-  border-top: 1px solid var(--line);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-.brief-footer p {
-  margin: 0;
-}
-.brief-footer a {
-  color: var(--amber);
-}
-/* pops toward you on hover: lifts, grows a touch, picks up the lamp's
-   glow, and the arrow steps forward. The link is a fixed hit area and
-   only its inner text moves — moving the link itself slid it out from
-   under the cursor, which ended the hover, which dropped it back: a
-   flicker loop. */
-.brief-footer-room {
-  display: inline-block;
-  padding: 6px 0;
-}
-.brief-footer-room-text,
-.brief-footer-room-text span {
-  display: inline-block;
-  transition:
-    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
-    text-shadow 0.3s,
-    color 0.3s;
-}
-.brief-footer-room-text {
-  transform-origin: 100% 50%;
-}
-.brief-footer-room:hover .brief-footer-room-text,
-.brief-footer-room:focus-visible .brief-footer-room-text {
-  color: #ffd3a0;
-  transform: translateY(-2px) scale(1.08);
-  text-shadow: 0 0 14px rgba(255, 179, 97, 0.55);
-}
-.brief-footer-room:hover .brief-footer-room-text span,
-.brief-footer-room:focus-visible .brief-footer-room-text span {
-  transform: translateX(5px);
-}
-.brief-credit {
-  margin: -28px 0 0;
-  padding-bottom: 40px;
-  font-size: 11px;
-  color: var(--label);
-}
-.brief-credit a {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .brief-marquee-track {
-    animation: none;
-  }
-  .brief-card,
-  .brief-run-card,
-  .brief-btn,
-  .brief-contents li a {
-    transition: none;
-  }
-}
-
-/* ===================================================== case studies */
-
-.brief-case {
-  counter-reset: block;
-  padding-bottom: 40px;
-}
-.brief-case-head {
-  padding: 56px 0 72px;
-}
-@media (min-width: 900px) {
-  .brief-case-head {
-    padding: 88px 0 104px;
-  }
-}
-.brief-back {
-  display: inline-block;
-  margin-bottom: 40px;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--label) !important;
-  transition:
-    color 0.25s,
-    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-back:hover {
-  color: var(--amber) !important;
-  transform: translateX(-4px);
-}
-.brief-case-head .brief-label {
-  margin: 0;
-}
-.brief-case-title {
-  margin: 18px 0 0;
-  font-size: clamp(40px, 8vw, 104px);
+  gap: 12px 24px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  color: var(--paper);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
-.brief-case-tagline {
-  max-width: 34ch;
-  margin: 24px 0 0;
-  font-size: clamp(20px, 2.6vw, 30px);
+.brief-footer-links {
+  display: flex;
+  gap: 18px;
+}
+.brief-footer-links a,
+.brief-footer-room {
+  transition: color 0.25s;
+}
+.brief-footer-links a:hover,
+.brief-footer-room:hover {
+  color: var(--grey);
+}
+.brief-footer-room {
+  color: var(--grey);
+}
+.brief-footer-room:hover {
+  color: var(--ink);
+}
+
+/* ======================================================= case study */
+
+.b-case-head {
+  padding-top: clamp(40px, 7vw, 96px);
+}
+.b-back {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--grey);
+  transition: color 0.25s;
+}
+.b-back:hover {
+  color: var(--ink);
+}
+.b-case-title {
+  margin-top: clamp(28px, 4vw, 56px);
+  font-size: clamp(48px, 9vw, 144px);
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  max-width: 12em;
+}
+.b-case-tagline {
+  margin-top: clamp(20px, 2.4vw, 32px);
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(20px, 2vw, 28px);
   font-weight: 500;
   letter-spacing: -0.02em;
-  line-height: 1.3;
-  color: var(--text);
+  line-height: 1.25;
+  color: var(--grey);
+  max-width: 28em;
 }
-.brief-facts {
-  display: grid;
-  gap: 20px 32px;
-  margin: 48px 0 0;
+.b-facts {
+  margin-top: clamp(48px, 6vw, 80px);
   padding-top: 24px;
   border-top: 1px solid var(--line);
+  display: grid;
+  gap: 24px 32px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 }
-@media (min-width: 768px) {
-  .brief-facts {
-    grid-template-columns: repeat(4, auto);
-    justify-content: start;
-    gap: 32px 56px;
-  }
-}
-.brief-facts dt {
+.b-facts dt {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--grey);
   margin-bottom: 8px;
 }
-.brief-facts dd {
-  margin: 0;
+.b-facts dd {
   font-size: 15px;
-  color: var(--paper);
+  font-weight: 500;
+  line-height: 1.45;
 }
-.brief-facts-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-}
-.brief-facts-links a:hover {
-  color: var(--amber);
-}
-
-/* a numbered section: number + title on the left, content on the right */
-.brief-block {
-  counter-increment: block;
+.b-facts-links {
   display: grid;
-  gap: 20px;
-  padding: 64px 0;
-  border-top: 1px solid var(--line);
+  gap: 4px;
+  justify-items: start;
 }
-@media (min-width: 900px) {
-  .brief-block {
-    grid-template-columns: 280px 1fr;
-    gap: 48px;
-    padding: 88px 0;
-  }
-  .brief-block > header {
-    position: sticky;
-    top: 88px;
-    align-self: start;
-  }
+.b-facts-links a {
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px
+    no-repeat;
+  transition: background-size 0.5s var(--ease);
 }
-/* grid children default to min-width:auto — without this a wide diagram
-   stretches the column instead of scrolling inside it */
-.brief-block > div {
-  min-width: 0;
-}
-.brief-block-n {
-  margin: 0 0 12px;
-}
-.brief-block-n::before {
-  content: counter(block, decimal-leading-zero);
-}
-.brief-block-title {
-  margin: 0;
-  font-size: clamp(26px, 3vw, 36px);
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  color: var(--paper);
-}
-.brief-prose {
-  max-width: 68ch;
-  margin: 0 0 18px;
-  font-size: 16.5px;
-  line-height: 1.7;
-  color: var(--text);
-}
-.brief-prose:last-child {
-  margin-bottom: 0;
+.b-facts-links a:hover {
+  background-size: 100% 1px;
 }
 
-.brief-results {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 14px;
-}
-.brief-results li {
-  padding: 18px 22px;
-  border-radius: 14px;
-  background: var(--raise);
-  border: 1px solid var(--line);
-  border-left: 2px solid var(--amber);
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--text);
-}
-
-.brief-demo {
+.b-demo {
   position: relative;
   display: block;
+  margin-top: clamp(56px, 7vw, 96px);
+  border-radius: clamp(16px, 2vw, 28px);
   overflow: hidden;
-  margin-bottom: 20px;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: var(--raise);
+  background: #000;
 }
-.brief-demo img {
+.b-demo img {
   display: block;
   width: 100%;
   height: auto;
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 1.4s var(--ease);
 }
-.brief-demo:hover img {
-  transform: scale(1.025);
+.b-demo:hover img {
+  transform: scale(1.02);
 }
-.brief-demo-play {
+.b-demo-play {
   position: absolute;
-  left: 16px;
-  bottom: 16px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--paper);
+  left: clamp(14px, 2vw, 24px);
+  bottom: clamp(14px, 2vw, 24px);
 }
-.brief-demo:hover .brief-demo-play {
-  color: var(--amber);
+.b-caption {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--grey);
+  max-width: 60em;
 }
 
-/* Full-bleed row under both columns: the room's diagrams are 790-1200px
-   wide in their own units, too wide for the text column. Here they get
-   up to 1400px and scale to fill it (ArchDiagram's `fit`); below their
-   natural width they scroll sideways inside their own box. */
-/* a pinned title would slide over the full-width row beneath it */
-.brief-block:has(.brief-block-wide) > header {
-  position: static;
-}
-.brief-block-wide {
-  --w: min(calc(100vw - 32px), 1400px);
-  grid-column: 1 / -1;
-  width: var(--w);
-  margin-left: calc((100% - var(--w)) / 2);
-}
-.brief-arch figcaption {
-  font-size: 10px !important;
-  margin-top: 10px !important;
-}
-
-.brief-challenges,
-.brief-timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.brief-challenges li {
-  display: grid;
-  grid-template-columns: 40px 1fr;
-  padding: 24px 0;
-  border-bottom: 1px solid var(--line);
-}
-.brief-challenges li:first-child {
-  padding-top: 0;
-}
-.brief-challenges li:last-child {
-  border-bottom: 0;
-}
-.brief-challenges .brief-label {
-  padding-top: 5px;
-}
-.brief-challenges .brief-prose {
-  margin-top: 10px;
-  font-size: 15.5px;
-}
-
-.brief-lessons {
-  margin: 0;
-  padding-left: 20px;
-  display: grid;
-  gap: 14px;
-  list-style: disc;
-  font-size: 17px;
-  line-height: 1.6;
-  color: var(--text);
-}
-.brief-lessons li::marker {
-  color: var(--amber);
-}
-
-.brief-stack {
-  display: grid;
-  gap: 20px 32px;
-  margin: 0;
-}
-@media (min-width: 640px) {
-  .brief-stack {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-.brief-stack dt {
-  margin-bottom: 6px;
-}
-.brief-stack dd {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--dim);
-}
-
-.brief-timeline li {
-  display: grid;
-  gap: 4px 24px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line);
-}
-@media (min-width: 640px) {
-  .brief-timeline li {
-    grid-template-columns: 120px 1fr;
-  }
-}
-.brief-timeline .brief-label {
-  padding-top: 3px;
-}
-.brief-timeline p {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--dim);
-}
-
-.brief-next {
-  display: grid;
-  gap: 40px;
-  padding: 72px 0 40px;
-  border-top: 1px solid var(--line);
+.b-block {
+  padding-top: clamp(80px, 10vw, 140px);
 }
 @media (min-width: 900px) {
-  .brief-next {
-    grid-template-columns: 1fr 280px;
-    align-items: end;
+  .b-block-title {
+    position: sticky;
+    top: 96px;
+    align-self: start;
   }
 }
-.brief-next-link {
+.b-block-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(24px, 2.2vw, 32px);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+.b-prose {
+  font-size: 17px;
+  line-height: 1.65;
+  max-width: 38em;
+}
+.b-prose + .b-prose {
+  margin-top: 1.1em;
+}
+.b-block-wide {
+  margin-top: clamp(40px, 5vw, 64px);
+}
+.b-arch {
+  background: var(--ink);
+  border-radius: clamp(16px, 2vw, 28px);
+  padding: clamp(14px, 3vw, 40px);
+}
+
+.b-results {
+  counter-reset: r;
+  border-top: 1px solid var(--line);
+}
+.b-results li {
+  counter-increment: r;
+  position: relative;
+  padding: 18px 0 18px 44px;
+  border-bottom: 1px solid var(--line);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.b-results li::before {
+  content: counter(r, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 21px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--grey);
+  font-variant-numeric: tabular-nums;
+}
+
+.b-hard > li {
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+}
+.b-hard > li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.b-hard-title {
+  font-family: var(--font-display), sans-serif;
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+
+.b-lessons li {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(20px, 1.8vw, 24px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+.b-lessons li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.b-case-stack {
   display: grid;
-  gap: 12px;
+  gap: 24px 32px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
 }
-.brief-next-title {
-  font-size: clamp(36px, 6vw, 80px);
+.b-case-stack dt {
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  color: var(--paper);
-  transition: color 0.3s;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--grey);
+  margin-bottom: 8px;
 }
-.brief-next-title span {
-  display: inline-block;
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-next-link:hover .brief-next-title {
-  color: var(--amber);
-}
-.brief-next-link:hover .brief-next-title span {
-  transform: translateX(10px);
-}
-.brief-next-link .brief-dim {
-  max-width: 52ch;
+.b-case-stack dd {
   font-size: 15px;
   line-height: 1.55;
 }
-.brief-related {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
+
+.b-case-timeline li {
+  display: grid;
+  gap: 4px 24px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.b-case-timeline li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.b-case-timeline span {
+  color: var(--grey);
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 600px) {
+  .b-case-timeline li {
+    grid-template-columns: 140px 1fr;
+  }
+}
+
+.b-next {
+  margin-top: clamp(120px, 14vw, 200px);
   border-top: 1px solid var(--line);
 }
-.brief-related a {
-  display: block;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 15px;
-  color: var(--paper);
-  transition: color 0.25s;
+.b-next-link {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 18px;
+  padding: clamp(80px, 10vw, 150px) 0;
 }
-.brief-related a:hover {
-  color: var(--amber);
+.b-next-title {
+  font-size: clamp(48px, 10vw, 160px);
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+  transition: transform 0.8s var(--ease);
+}
+.b-next-link:hover .b-next-title {
+  transform: translateY(-6px);
+}
+.b-next-line {
+  font-size: 16px;
+  color: var(--grey);
+  max-width: 34em;
 }
 
 /* ================================================= page transitions */
-/* Old page sinks back and blurs; the new one rises over it from below
-   with rounded top corners — the curve and keyframes follow the
-   reference site. The nav is its own layer so it holds still. */
+/* The old page fades out; the new one fades in a short way up. The nav
+   is its own layer so it holds still across the change. */
 
 .brief-page {
   view-transition-name: brief-page;
@@ -1546,483 +1219,32 @@ html.lenis body {
 ::view-transition-group(brief-nav) {
   animation: none;
 }
-::view-transition-group(brief-page) {
-  animation-duration: 0.9s;
-  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
-}
 ::view-transition-old(brief-page) {
-  transform-origin: 50% 0;
-  animation: 0.6s cubic-bezier(0.76, 0, 0.24, 1) both brief-page-out;
+  animation: 0.32s cubic-bezier(0.4, 0, 1, 1) both brief-page-out;
 }
 ::view-transition-new(brief-page) {
-  animation: 0.9s cubic-bezier(0.76, 0, 0.24, 1) both brief-page-in;
+  animation: 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both brief-page-in;
 }
 @keyframes brief-page-out {
   to {
     opacity: 0;
-    filter: blur(8px);
-    clip-path: inset(0 3% round 28px);
-    transform: scale(0.94) translateY(-2vh);
   }
 }
 @keyframes brief-page-in {
   from {
-    clip-path: inset(100% 0 0 round 40px 40px 0 0);
-    transform: translateY(14vh);
-  }
-  to {
-    clip-path: inset(0);
-    transform: none;
+    opacity: 0;
+    transform: translateY(24px);
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(brief-page),
   ::view-transition-old(brief-page),
   ::view-transition-new(brief-page) {
     animation: none;
   }
-}
-
-/* ===================================================== numbers wall */
-/* The headline is pinned (sticky) in the middle of the screen while two
-   columns of stat cards scroll up past it. The columns are pulled up by
-   one viewport so they travel over the pinned panel, and the section's
-   height is simply the columns' height. */
-
-.brief-wall {
-  position: relative;
-  margin-top: 40px;
-}
-.brief-wall-pin {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  height: 100vh;
-  height: 100svh;
-  display: grid;
-  place-items: center;
-  text-align: center;
-}
-.brief-wall-pin > div {
-  max-width: 560px;
-}
-.brief-wall-sub {
-  max-width: 30rem;
-  margin: 20px auto 28px;
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--dim);
-}
-.brief-wall-cols {
-  position: relative;
-  z-index: 2;
-  margin-top: -100vh;
-  margin-top: -100svh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 75vh 0 20vh;
-  pointer-events: none;
-}
-@media (min-width: 900px) {
-  .brief-wall-cols {
-    gap: 160px;
-    padding: 60vh 0 15vh;
+  .brief *,
+  .brief *::before,
+  .brief *::after {
+    transition-duration: 0.01ms !important;
   }
-}
-.brief-wall-col {
-  display: grid;
-  align-content: start;
-  gap: 38vh;
-}
-/* two narrow columns cover the pinned heading more often on a phone —
-   space the cards out so it reads clearly between passes */
-@media (max-width: 639px) {
-  .brief-wall-col {
-    gap: 62vh;
-  }
-  .brief-wall-col-2 {
-    padding-top: 45vh;
-  }
-}
-.brief-wall-col-2 {
-  padding-top: 32vh;
-  justify-items: end;
-}
-@media (min-width: 900px) {
-  .brief-wall-col-2 {
-    padding-top: 40vh;
-  }
-}
-.brief-stat {
-  pointer-events: auto;
-  display: grid;
-  gap: 10px;
-  width: min(100%, 340px);
-  padding: 22px;
-  border-radius: 20px;
-  background: rgba(14, 14, 14, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--line);
-  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
-  transition:
-    border-color 0.3s,
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.brief-stat:hover {
-  border-color: color-mix(in srgb, var(--amber) 50%, transparent);
-  transform: translateY(-4px) rotate(-0.5deg);
-}
-.brief-stat-value {
-  font-size: clamp(30px, 4.4vw, 52px);
-  font-weight: 600;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  color: var(--amber);
-}
-.brief-stat-label {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text);
-}
-@media (max-width: 639px) {
-  .brief-stat {
-    padding: 16px;
-    border-radius: 16px;
-  }
-  .brief-stat-label {
-    font-size: 13px;
-  }
-}
-
-/* ------------------------------------------------------------ toys */
-
-/* The pendant lamp: hangs from behind the nav (one z-step below it), so
-   the cord reads as coming down out of the ceiling. */
-.brief-lamp {
-  --lamp-right: 18px;
-  position: fixed;
-  top: 0;
-  right: var(--lamp-right);
-  z-index: 19;
-  pointer-events: none;
-}
-@media (min-width: 640px) {
-  .brief-lamp {
-    --lamp-right: 40px;
-  }
-  .brief .brief-lamp svg {
-    width: 52px;
-  }
-  .brief .brief-lamp-cord {
-    height: clamp(58px, 10vh, 96px);
-  }
-}
-.brief-lamp-rig {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform-origin: 50% 0;
-}
-.brief-lamp-cord {
-  width: 1px;
-  height: 50px;
-  background: var(--label);
-}
-.brief-lamp button {
-  pointer-events: auto;
-  margin-top: -1px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: grab;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.brief-lamp button:active {
-  cursor: grabbing;
-}
-.brief-lamp button:focus-visible {
-  outline: 1px solid var(--amber);
-  outline-offset: 4px;
-  border-radius: 6px;
-}
-.brief-lamp svg {
-  display: block;
-  width: 40px;
-  height: auto;
-  overflow: visible;
-  transition: filter 0.4s;
-}
-.brief-lamp-collar,
-.brief-lamp-shade {
-  fill: #161616;
-  stroke: var(--label);
-  stroke-width: 1.2;
-  transition: stroke 0.3s;
-}
-.brief-lamp button:hover .brief-lamp-shade {
-  stroke: var(--amber);
-}
-.brief-lamp-bulb {
-  fill: #262626;
-  transition: fill 0.35s;
-}
-.brief-lamp[data-on="true"] .brief-lamp-bulb {
-  fill: #ffe2bd;
-}
-.brief-lamp[data-on="true"] svg {
-  filter: drop-shadow(0 6px 14px rgba(255, 179, 97, 0.7));
-}
-
-/* The cone of light. It lives inside the rig, so it swings with the
-   shade. Kept cheap on purpose: no blend mode (that would re-blend the
-   page under it on every scroll frame), and `visibility: hidden` while
-   off, so an unlit lamp paints nothing at all. */
-.brief-lamp-beam {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  width: min(1100px, 240vw);
-  height: 150vh;
-  margin-top: -6px;
-  transform: translateX(-50%);
-  background: conic-gradient(
-    from 157deg at 50% 0%,
-    transparent 0deg,
-    rgba(255, 186, 110, 0.11) 14deg,
-    rgba(255, 196, 130, 0.15) 23deg,
-    rgba(255, 186, 110, 0.11) 32deg,
-    transparent 46deg
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 55% 85% at 50% 0%,
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 45%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    ellipse 55% 85% at 50% 0%,
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 45%,
-    transparent 100%
-  );
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.5s ease-out,
-    visibility 0s 0.5s;
-}
-.brief-lamp[data-on="true"] .brief-lamp-beam {
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.5s ease-out;
-}
-
-/* The flower, sitting in the bottom corner of the contact section. */
-.brief-contact {
-  position: relative;
-}
-.brief-flower {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 84px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-@media (min-width: 900px) {
-  .brief-flower {
-    width: 124px;
-    bottom: 24px;
-  }
-}
-.brief-flower:focus-visible {
-  outline: 1px solid var(--amber);
-  outline-offset: 4px;
-  border-radius: 8px;
-}
-.brief-flower svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-.brief-flower svg * {
-  transform-box: view-box;
-}
-.brief-flower-plant {
-  transform-origin: 60px 140px;
-  transform: rotate(-3deg);
-  transition: transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.brief-flower[data-open="true"] .brief-flower-plant {
-  transform: rotate(0deg);
-}
-/* toward the lamp, which hangs up and to the right */
-.brief-flower[data-lit="true"] .brief-flower-plant {
-  transform: rotate(7deg);
-}
-.brief-flower-stem {
-  fill: none;
-  stroke: var(--label);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-.brief-flower-leaf {
-  fill: rgba(255, 255, 255, 0.04);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.brief-flower-leaf-l {
-  transform-origin: 59px 120px;
-  transform: rotate(8deg);
-}
-.brief-flower-leaf-r {
-  transform-origin: 61px 102px;
-  transform: rotate(-8deg);
-}
-.brief-flower[data-open="true"] .brief-flower-leaf-l {
-  transform: rotate(-8deg);
-}
-.brief-flower[data-open="true"] .brief-flower-leaf-r {
-  transform: rotate(8deg);
-}
-/* each petal pivots on the flower's heart (60,52): folded up into a bud
-   when closed, fanned out to its own angle when open */
-.brief-flower-petal {
-  fill: rgba(255, 179, 97, 0.06);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  transform-origin: 60px 52px;
-  transform: rotate(calc(var(--angle) / 10 - 18deg)) scale(0.6);
-  transition:
-    transform 0.55s cubic-bezier(0.5, 0, 0.75, 0) calc((7 - var(--i)) * 25ms),
-    fill 0.4s,
-    stroke 0.4s;
-}
-.brief-flower[data-open="true"] .brief-flower-petal {
-  fill: rgba(255, 179, 97, 0.16);
-  stroke: var(--amber);
-  transform: rotate(var(--angle)) scale(1);
-  transition:
-    transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 45ms),
-    fill 0.4s,
-    stroke 0.4s;
-}
-.brief-flower[data-lit="true"] .brief-flower-petal {
-  fill: rgba(255, 179, 97, 0.32);
-}
-.brief-flower-heart {
-  fill: var(--raise);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  transform-origin: 60px 52px;
-  transform: scale(0.55);
-  transition:
-    transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
-    fill 0.4s,
-    stroke 0.4s;
-}
-.brief-flower[data-open="true"] .brief-flower-heart {
-  fill: var(--amber);
-  stroke: var(--amber);
-  transform: scale(1);
-}
-.brief-flower-pot {
-  fill: var(--raise);
-  stroke: var(--label);
-  stroke-width: 1.2;
-  stroke-linejoin: round;
-}
-@media (prefers-reduced-motion: reduce) {
-  .brief-flower svg * {
-    transition-duration: 0.01s !important;
-    transition-delay: 0s !important;
-  }
-}
-
-/* ---------------------------------------------------- section icons */
-
-/* Animated emoji beside each section title (components/brief/icons.tsx).
-   The box is sized up front so the title never shifts when the
-   animation loads into it. */
-.brief-icon {
-  display: inline-block;
-  width: 0.78em;
-  height: 0.78em;
-  margin-left: 0.25em;
-  vertical-align: -0.08em;
-}
-.brief-icon svg {
-  display: block;
-}
-
-/* ------------------------------------------------------ reading beam */
-
-/* Reading progress (components/brief/progress.tsx): a short fixed
-   track, centred on the left edge, that an amber blade fills from the
-   top as you read — white-hot at its leading tip. The track never moves
-   or grows; only the fill does. */
-.brief-beam {
-  position: fixed;
-  top: 50%;
-  left: 8px;
-  z-index: 15;
-  width: 2px;
-  height: 140px;
-  margin-top: -70px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-  /* clip the blade to the track, but leave room for its glow */
-  clip-path: inset(-6px -12px -6px -12px);
-}
-@media (min-width: 640px) {
-  .brief-beam {
-    left: 16px;
-    height: 180px;
-    margin-top: -90px;
-  }
-}
-@media (min-width: 1280px) {
-  .brief-beam {
-    left: 28px;
-  }
-}
-.brief-beam-blade {
-  position: absolute;
-  inset: 0;
-  border-radius: 2px;
-  transform: translateY(-100%);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 179, 97, 0.25) 0%,
-    rgba(255, 179, 97, 0.9) 70%,
-    #ffd3a0 92%,
-    #fff3e0 100%
-  );
-  box-shadow: 0 0 8px rgba(255, 179, 97, 0.5);
-  will-change: transform;
-}
-/* the hot tip */
-.brief-beam-blade::after {
-  content: "";
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  margin-left: -2.5px;
-  border-radius: 50%;
-  background: #fffaf2;
-  box-shadow:
-    0 0 5px 2px rgba(255, 210, 150, 0.9),
-    0 0 12px 3px rgba(255, 179, 97, 0.4);
 }

@@ -211,8 +211,8 @@ export function MaskTitle({
       <Tag
         className={className}
         variants={{
-          hidden: { y: "105%", rotate: 2 },
-          shown: { y: "0%", rotate: 0 },
+          hidden: { y: "105%" },
+          shown: { y: "0%" },
         }}
         transition={{ duration: 1.1, delay, ease: EASE.out }}
       >
@@ -222,11 +222,7 @@ export function MaskTitle({
   );
 }
 
-/**
- * A block that lifts and unclips from the top edge as it enters. The
- * clip is dropped when the animation ends so focus rings and shadows
- * are never cut off afterwards.
- */
+/** A block that fades up a short way as it enters. Quiet on purpose. */
 export function Reveal({
   children,
   delay = 0,
@@ -244,12 +240,7 @@ export function Reveal({
   style?: CSSProperties;
 }) {
   const Tag = motion[as];
-  const shown = {
-    opacity: 1,
-    y: 0,
-    clipPath: "inset(0% 0% 0% 0% round 0px)",
-    transitionEnd: { clipPath: "none" },
-  };
+  const shown = { opacity: 1, y: 0 };
   const trigger = immediate
     ? { animate: shown }
     : { whileInView: shown, viewport: { once: true, margin: "-80px" } };
@@ -257,13 +248,9 @@ export function Reveal({
     <Tag
       className={className}
       style={style}
-      initial={{
-        opacity: 0,
-        y: 36,
-        clipPath: "inset(18% 0% 0% 0% round 20px)",
-      }}
+      initial={{ opacity: 0, y: 20 }}
       {...trigger}
-      transition={{ duration: 1.1, delay, ease: EASE.out }}
+      transition={{ duration: 0.9, delay, ease: EASE.out }}
     >
       {children}
     </Tag>
@@ -317,24 +304,6 @@ export function Parallax({
   return (
     <div ref={ref} className={className}>
       {children}
-    </div>
-  );
-}
-
-/** An endless horizontal ticker. Pure CSS; pauses on hover. */
-export function Marquee({ items }: { items: readonly string[] }) {
-  const row = (copy: number) =>
-    items.map((s, i) => (
-      <span key={`${copy}-${i}`} className="brief-marquee-item">
-        {s}
-      </span>
-    ));
-  return (
-    <div className="brief-marquee" aria-hidden>
-      <div className="brief-marquee-track">
-        {row(0)}
-        {row(1)}
-      </div>
     </div>
   );
 }

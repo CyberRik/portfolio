@@ -72,48 +72,42 @@ export default async function CaseStudy({
 
   // next in reading order, wrapping — the page always hands you onward
   const next = PROJECT_DOCS[ORDER[(ORDER.indexOf(p.id) + 1) % ORDER.length]];
-  const related = p.related
-    .filter((id) => id !== next.id)
-    .map((id) => PROJECT_DOCS[id]);
 
   return (
-    <main className="brief-wrap brief-case">
-      <header className="brief-case-head">
+    <main className="b-case">
+      <header className="b-wrap b-case-head">
         <Reveal immediate>
-          <TransitionLink href="/brief#work" className="brief-back">
+          <TransitionLink href="/brief#work" className="b-back">
             ← All work
           </TransitionLink>
         </Reveal>
-        <Reveal immediate delay={0.05}>
-          <p className="brief-label">
-            {p.context} · {p.period}
-          </p>
-        </Reveal>
-        <MaskTitle as="h1" immediate delay={0.1} className="brief-case-title">
-          {p.title}
-        </MaskTitle>
-        <Reveal immediate delay={0.25}>
-          <p className="brief-case-tagline">{p.tagline}</p>
+        <h1 className="b-display b-case-title">
+          <MaskTitle as="span" immediate delay={0.05}>
+            {p.title}
+          </MaskTitle>
+        </h1>
+        <Reveal immediate delay={0.2}>
+          <p className="b-case-tagline">{p.tagline}</p>
         </Reveal>
 
-        <Reveal immediate delay={0.35}>
-          <dl className="brief-facts">
+        <Reveal immediate delay={0.3}>
+          <dl className="b-facts">
             <div>
-              <dt className="brief-label">Role</dt>
+              <dt>Role</dt>
               <dd>{p.role}</dd>
             </div>
             <div>
-              <dt className="brief-label">When</dt>
+              <dt>Timeline</dt>
               <dd>{p.period}</dd>
             </div>
             <div>
-              <dt className="brief-label">Where</dt>
+              <dt>Context</dt>
               <dd>{p.context}</dd>
             </div>
             {links.length > 0 && (
               <div>
-                <dt className="brief-label">Links</dt>
-                <dd className="brief-facts-links">
+                <dt>Links</dt>
+                <dd className="b-facts-links">
                   {links.map((l) => (
                     <a
                       key={l.href}
@@ -131,11 +125,31 @@ export default async function CaseStudy({
         </Reveal>
       </header>
 
+      {p.demo && (
+        <div className="b-wrap">
+          <Reveal>
+            <a
+              className="b-demo"
+              href={`https://www.youtube.com/watch?v=${p.demo.youtube}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- a static poster; next/image adds nothing here */}
+              <img src={p.demo.poster} alt="" loading="lazy" />
+              <span className="b-tag b-tag-solid b-demo-play">
+                ▶ Watch on YouTube · {p.demo.length}
+              </span>
+            </a>
+            <p className="b-caption">{p.demo.blurb}</p>
+          </Reveal>
+        </div>
+      )}
+
       {results.length > 0 && (
-        <Block title="Results">
-          <ol className="brief-results">
-            {results.map((r, i) => (
-              <Reveal as="li" key={r} delay={Math.min(i, 4) * 0.05}>
+        <Block title="The outcome">
+          <ol className="b-results">
+            {results.map((r) => (
+              <Reveal as="li" key={r}>
                 {r}
               </Reveal>
             ))}
@@ -143,41 +157,21 @@ export default async function CaseStudy({
         </Block>
       )}
 
-      {p.demo && (
-        <Block title="Walkthrough">
-          <Reveal>
-            <a
-              className="brief-demo"
-              href={`https://www.youtube.com/watch?v=${p.demo.youtube}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- a static poster; next/image adds nothing here */}
-              <img src={p.demo.poster} alt="" loading="lazy" />
-              <span className="brief-demo-play">
-                ▶ Watch on YouTube · {p.demo.length}
-              </span>
-            </a>
-            <p className="brief-prose brief-dim">{p.demo.blurb}</p>
-          </Reveal>
-        </Block>
-      )}
-
       {(overview || problem) && (
-        <Block title="The problem">
+        <Block title="The challenge">
           <Reveal>
-            {overview && <p className="brief-prose">{overview}</p>}
-            {problem && <p className="brief-prose">{problem}</p>}
+            {overview && <p className="b-prose">{overview}</p>}
+            {problem && <p className="b-prose">{problem}</p>}
           </Reveal>
         </Block>
       )}
 
       {(arch || p.architecture.diagram) && (
         <Block
-          title="Architecture"
+          title="The system"
           wide={
             p.architecture.diagram && (
-              <Reveal className="brief-arch">
+              <Reveal className="b-arch">
                 <ArchDiagram spec={p.architecture.diagram} fit />
               </Reveal>
             )
@@ -185,24 +179,19 @@ export default async function CaseStudy({
         >
           {arch && (
             <Reveal>
-              <p className="brief-prose">{arch}</p>
+              <p className="b-prose">{arch}</p>
             </Reveal>
           )}
         </Block>
       )}
 
       {challenges.length > 0 && (
-        <Block title="Hard parts">
-          <ol className="brief-challenges">
-            {challenges.map((c, i) => (
+        <Block title="The hard parts">
+          <ol className="b-hard">
+            {challenges.map((c) => (
               <Reveal as="li" key={c.title}>
-                <span className="brief-label">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <h3 className="brief-h3">{c.title}</h3>
-                  <p className="brief-prose brief-dim">{c.body}</p>
-                </div>
+                <h3 className="b-hard-title">{c.title}</h3>
+                <p className="b-prose b-muted">{c.body}</p>
               </Reveal>
             ))}
           </ol>
@@ -211,7 +200,7 @@ export default async function CaseStudy({
 
       {lessons.length > 0 && (
         <Block title="What I took from it">
-          <ul className="brief-lessons">
+          <ul className="b-lessons">
             {lessons.map((l) => (
               <Reveal as="li" key={l}>
                 {l}
@@ -223,11 +212,11 @@ export default async function CaseStudy({
 
       <Block title="Stack">
         <Reveal>
-          <dl className="brief-stack">
+          <dl className="b-case-stack">
             {p.stack.map((g) => (
               <div key={g.group}>
-                <dt className="brief-label">{g.group}</dt>
-                <dd>{g.items.join(" · ")}</dd>
+                <dt>{g.group}</dt>
+                <dd>{g.items.join(", ")}</dd>
               </div>
             ))}
           </dl>
@@ -236,10 +225,10 @@ export default async function CaseStudy({
 
       {timeline.length > 0 && (
         <Block title="Timeline">
-          <ol className="brief-timeline">
+          <ol className="b-case-timeline">
             {timeline.map((t, i) => (
               <Reveal as="li" key={i}>
-                <span className="brief-label">{t.when}</span>
+                <span>{t.when}</span>
                 <p>{t.what}</p>
               </Reveal>
             ))}
@@ -247,41 +236,23 @@ export default async function CaseStudy({
         </Block>
       )}
 
-      <nav className="brief-next" aria-label="More work">
-        <Reveal>
-          <TransitionLink
-            href={`/brief/work/${next.id}`}
-            className="brief-next-link"
-          >
-            <span className="brief-label">Next project</span>
-            <span className="brief-next-title">
-              {next.shortTitle ?? next.title} <span aria-hidden>→</span>
+      <nav className="b-next" aria-label="Next project">
+        <div className="b-wrap">
+          <TransitionLink href={`/brief/work/${next.id}`} className="b-next-link">
+            <span className="b-cue">(next project)</span>
+            <span className="b-display b-next-title">
+              {next.shortTitle ?? next.title}
             </span>
-            <span className="brief-dim">{next.tagline}</span>
+            <span className="b-next-line">{next.tagline}</span>
           </TransitionLink>
-        </Reveal>
-        {related.length > 0 && (
-          <Reveal>
-            <p className="brief-label">Related</p>
-            <ul className="brief-related">
-              {related.map((r) => (
-                <li key={r.id}>
-                  <TransitionLink href={`/brief/work/${r.id}`}>
-                    {r.shortTitle ?? r.title} <span aria-hidden>→</span>
-                  </TransitionLink>
-                </li>
-              ))}
-            </ul>
-          </Reveal>
-        )}
+        </div>
       </nav>
     </main>
   );
 }
 
 /**
- * A numbered section: number + title beside the content on desktop.
- * Numbered by a CSS counter, so skipping an empty section leaves no gap.
+ * A titled section: title on the left, content on the right on desktop.
  * `wide` content runs full width under both columns (diagrams).
  */
 function Block({
@@ -294,13 +265,12 @@ function Block({
   wide?: React.ReactNode;
 }) {
   return (
-    <section className="brief-block">
-      <header>
-        <p className="brief-label brief-block-n" aria-hidden />
-        <MaskTitle className="brief-block-title">{title}</MaskTitle>
-      </header>
-      <div>{children}</div>
-      {wide && <div className="brief-block-wide">{wide}</div>}
+    <section className="b-wrap b-block">
+      <div className="b-split">
+        <h2 className="b-block-title">{title}</h2>
+        <div>{children}</div>
+      </div>
+      {wide && <div className="b-block-wide">{wide}</div>}
     </section>
   );
 }
