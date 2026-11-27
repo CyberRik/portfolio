@@ -19,7 +19,7 @@ import {
 import { MaskTitle, Reveal, TransitionLink } from "@/components/brief/motion";
 import { CopyEmail } from "@/components/brief/chrome";
 import { Schematic } from "@/components/brief/schematic";
-import { Clip, PopGroup, PopUp } from "@/components/brief/media";
+import { Clip, PopUp } from "@/components/brief/media";
 import { MatrixSpotlightBackground } from "@/components/brief/cursor";
 
 /**
@@ -203,55 +203,26 @@ function Hero() {
  */
 function Showcase() {
   return (
-    <section className="b-wrap" aria-label="Recordings">
-      <Reveal immediate delay={0.4}>
-        <PopGroup className="b-showcase">
-          <PopUp className="b-shot b-shot-main" delay={0.05} distance={36} grouped>
-            <Link href="/" className="b-shot-link" data-cursor="ENTER ROOM">
-              <Clip
-                src="/brief/clips/room-tour.mp4"
-                poster="/brief/clips/room-tour.jpg"
-                label="A flight through the 3D room: the desk, the monitor, the whiteboard"
-                className="b-shot-media"
-              />
-              <span className="b-tag b-shot-tag">
-                The 3D room, recorded live
-              </span>
-            </Link>
-          </PopUp>
-          <PopUp className="b-shot b-shot-a" delay={0.18} distance={36} grouped>
-            <TransitionLink
-              href="/brief/work/ancora"
-              className="b-shot-link"
-              data-cursor="CASE STUDY"
-            >
-              <Clip
-                src="/brief/clips/ancora-dag.mp4"
-                poster="/brief/clips/ancora-dag.jpg"
-                label="Ancora: a run's DAG reconstructed live from Temporal history"
-                className="b-shot-media"
-              />
-              <span className="b-tag b-shot-tag">Ancora · live run DAG</span>
-            </TransitionLink>
-          </PopUp>
-          <PopUp className="b-shot b-shot-b" delay={0.3} distance={36} grouped>
-            <TransitionLink
-              href="/brief/work/ancora"
-              className="b-shot-link"
-              data-cursor="CASE STUDY"
-            >
-              <Clip
-                src="/brief/clips/ancora-chaos.mp4"
-                poster="/brief/clips/ancora-chaos.jpg"
-                label="Ancora: recovering after a worker is SIGKILLed mid-run"
-                className="b-shot-media"
-              />
-              <span className="b-tag b-shot-tag">
-                Ancora · SIGKILL recovery
-              </span>
-            </TransitionLink>
-          </PopUp>
-        </PopGroup>
+    <section className="b-wrap b-feature" aria-label="The 3D room">
+      <PopUp distance={40}>
+        <Link href="/" className="b-feature-link" data-cursor="ENTER ROOM">
+          <Clip
+            src="/brief/clips/room-tour.mp4"
+            poster="/brief/clips/room-tour.jpg"
+            label="A flight through the 3D room: the desk, the monitor, the whiteboard"
+            className="b-feature-media"
+          />
+        </Link>
+      </PopUp>
+      <Reveal className="b-feature-cap">
+        <p className="b-meta">This site, in 3D</p>
+        <p className="b-feature-text">
+          The full portfolio is a room you can walk into: a desk, a monitor
+          running its own little OS, a whiteboard. Recorded live.
+        </p>
+        <Link href="/" className="b-textlink">
+          Walk into the room →
+        </Link>
       </Reveal>
     </section>
   );

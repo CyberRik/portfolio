@@ -1,5 +1,5 @@
 /*
- * /brief — white paper, two typefaces, one ink.
+ * /brief — off-white paper, two typefaces, one ink.
  *
  * Inter Tight for display (large, tight, weight 500), Inter for text.
  * Ink #0e0e0e and a single grey do all the work; there is no accent
@@ -16,7 +16,7 @@ html:has(.brief) body {
   height: auto;
   overflow: visible;
   overscroll-behavior: auto;
-  background: #fff;
+  background: #f6f5f1;
 }
 
 /* Lenis' recommended base styles */
@@ -39,11 +39,12 @@ html.lenis body {
   --grey: #6d6d6d;
   --soft: #a3a3a3;
   --line: #e7e7e7;
-  --paper: #f2f2f0;
+  --bg: #f6f5f1;
+  --paper: #ebe9e3;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --gutter: clamp(20px, 3.6vw, 52px);
 
-  background: #fff;
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-text), ui-sans-serif, system-ui, sans-serif;
   font-size: 16px;
@@ -217,14 +218,14 @@ html.lenis body {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(255, 255, 255, 0);
+  background: rgba(246, 245, 241, 0);
   border-bottom: 1px solid transparent;
   transition:
     background-color 0.4s,
     border-color 0.4s;
 }
 .brief-nav.is-scrolled {
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(246, 245, 241, 0.94);
   border-bottom-color: var(--line);
   -webkit-backdrop-filter: saturate(1.4) blur(14px);
   backdrop-filter: saturate(1.4) blur(14px);
@@ -426,42 +427,48 @@ html.lenis body {
   }
 }
 
-/* ========================================================= showcase */
-/* A black panel; three recordings rise into it one after another. */
+/* ========================================================== feature */
+/* One recording of the room, wide and quiet, captioned underneath. */
 
-.b-showcase {
-  position: relative;
-  margin-top: clamp(64px, 8vw, 120px);
-  border-radius: clamp(16px, 2vw, 28px);
-  background: #000;
-  overflow: hidden;
-  padding: clamp(16px, 4vw, 64px) clamp(12px, 3vw, 48px);
-  display: grid;
-  gap: 14px;
+.b-feature {
+  margin-top: clamp(56px, 7vw, 112px);
 }
-.b-shot {
-  position: relative;
-}
-.b-shot-link {
-  position: relative;
+.b-feature-link {
   display: block;
-  border-radius: clamp(10px, 1.2vw, 16px);
+  border-radius: clamp(14px, 1.6vw, 22px);
   overflow: hidden;
   background: #111;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 30px 80px rgba(0, 0, 0, 0.6);
   isolation: isolate;
 }
-.b-shot-media {
+.b-feature-media {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 21 / 9;
   object-fit: cover;
   transition: transform 1.4s var(--ease);
 }
-.b-shot-link:hover .b-shot-media {
-  transform: scale(1.03);
+.b-feature-link:hover .b-feature-media {
+  transform: scale(1.02);
+}
+.b-feature-cap {
+  display: grid;
+  gap: 8px 32px;
+  margin-top: 18px;
+  align-items: baseline;
+}
+.b-feature-text {
+  max-width: 52ch;
+  color: var(--grey);
+}
+@media (min-width: 900px) {
+  .b-feature-cap {
+    grid-template-columns: 3fr 6fr auto;
+  }
+}
+@media (max-width: 640px) {
+  .b-feature-media {
+    aspect-ratio: 4 / 3;
+  }
 }
 /* small floating labels on media, after the reference's pills */
 .b-tag {
@@ -483,44 +490,6 @@ html.lenis body {
     0 0 0 1px rgba(255, 255, 255, 0.16),
     0 6px 20px rgba(0, 0, 0, 0.25);
 }
-.b-shot-tag {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  z-index: 2;
-}
-@media (min-width: 900px) {
-  /* a quiet grid: the room large on the left, the two Ancora clips
-     stacked on the right, every edge on the same lines */
-  .b-showcase {
-    grid-template-columns: 1.94fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: clamp(12px, 1.4vw, 20px);
-    padding: clamp(20px, 2.6vw, 40px);
-  }
-  .b-shot-main {
-    grid-row: 1 / span 2;
-  }
-  .b-shot-a,
-  .b-shot-b {
-    min-height: 0;
-  }
-  .b-shot-a .b-shot-link,
-  .b-shot-b .b-shot-link {
-    height: 100%;
-  }
-  .b-shot-a .b-shot-media,
-  .b-shot-b .b-shot-media {
-    height: 100%;
-    aspect-ratio: auto;
-    object-position: top left;
-  }
-  .b-shot-tag {
-    left: 14px;
-    top: 14px;
-  }
-}
-
 /* ============================================================= work */
 
 .b-work-head {

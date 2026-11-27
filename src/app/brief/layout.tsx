@@ -29,7 +29,7 @@ const text = Inter({
   subsets: ["latin"],
 });
 
-export const viewport: Viewport = { themeColor: "#ffffff" };
+export const viewport: Viewport = { themeColor: "#f6f5f1" };
 
 export default function BriefLayout({
   children,
