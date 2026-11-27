@@ -39,8 +39,7 @@ const MAGNET_MAX = { w: 360, h: 72 };
 /**
  * An arrow pointer drawn at the real pointer position (no lag), inverted
  * against whatever is under it (mix-blend-mode: difference), a touch
- * larger over links and buttons. Over anything carrying data-cursor="…"
- * a small uppercase label sits beside the arrow — text only, no shape.
+ * larger over links and buttons.
  */
 export function CustomCursor() {
   const fine = useMedia(FINE);
@@ -48,7 +47,6 @@ export function CustomCursor() {
   const enabled = fine && !reduced;
 
   const dot = useRef<HTMLDivElement>(null);
-  const [label, setLabel] = useState<string | null>(null);
   const [mode, setMode] = useState<"idle" | "link">("idle");
   const [hidden, setHidden] = useState(true);
   const [down, setDown] = useState(false);
@@ -95,10 +93,10 @@ export function CustomCursor() {
       const el = e.target instanceof Element ? e.target : null;
       const labelled = el?.closest<HTMLElement>("[data-cursor]");
       const link = el?.closest<HTMLElement>("a, button, summary");
-      setLabel(labelled?.dataset.cursor ?? null);
       setMode(link ? "link" : "idle");
 
-      // magnetic pull on small links and buttons, never on labelled cards
+      // magnetic pull on small links and buttons, never on the big
+      // media cards (marked data-cursor)
       const pull =
         link &&
         !labelled &&
@@ -150,7 +148,7 @@ export function CustomCursor() {
   return (
     <div
       ref={dot}
-      className={`b-cursor ${mode === "link" && !label ? "is-link" : ""} ${label ? "is-label" : ""} ${hidden ? "is-hidden" : ""} ${down ? "is-down" : ""}`}
+      className={`b-cursor ${mode === "link" ? "is-link" : ""} ${hidden ? "is-hidden" : ""} ${down ? "is-down" : ""}`}
       aria-hidden
     >
       <svg
@@ -161,7 +159,6 @@ export function CustomCursor() {
       >
         <path d="M2 1.5 L2 19.5 L6.8 15.1 L9.9 22.2 L13 20.8 L9.9 13.9 L16.4 13.6 Z" />
       </svg>
-      <span className="b-cursor-label">{label}</span>
     </div>
   );
 }

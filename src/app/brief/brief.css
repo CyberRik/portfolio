@@ -1293,30 +1293,6 @@ html.has-cursor .brief * {
 .b-cursor.is-hidden .b-cursor-arrow {
   opacity: 0;
 }
-/* a label beside the arrow: plain text, inverted like the arrow */
-.b-cursor-label {
-  position: absolute;
-  left: 22px;
-  top: 18px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-  color: #fff;
-  opacity: 0;
-  translate: -4px 0;
-  transition:
-    opacity 0.2s,
-    translate 0.3s var(--ease);
-}
-.b-cursor.is-label .b-cursor-label {
-  opacity: 1;
-  translate: 0 0;
-}
-.b-cursor.is-hidden .b-cursor-label {
-  opacity: 0;
-}
-
 /* ================================================== floating tags */
 /* After the reference's corner pair: they pop up once the page settles. */
 
