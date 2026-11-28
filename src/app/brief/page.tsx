@@ -66,7 +66,11 @@ const SPOTLIGHT: {
     id: "desi-agent",
     figure: "45.9% → 97.7%",
     caption: "Task success on 486 held-out banking conversations",
-    tone: "paper",
+    tone: "photo",
+    clip: {
+      src: "/brief/clips/desi-agent-ask.mp4",
+      poster: "/brief/clips/desi-agent-ask.jpg",
+    },
   },
   {
     id: "ancora",
