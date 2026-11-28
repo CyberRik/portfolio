@@ -626,6 +626,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     ],
     links: [
       { label: "GitHub", href: "https://github.com/CyberRik/tool-calling-bfcl" },
+      { label: "Live demo", href: "https://huggingface.co/spaces/rik-labs/toolcalllm-replay" },
       { label: "Resume", href: PROFILE.resumeUrl },
     ],
     related: ["senpai", "medproqa"],
