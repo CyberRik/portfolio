@@ -27,13 +27,18 @@ const PAD = 16;
 /** Geist Mono advance width at the sizes below — enough to size a box from its text */
 const CH_LABEL = 5.25;
 const CH_SUB = 4.35;
+/** 7px mono edge labels */
+const CH_EDGE = 4.25;
+/** depth a backward edge's loop dips below its boxes, plus its label */
+const LOOP_ROOM = 30;
 
 /**
  * `fit` lets the drawing grow to fill its container (up to 1.6x) instead
  * of rendering at fixed size. The layout is tuned for the monitor's small
  * CSS pixels; /brief shows the same diagram across a full page, where
- * 8.5px labels would be unreadable. It never shrinks below natural size —
- * a narrow screen scrolls sideways instead.
+ * 8.5px labels would be unreadable. It shrinks at most to 85% of natural
+ * size, enough for a wide diagram to fit a laptop column; a narrower screen
+ * scrolls sideways instead.
  */
 export function ArchDiagram({
   spec,
@@ -61,13 +66,32 @@ export function ArchDiagram({
     const inCol = spec.nodes.filter((n) => n.col === c);
     colW[c] = inCol.length ? Math.max(...inCol.map(nodeW)) : MIN_W;
   }
+  // A label on an edge between neighbouring columns is centred in the
+  // gap between them, so the gap has to be at least as wide as the label
+  // or the text runs under the boxes on either side.
+  const colOf = (id: string) => spec.nodes.find((n) => n.id === id)?.col;
+  const gapW: number[] = [];
+  for (let c = 0; c < maxCol; c++) {
+    const labels = spec.edges
+      .filter((e) => e.label && colOf(e.from) === c && colOf(e.to) === c + 1)
+      .map((e) => e.label!.length * CH_EDGE + 18);
+    gapW[c] = Math.max(COL_GAP, ...labels);
+  }
   const colX: number[] = [];
   for (let c = 0; c <= maxCol; c++) {
-    colX[c] = c === 0 ? PAD : colX[c - 1] + colW[c - 1] + COL_GAP;
+    colX[c] = c === 0 ? PAD : colX[c - 1] + colW[c - 1] + gapW[c - 1];
   }
 
+  // backward edges loop underneath their boxes; leave room for the loop
+  // (and its label) below the last row
+  const loopsUnder = spec.edges.some((e) => {
+    const a = colOf(e.from);
+    const b = colOf(e.to);
+    return a !== undefined && b !== undefined && b < a;
+  });
   const width = colX[maxCol] + colW[maxCol] + PAD;
-  const height = maxRow * ROW_H + NODE_H + PAD * 2;
+  const height =
+    maxRow * ROW_H + NODE_H + PAD * 2 + (loopsUnder ? LOOP_ROOM : 0);
 
   const at = (id: string) => {
     const n = spec.nodes.find((x) => x.id === id);
@@ -99,7 +123,7 @@ export function ArchDiagram({
                   display: "block",
                   width: "100%",
                   height: "auto",
-                  minWidth: width,
+                  minWidth: width * 0.85,
                   maxWidth: width * 1.6,
                   margin: "0 auto",
                 }

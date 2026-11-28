@@ -95,8 +95,8 @@ const SPOTLIGHT: {
   },
   {
     id: "senpai",
-    figure: "11 → 55 tok/s",
-    caption: "Inference throughput, via prefix and context caching",
+    figure: "334s → 152s",
+    caption: "The create_quote workflow, with synthesis routed to a Q4 8B",
     tone: "photo",
     clip: {
       src: "/brief/clips/senpai-copilot.mp4",
@@ -105,8 +105,8 @@ const SPOTLIGHT: {
   },
   {
     id: "toolcalllm",
-    figure: "97%",
-    caption: "BFCL accuracy on single-turn function calling",
+    figure: "97.0%",
+    caption: "BFCL simple_python after QLoRA, from a 95.25% base",
     tone: "photo",
     clip: {
       src: "/brief/clips/toolcalllm-compose.mp4",
