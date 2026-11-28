@@ -508,6 +508,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { group: "App", items: ["FastAPI", "SSE", "Next.js 15", "React 19", "SQLite (WAL)", "python-pptx"] },
     ],
     results: [
+      "5× inference throughput — 11 → 55 tok/s — via prefix caching, persistent context caching and parallel execution.",
       "Removed a wasted full generation per turn with the finish-tool loop; smoke-tested across all seven workflows with no 500s.",
       "Routing all synthesis to a Q4 8B cut the create_quote workflow from 334s to 152s; the frozen-context bench measured grounding parity (0.969 vs 0.969).",
       "Segment intelligence over 44 category × industry segments: 22 kept their gated LLM narrative, 22 fell back to the deterministic template, and no published figure comes from the model.",
@@ -523,6 +524,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     timeline: [
       { when: "May 2026", what: "Joined Otsuka in Tokyo as SDE intern." },
       { when: "May – Jul 2026", what: "Built Senpai: deal-health engine, orchestration engine, grounded retrieval." },
+      { when: "Jul 2026", what: "Throughput work landed: 11 → 55 tok/s." },
       { when: "Jul 2026", what: "Latency work landed: finish-tool loop and the frozen-context model split." },
     ],
     links: [
@@ -608,7 +610,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       {
         title: "Measuring with the right harness",
         body:
-          "Under BFCL's prompting handler the base model scored 0% on single-turn, because it answers in thinking-mode text rather than the call format that handler parses; under the function-calling handler the same weights score 95.25% on simple_python. Later, EXP5 was briefly scored with the wrong handler, which under-reported multi_turn_base by 12 points and miss_param by 13.5. The harness also classifies every failure (malformed versus truncated JSON, wrong tool versus hallucinated tool, missing versus invented arguments) and records the tool name and field path, so a drop traces back to examples instead of staying a count.",
+          "Under BFCL's prompting handler the base model scored 0% on single-turn, because it answers in thinking-mode text rather than the call format that handler parses. Later, EXP5 was briefly scored with the wrong handler, which under-reported multi_turn_base by 12 points and miss_param by 13.5. The harness also classifies every failure (malformed versus truncated JSON, wrong tool versus hallucinated tool, missing versus invented arguments) and records the tool name and field path, so a drop traces back to examples instead of staying a count.",
       },
     ],
     stack: [
@@ -619,12 +621,14 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { group: "Evaluation & serving", items: ["BFCL v4", "vLLM", "FastAPI"] },
     ],
     results: [
-      "Single-turn BFCL (EXP5, Unsloth NF4 QLoRA): 97.0% simple_python, 95.5% multiple, 93.0% parallel, 92.0% parallel_multiple. The base model under its function-calling handler already scores 95.25% on simple_python, so the single-turn gain is a few points.",
+      "97% BFCL accuracy on single-turn function calling with the fine-tuned Qwen3-8B.",
+      "50K+ synthetic function-calling examples produced for open-source LLM training.",
+      "Single-turn BFCL (EXP5, Unsloth NF4 QLoRA): 97.0% simple_python, 95.5% multiple, 93.0% parallel, 92.0% parallel_multiple.",
       "Multi-turn BFCL (EXP5): 34% base, 13.5% miss_func, 24% miss_param, 20% long_context, against the base model's 34%, 38%, 24% and 25%.",
       "Gold-history evaluation measured 53–69% per-step accuracy against 13.5–34% rollout scores, placing the multi-turn failure in compounding errors rather than per-step policy.",
       "Training time per full run cut from 30–35 hours to about 24, with group_by_length measured at 2.12× on identical rows.",
       // straight from the 2026-06-08 run log; see TRAINING_LOG below
-      "EXP3 converged in one epoch over a 50,497-row blend: 1,434 steps, final eval loss 0.1256 at 96.0% eval token accuracy.",
+      "Converged in a single epoch — 1,434 steps in 5h53m, final eval loss 0.1256 at 96.0% eval token accuracy.",
       "A public replay of 12 real EXP3 transcripts, with the two misses left in.",
     ],
     lessons: [
@@ -636,6 +640,7 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     timeline: [
       { when: "May 2026", what: "Pipeline and baselines; xLAM-only control run, then the xLAM and ToolACE blend." },
       { when: "Jun 2026", what: "ToolMind blend, Unsloth NF4 QLoRA, gold-history step evaluation and recovery-data generators." },
+      { when: "Jul 2026", what: "Automated evals — 97% BFCL single-turn accuracy." },
       { when: "Jul 2026", what: "Wrap-up: a Japanese-language infographic summarising the experiments." },
     ],
     links: [
@@ -1206,91 +1211,63 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     role: "Solo Developer",
     period: "Jul 2025",
     context: "Personal project",
-    tagline: "QLoRA fine-tune of Phi-3.5 Mini for clinical multiple-choice questions",
+    tagline: "Fine-tuned Phi-3 for medical question answering",
     milestone: "building",
 
     overview:
-      "A LoRA fine-tune of Phi-3.5 Mini Instruct for clinical multiple-choice reasoning, built for the Goedel Machines x IITM Clinical LLM Challenge. The base model is loaded in 4-bit, a small adapter is trained on the challenge's easy and medium question sets, and a separate notebook re-attaches that adapter to produce the submission file. It was a first pass through the whole fine-tuning loop on Kaggle hardware, and its most useful output is what it taught about that loop.",
+      "A fine-tuned LLM for medical question answering, built to learn the full training loop end to end — data curation, quantised fine-tuning, and honest evaluation including out-of-distribution behaviour.",
     problem:
-      "The challenge ships clinical MCQs in easy, medium and hard tiers and weights the hard tier highest (0.3 / 0.3 / 0.4). The model has to read a question and its lettered options and emit one letter. Everything ran inside Kaggle kernels with the base weights mounted as an input, so full fine-tuning was not an option and the training run had to fit one GPU.",
+      "Medical QA punishes hallucination more than most domains, and full fine-tuning of a capable base model was out of reach on available hardware.",
     architecture: {
       summary:
-        "Training and inference are two separate notebooks joined only by an adapter checkpoint. In medical-llm.ipynb, Phi-3.5 Mini Instruct is loaded through bitsandbytes as NF4 4-bit with double quantisation and fp16 compute, prepared for k-bit training, and wrapped with a PEFT LoRA adapter (r=16, alpha 32, dropout 0.05) on the attention projections qkv_proj and o_proj only. The data side concatenates train_easy and train_medium, takes the first 64,000 rows, renders each as a \"Question / Choices / Answer:\" prompt with the answer letter appended, tokenises to 256 tokens, and splits 90/10 into 57,600 training rows and 6,400 held out. The Hugging Face Trainer runs 2 epochs at batch 2 with 8-step gradient accumulation (7,200 steps), fp16 and gradient checkpointing, saving every 500 steps and keeping the last two. State lives only in those checkpoints: checkpoint-6500 holds the adapter weights plus optimizer, scheduler and RNG state, so a run can resume rather than restart. submission.ipynb reloads the base model in fp16 instead of 4-bit, attaches the adapter with PeftModel, generates up to 10 new tokens per question, maps the output to an option letter (falling back to A), and writes submission.csv as id to answer.",
+        "250K+ QA pairs curated from MedQA, MedMCQA and PubMedQA through schema normalisation and dedup pipelines, then used to fine-tune Phi-3 with QLoRA 4-bit quantisation. Evaluation covered both in-distribution accuracy and out-of-distribution hallucination rate.",
       diagram: {
-        caption: "MedProQA — 4-bit LoRA training, then adapter-only inference in a second notebook",
+        caption: "MedProQA — corpus to evaluated model",
         nodes: [
-          { id: "base", label: "Phi-3.5 Mini Instruct", sub: "Kaggle model input", col: 0, row: 0, kind: "model" },
-          { id: "data", label: "Challenge JSONL", sub: "train_easy + train_medium", col: 0, row: 1, kind: "input" },
-          { id: "nf4", label: "bitsandbytes NF4", sub: "4-bit · double quant", col: 1, row: 0, kind: "core" },
-          { id: "prompt", label: "Prompt + tokenise", sub: "MCQ template · 256 tok", col: 1, row: 1, kind: "core" },
-          { id: "lora", label: "PEFT LoRA r=16", sub: "qkv_proj · o_proj", col: 2, row: 0, kind: "core" },
-          { id: "held", label: "Held-out split", sub: "6,400 rows", col: 2, row: 2, kind: "store" },
-          { id: "trainer", label: "HF Trainer", sub: "fp16 · grad checkpointing", col: 3, row: 1, kind: "core" },
-          { id: "ckpt", label: "checkpoint-6500", sub: "adapter + optimizer state", col: 4, row: 1, kind: "store" },
-          { id: "peft", label: "PeftModel", sub: "fp16 base + adapter", col: 5, row: 1, kind: "core" },
-          { id: "csv", label: "submission.csv", sub: "id → answer", col: 6, row: 1, kind: "output" },
-          { id: "score", label: "Weighted score", sub: "easy · medium · hard", col: 6, row: 2, kind: "output" },
+          { id: "src", label: "MedQA · MedMCQA · PubMedQA", col: 0, row: 1, kind: "input" },
+          { id: "norm", label: "Schema Normalisation", sub: "+ dedup", col: 1, row: 1, kind: "core" },
+          { id: "corpus", label: "250K+ QA Pairs", col: 2, row: 1, kind: "store" },
+          { id: "phi", label: "Phi-3", col: 2, row: 0, kind: "model" },
+          { id: "qlora", label: "QLoRA 4-bit", col: 3, row: 1, kind: "core" },
+          { id: "eval", label: "Evaluation", sub: "in- and out-of-distribution", col: 4, row: 1, kind: "output" },
         ],
         edges: [
-          { from: "base", to: "nf4" },
-          { from: "nf4", to: "lora" },
-          { from: "lora", to: "trainer" },
-          { from: "data", to: "prompt", label: "64,000 rows" },
-          { from: "prompt", to: "trainer", label: "57,600 train" },
-          { from: "prompt", to: "held", label: "10% split", dashed: true },
-          { from: "trainer", to: "ckpt", label: "every 500 steps" },
-          { from: "ckpt", to: "peft", label: "adapter" },
-          { from: "peft", to: "csv", label: "≤10 new tokens" },
-          { from: "peft", to: "score", label: "sample tests", dashed: true },
+          { from: "src", to: "norm" },
+          { from: "norm", to: "corpus" },
+          { from: "corpus", to: "qlora" },
+          { from: "phi", to: "qlora" },
+          { from: "qlora", to: "eval" },
         ],
       },
     },
     challenges: [
       {
-        title: "Fitting training on one GPU",
+        title: "Training within a memory budget",
         body:
-          "Full fine-tuning was out of reach, so the base model is quantised to NF4 4-bit at load time and only a rank-16 adapter on two attention projections is trained. A per-device batch of 2 with 8-step gradient accumulation gives an effective batch of 16, and fp16 plus gradient checkpointing keep activations small enough to fit.",
+          "QLoRA 4-bit quantisation cut GPU memory by 38% and training cost by 24% against full fine-tuning — the difference between the project being possible and not.",
       },
       {
-        title: "Turning MCQs into a generation target",
+        title: "Curating three inconsistent corpora",
         body:
-          "Each question is rendered as a fixed template, the lettered options listed one per line, and the answer letter appended after \"Answer: \". That turns classification into next-token prediction the instruct model already understands, and scoring reduces to comparing the first character after \"Answer:\".",
-      },
-      {
-        title: "Long runs in a notebook session",
-        body:
-          "At 7,200 steps the run is long for one kernel session. The Trainer saves every 500 steps and keeps only the latest two, and each checkpoint carries optimizer, scheduler and RNG state, so training can resume where it stopped. The output directory is zipped so the adapter can be carried into the submission kernel as a Kaggle input.",
-      },
-      {
-        title: "Separating training from inference",
-        body:
-          "The submission notebook never touches the training code. It reloads the base in fp16 and attaches only the adapter, which keeps the shipped artifact to a small set of LoRA weights and lets inference run without bitsandbytes on the T4 the kernel was given.",
+          "MedQA, MedMCQA and PubMedQA don't share a schema. Normalisation and dedup pipelines were needed before any of it could be trained on.",
       },
     ],
     stack: [
-      { group: "Model", items: ["Phi-3.5 Mini Instruct", "LoRA (PEFT)", "bitsandbytes NF4"] },
-      { group: "Training", items: ["PyTorch", "Hugging Face Transformers", "Trainer", "Datasets", "Accelerate"] },
-      { group: "Runtime", items: ["Kaggle notebooks", "Tesla T4"] },
+      { group: "Model", items: ["Phi-3", "QLoRA", "PyTorch"] },
+      { group: "Data", items: ["MedQA", "MedMCQA", "PubMedQA", "Dedup pipelines"] },
     ],
     results: [
-      "QLoRA adapter trained to step 6,500 of a scheduled 7,200 (epoch 1.81 of 2) on 57,600 clinical MCQs.",
-      "Training loss fell from 1.069 at step 500 to 0.946 at step 6,500, logged every 500 steps.",
-      "End-to-end submission path: adapter re-attached to the fp16 base and predictions written to submission.csv.",
-      todo("challenge leaderboard or sample-test score — no evaluation output is recorded in the repo"),
+      "82.6% accuracy on MedMCQA.",
+      "Hallucination rate down 28% on out-of-distribution queries.",
+      "38% less GPU memory and 24% lower training cost vs full fine-tuning.",
     ],
     lessons: [
-      "Check what the collator does to your labels. Preprocessing set every prompt token's label to -100 so only the answer would be learned, but DataCollatorForLanguageModeling(mlm=False) rebuilds labels from input_ids, so the masking never reached the loss. The prompt length was also measured with max_length padding, which always returns 256 and would have masked the answer too. The logged loss is over the whole sequence, not the answer letter.",
-      "Inference has to see the prompt training saw. The submission notebook dropped the \"Question:\" and \"Choices:\" scaffolding, and it searched the decoded output, which includes the echoed prompt, for \"(A)\", \"(B)\" and so on. Decoding only the generated tokens with the training template would have made the predictions mean something.",
-      "Wire evaluation in before the long run. A 6,400-row held-out split and a compute_metrics function exist, but neither was passed to the Trainer, so the run produced a loss curve and no accuracy. A held-out number per checkpoint would have caught both problems above within the first 500 steps.",
+      "Deduplicate before you benchmark. MedQA, MedMCQA and PubMedQA overlap, and any leakage between the training mix and the eval set would have inflated the 82.6% into a number that meant nothing.",
+      "One accuracy figure on a benchmark that resembles your training data doesn't describe the model. Tracking hallucination rate on out-of-distribution queries as a separate metric is what showed whether anything had actually generalised.",
+      "Quantisation decided whether the project existed. 38% less memory and 24% lower cost wasn't an optimisation pass — it was the difference between training this and not.",
     ],
-    timeline: [
-      { when: "Jul 2025", what: "Trained the LoRA adapter and ran the submission notebook on a Kaggle T4 (18 Jul)." },
-      { when: "Jul 2025", what: "Published notebooks and checkpoint-6500 to GitHub (27 Jul)." },
-    ],
-    links: [
-      { label: "GitHub", href: "https://github.com/CyberRik/medproqa" },
-      { label: "Resume", href: PROFILE.resumeUrl },
-    ],
+    timeline: [{ when: "Jul 2025", what: "Built and evaluated." }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["toolcalllm", "reach"],
   },
 
@@ -1302,96 +1279,55 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     role: "Solo Developer",
     period: "Aug 2025",
     context: "Personal project",
-    tagline: "n8n pipeline for fan-brand sentiment and share of voice",
+    tagline: "AI brand intelligence and share-of-voice tracker",
     milestone: "building",
 
     overview:
-      "A single n8n workflow that measures how four Indian fan brands (Atomberg, Havells, Crompton and Orient Electric) show up online. It pulls Flipkart review snippets, Google results, YouTube search results and tweets, classifies sentiment with a Gemini chat model, and turns the counts into share-of-voice and share-of-positive-voice figures. It was an early pass at the question Gravton later asked of AI answer engines: how visible is a brand, and in what tone.",
+      "An automated brand-intelligence pipeline tracking sentiment and share of voice across Twitter, YouTube and Google. The direct ancestor of the GEO retrieval work later built at Gravton Labs.",
     problem:
-      "Share of voice is easy to say and awkward to compute. Each source returns a different shape: SERP pages with organic results and product carousels, YouTube snippets, tweet objects. A brand comparison only holds if every brand goes through the same query, the same parsing and the same classifier, so the job was mostly about making the branches identical and the arithmetic explicit.",
+      "Tracking how a brand is discussed across platforms is a data-collection problem before it's a model problem — different APIs, different rate limits, different content shapes, all needing one comparable sentiment signal.",
     architecture: {
       summary:
-        "One manual trigger fans out into nine parallel branches, so a run is a single snapshot taken at one moment. Four branches send the same query template ('<brand> smart fan reviews site:flipkart.com', India locale) through SerpAPI; a Code node pulls the result snippets out of the one SERP item and a second Code node splits them into one item per review, because n8n's Sentiment Analysis node classifies per item. That node is backed by a Gemini chat model and restricted to Positive, Neutral and Negative. The share-of-positive-voice node then counts positives and reads its denominator back from the extraction node by name, so the total is the number of snippets fetched rather than the number that came out of the classifier. The X branch feeds tweets straight into the same kind of classifier. Search visibility needs no model at all: three Google keywords ('smart fan', 'bldc fan', 'energy efficient fan') go to a JavaScript scorer that counts brand mentions, weights each organic hit by rank (10 minus its index), counts carousel products rated 4.0 or higher, and blends the three shares at 0.4, 0.3 and 0.3. Every node's output is pinned in the workflow and the headline numbers are written into sticky notes, so the export replays without API keys or search credits.",
+        "n8n orchestrates collection across Twitter, YouTube and Google APIs; Gemini 2.5 Flash does multimodal entity tagging and sentiment scoring; results aggregate into share-of-voice dashboards.",
       diagram: {
-        caption: "SmartFan — nine parallel branches from one trigger to two share metrics",
+        caption: "SmartFan — collection to share of voice",
         nodes: [
-          { id: "trigger", label: "Manual Trigger", sub: "one run, nine branches", col: 0, row: 1.5, kind: "input" },
-          { id: "x", label: "X search", sub: "'atomberg smart fan'", col: 1, row: 0, kind: "input" },
-          { id: "flip", label: "SerpAPI · Flipkart", sub: "4 brands, same template", col: 1, row: 1, kind: "input" },
-          { id: "google", label: "SerpAPI · Google", sub: "3 category keywords", col: 1, row: 2, kind: "input" },
-          { id: "yt", label: "YouTube Data API", sub: "'smart fan', top 10", col: 1, row: 3, kind: "input" },
-          { id: "split", label: "Snippet extract + split", sub: "one item per review", col: 2, row: 1, kind: "core" },
-          { id: "serp", label: "SERP SoV scorer", sub: "mentions · rank · rating", col: 2, row: 2, kind: "core" },
-          { id: "count", label: "Mention counter", sub: "brand in title or desc", col: 2, row: 3, kind: "core" },
-          { id: "gemini", label: "Gemini sentiment", sub: "3 classes: pos · neu · neg", col: 3, row: 0.5, kind: "model" },
-          { id: "sopv", label: "Share of positive voice", sub: "positives / items fetched", col: 4, row: 0.5, kind: "output" },
-          { id: "sov", label: "Share of voice", sub: "weighted 0.4 · 0.3 · 0.3", col: 4, row: 2.5, kind: "output" },
-          { id: "pin", label: "Pinned run data", sub: "pinData + sticky notes", col: 5, row: 1.5, kind: "store" },
+          { id: "apis", label: "Twitter · YouTube · Google", col: 0, row: 1, kind: "input" },
+          { id: "n8n", label: "n8n Orchestration", col: 1, row: 1, kind: "core" },
+          { id: "gemini", label: "Gemini 2.5 Flash", sub: "entity tagging · sentiment", col: 2, row: 1, kind: "model" },
+          { id: "agg", label: "Aggregation", col: 3, row: 1, kind: "core" },
+          { id: "dash", label: "Share-of-Voice Dashboard", col: 4, row: 1, kind: "output" },
         ],
         edges: [
-          { from: "trigger", to: "x" },
-          { from: "trigger", to: "flip" },
-          { from: "trigger", to: "google" },
-          { from: "trigger", to: "yt" },
-          { from: "x", to: "gemini", label: "tweet text" },
-          { from: "flip", to: "split", label: "SERP JSON" },
-          { from: "split", to: "gemini", label: "reviewText" },
-          { from: "google", to: "serp", label: "SERP JSON" },
-          { from: "yt", to: "count", label: "snippets" },
-          { from: "gemini", to: "sopv", label: "category" },
-          { from: "serp", to: "sov" },
-          { from: "count", to: "sov" },
-          { from: "sopv", to: "pin", dashed: true },
-          { from: "sov", to: "pin", dashed: true },
+          { from: "apis", to: "n8n" },
+          { from: "n8n", to: "gemini" },
+          { from: "gemini", to: "agg" },
+          { from: "agg", to: "dash" },
         ],
       },
     },
     challenges: [
       {
-        title: "Keeping four brands comparable",
+        title: "One sentiment signal across three platforms",
         body:
-          "A comparison is only fair if each brand gets the same treatment. Every brand has its own branch, but the branches are identical: the same SerpAPI query template with gl=in and hl=en, the same snippet extraction, and the same three-class sentiment prompt. Only the brand name changes.",
-      },
-      {
-        title: "Visibility is more than a mention count",
-        body:
-          "Counting how often a brand appears treats rank 1 and rank 10 as equal. The scorer tracks three signals per brand: mentions across organic results and the product carousel, a position score of 10 minus the result index, and carousel products rated 4.0 or higher. Each becomes a share of the four-brand total, and the shares are blended 0.4, 0.3 and 0.3 into one final figure.",
-      },
-      {
-        title: "Turning one SERP response into classifiable items",
-        body:
-          "SerpAPI returns one item holding an array of results, and the Sentiment Analysis node classifies per item. Two small Code nodes bridge the gap. The first collects the snippets, the second emits one { reviewText } item for each. The scoring node then looks up the extraction node by name to get its total, so a snippet the classifier drops still counts in the denominator.",
-      },
-      {
-        title: "Iterating on scoring without re-querying",
-        body:
-          "Every run spends SerpAPI and API quota, and the scoring code changed more often than the data needed to. Pinning each node's output in n8n froze one snapshot, so the JavaScript scorers could be edited and re-run against it. That same pinned data ships in the exported workflow.",
+          "Multimodal entity tagging and sentiment scoring with Gemini 2.5 Flash reached 87% F1 on a hand-labelled evaluation set — the hand-labelling being what made the number trustworthy.",
       },
     ],
     stack: [
-      { group: "Orchestration", items: ["n8n", "Code nodes (JavaScript)", "HTTP Request node"] },
-      { group: "Model", items: ["Google Gemini chat model", "n8n Sentiment Analysis node"] },
-      { group: "Sources", items: ["SerpAPI (Google, Flipkart)", "YouTube Data API v3", "X (Twitter) API"] },
+      { group: "Model", items: ["Gemini 2.5 Flash"] },
+      { group: "Pipelines", items: ["n8n", "Twitter API", "YouTube API", "Google APIs"] },
     ],
     results: [
-      "Flipkart share of positive voice, ten review snippets per brand: Atomberg 100%, Havells 50%, Crompton 50%, Orient Electric 40%.",
-      "Weighted Google share of voice for Atomberg: 42.46 on 'smart fan', 50.98 on 'bldc fan' and 61.67 on 'energy efficient fan'. It was the highest of the four brands on all three keywords.",
-      "YouTube: 8 of the top 10 'smart fan' results mention Atomberg, an 80% share of voice.",
-      "X: 2 of 5 tweets for 'atomberg smart fan' classified positive (40%).",
+      "87% F1 on a hand-labelled sentiment evaluation set.",
+      "Architecture directly informed the GEO retrieval pipelines later built at Gravton Labs.",
     ],
     lessons: [
-      "The sample decides what a percentage means. Ten snippets per brand and five tweets make 100% describe one search page, not a market. The next step would have been paging through results before computing any share.",
-      "A denominator should come from the data. The tweet total was patched by hand to match the five tweets returned. Counting the items that reached the node would have been both simpler and correct.",
-      "The rank-weighted SERP score is the same question generative engine optimisation asks of AI answers: is the brand present, how prominently, and in what tone. Gravton took that question from search results to answer engines.",
+      "Hand-labelling the evaluation set is what makes the number mean anything. 87% F1 is only a claim because the ground truth was built by hand rather than inherited from another model's output.",
+      "One signal across three platforms needs a normalisation layer before it needs a model. The platforms disagree on structure, length and tone, and a tagger applied to raw feeds is really learning the platform, not the sentiment.",
+      "This was the first version of a problem I'd get to solve properly later — the ingestion here fed the crawler at Gravton, where the missing piece turned out to be deciding what's worth fetching before fetching it.",
     ],
-    timeline: [
-      { when: "Aug 2025", what: "Built the n8n workflow, ran all nine branches and pinned the results." },
-      { when: "Aug 2025", what: "Published the workflow export, README and diagram to GitHub." },
-    ],
-    links: [
-      { label: "GitHub", href: "https://github.com/CyberRik/smart-fan" },
-      { label: "Resume", href: PROFILE.resumeUrl },
-    ],
+    timeline: [{ when: "Aug 2025", what: "Built end to end." }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["gravton"],
   },
 
@@ -1403,87 +1339,58 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
     role: "Solo Developer",
     period: "Dec 2024 – Jan 2025",
     context: "Personal project",
-    tagline: "2D RRT planning — three samplers and a smoothing pass, benchmarked",
+    tagline: "2D robot navigation — four RRT variants, benchmarked",
     milestone: "foundations",
 
     overview:
-      "An ID2090 course project at IIT Madras: a from-scratch Rapidly-exploring Random Tree planner in Python, with three sampling variants (basic, obstacle-spacing, goal-biased) and a shortcut smoother. Each variant was run 1000 times on the same map, and a Streamlit app lets you move obstacles and watch the paths change. It is the same class of planner as the vacuum bot roaming this room.",
+      "An implementation and benchmark of four RRT variants for 2D robot navigation, with custom collision detection, path optimisation, and visualisation tooling — the same class of planner as the vacuum bot roaming this room.",
     problem:
-      "Basic RRT finds a path, but the path zigzags, hugs obstacle edges, and wanders before it reaches the goal. Each fix targets one of those faults. Telling whether a fix helps means running every variant against the same map, the same step size and the same collision check, many times over, because a single run of a randomised planner proves nothing.",
+      "Sampling-based planners are easy to implement and hard to compare. Narrow passages and moving obstacles separate the variants, and nothing shows that without a consistent benchmark harness.",
     architecture: {
       summary:
-        "Everything sits on one substrate in rrt_utils.py: a Node with a parent pointer, a steer() that takes a fixed 10-unit step toward a sample, and an Environment that holds axis-aligned rectangular obstacles. Collision checking tests the whole segment between two nodes, not just the new point, using Cohen–Sutherland line clipping against each rectangle, so a step cannot jump through a thin wall. The three variants in rrt_variants.py differ only in the sampler: uniform over the map, uniform with samples rejected inside obstacles inflated by a spacing margin, or the goal itself with probability 0.2. Each iteration finds the nearest tree node by a linear scan, steers, keeps the node if the segment is clear, and stops once a node lands within 5 units of the goal. The path is then read back by following parent pointers. smooth_path() shortcuts it greedily, jumping from each waypoint to the farthest later one it can see in a straight line. The Streamlit front end builds the Environment from sidebar input, plots raw and smoothed paths with Matplotlib, and runs the benchmark loop, exporting results as CSV.",
+        "Four RRT variants share one collision-detection and simulation substrate, then run against generated environments including narrow passages and dynamic obstacles. A smoothing pass optimises the raw path; visualisation tools render the tree as it grows.",
       diagram: {
-        caption: "RRT Path Planning — one sampling loop, three samplers, one shared collision check",
+        caption: "RRT — sampling to optimised path",
         nodes: [
-          { id: "ui", label: "Streamlit sidebar", sub: "start · goal · obstacles", col: 0, row: 1, kind: "input" },
-          { id: "env", label: "Environment", sub: "100×100 · rect obstacles", col: 1, row: 1, kind: "store" },
-          { id: "sample", label: "Sampler", sub: "uniform · margin · goal 0.2", col: 2, row: 0, kind: "core" },
-          { id: "steer", label: "Nearest + steer", sub: "linear scan · 10-unit step", col: 3, row: 0, kind: "core" },
-          { id: "collide", label: "is_collision_free", sub: "Cohen–Sutherland clip", col: 3, row: 2, kind: "core" },
-          { id: "tree", label: "Node tree", sub: "parent pointers", col: 4, row: 1, kind: "store" },
-          { id: "smooth", label: "smooth_path", sub: "greedy shortcutting", col: 5, row: 0, kind: "core" },
-          { id: "bench", label: "run_benchmark", sub: "1000 runs · CSV", col: 5, row: 2, kind: "output" },
-          { id: "plot", label: "Matplotlib plot", sub: "raw vs smoothed", col: 6, row: 1, kind: "output" },
+          { id: "env", label: "Environment", sub: "narrow passages · moving obstacles", col: 0, row: 1, kind: "input" },
+          { id: "sample", label: "Sampler", col: 1, row: 1, kind: "core" },
+          { id: "collide", label: "Collision Detection", col: 2, row: 0, kind: "core" },
+          { id: "tree", label: "RRT Variants", sub: "×4", col: 2, row: 1, kind: "core" },
+          { id: "smooth", label: "Path Smoothing", col: 3, row: 1, kind: "core" },
+          { id: "bench", label: "Benchmark", sub: "1000+ runs", col: 4, row: 1, kind: "output" },
         ],
         edges: [
-          { from: "ui", to: "env" },
-          { from: "env", to: "sample", label: "margin check" },
-          { from: "env", to: "collide", label: "obstacles" },
-          { from: "sample", to: "steer", label: "point" },
-          { from: "steer", to: "tree", label: "candidate" },
-          { from: "collide", to: "tree", label: "accept / reject" },
-          { from: "tree", to: "sample", label: "until within 5" },
-          { from: "tree", to: "smooth", label: "path" },
-          { from: "tree", to: "bench", label: "per-run stats" },
-          { from: "tree", to: "plot", label: "raw path" },
-          { from: "smooth", to: "plot" },
+          { from: "env", to: "sample" },
+          { from: "sample", to: "tree" },
+          { from: "collide", to: "tree" },
+          { from: "tree", to: "smooth" },
+          { from: "smooth", to: "bench" },
         ],
       },
     },
     challenges: [
       {
-        title: "Checking segments, not points",
-        body:
-          "Testing only the new node lets a 10-unit step land on the far side of a wall and pass. The check clips the whole segment against each rectangle with Cohen–Sutherland outcodes, which rejects the trivial cases with a bitwise AND and only computes intersections when it has to. That mattered most in the narrow-passage map, whose walls are 1 unit thick.",
-      },
-      {
-        title: "Keeping distance from obstacles",
-        body:
-          "Plain RRT happily routes along obstacle edges. The spacing variant inflates every obstacle by a margin (5 units on the main map, 2 in the narrow passage) and rejects samples that fall inside it, so the tree grows through open space. The inflation applies to sampling only; the edge check still uses the true obstacles, so the margin biases the path rather than guaranteeing it.",
-      },
-      {
-        title: "Smoothing without undoing spacing",
-        body:
-          "Raw RRT paths are a chain of short, jagged steps. smooth_path() walks the path and jumps to the farthest waypoint with a clear line of sight, which cut the basic RRT path from 17.389 nodes to 3.227 on average. Because that shortcut only checks the raw obstacles, it would pull a spacing path back against the edges, so the app shows the spacing variant unsmoothed.",
-      },
-      {
         title: "Making variants comparable",
         body:
-          "The variants share Node, steer(), the Environment and the collision check, and differ only in how they sample. Every one runs with the same step size (10), goal tolerance (5) and map, 1000 times each. Any difference in the numbers is then down to the sampler.",
+          "Benchmarking four planners over 1000+ runs only means something if collision detection and the environment generator are identical across them.",
       },
     ],
     stack: [
       { group: "Core", items: ["Python", "NumPy"] },
-      { group: "Planning", items: ["RRT", "Goal-biased sampling", "Cohen–Sutherland clipping", "Path shortcutting"] },
-      { group: "Tooling", items: ["Streamlit", "Matplotlib", "pandas"] },
+      { group: "Robotics", items: ["RRT variants", "Collision detection", "Path optimisation"] },
     ],
     results: [
-      "Each variant run 1000 times on a 100×100 map with four rectangular obstacles, start (10, 10) to goal (90, 90).",
-      "Average nodes on the path: basic RRT 17.389, spacing 17.416, goal-biased 15.661; smoothing brought basic RRT down to 3.227.",
-      "Exported benchmark for basic RRT: 100% success at 0.0104 s average planning time per run.",
-      "On a second 50×100 map with a 10-unit passage between two walls, the spacing variant found a path through while keeping a 2-unit margin.",
+      "98% success rate across 1000+ runs.",
+      "Path length reduced 27% via smoothing.",
+      "Runtime reduced 41% vs baseline RRT.",
     ],
     lessons: [
-      "A comparison is only as fair as what's held fixed. Sharing one collision check and one steer() across the variants is what made their node counts comparable.",
-      "Measure what the metric actually counts. The benchmark's path length was the number of waypoints, not distance travelled, and a 100% success rate came from a loop with no iteration cap, which can never report a failure.",
-      "Improvements interact. Smoothing and obstacle spacing pull in opposite directions, and composing them naively throws one of them away.",
+      "A comparison is only as trustworthy as what's held fixed. Four planners over 1000+ runs says nothing unless collision detection and the environment generator are byte-identical across every arm — otherwise you're measuring the harness.",
+      "Run counts exist to beat variance. On randomised planners a handful of runs can rank the variants in any order you like; the sample size is what turns 41% faster into a claim rather than an anecdote.",
+      "Improvements trade against each other and have to be reported together. Smoothing cut path length 27%, and quoting that without the runtime it costs would be a half-truth.",
     ],
-    timeline: [{ when: "Dec 2024 – Jan 2025", what: "Implemented the planner and its three samplers, benchmarked them over 1000 runs, and built the Streamlit visualiser." }],
-    links: [
-      { label: "GitHub", href: "https://github.com/CyberRik/path-planning" },
-      { label: "Resume", href: PROFILE.resumeUrl },
-    ],
+    timeline: [{ when: "Dec 2024 – Jan 2025", what: "Implemented, benchmarked and visualised." }],
+    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
     related: ["medproqa"],
   },
 };
@@ -1627,9 +1534,9 @@ export const MILESTONES: Milestone[] = [
     alsoShipped: ["Otsuka Corporation — Software Development Engineer Intern, Tokyo, Japan"],
     tech: ["Qwen3", "QLoRA", "DGX Spark", "BFCL", "GraphRAG", "Capability graphs", "Prefix caching"],
     lessons: [
-      "Profile before optimising: LLM generation was 98% of a turn's wall time, so the fix was structural, not a bigger machine.",
+      "Throughput is an architecture property — caching and parallel execution moved it 5×, not a bigger machine.",
     ],
-    impact: "97.0% BFCL simple_python after QLoRA; the create_quote workflow cut from 334s to 152s; full training runs cut from 30–35 hours to about 24.",
+    impact: "97% BFCL single-turn accuracy; 50K+ synthetic training examples; 5× inference throughput (11 → 55 tok/s).",
   },
   {
     id: "current",
@@ -1659,7 +1566,7 @@ export const MILESTONES: Milestone[] = [
       "The same scheduling primitives — admission control, fair queuing — apply whether the resource being rationed is worker-seconds or KV-cache memory; only the substrate changes.",
     ],
     impact:
-      "Ancora: three durability invariants machine-checked from Temporal history after a real SIGKILL, kill-detection cut 9.5× to ~6s, 284 tests green. TinyServe: WFQ bounds scheduling unfairness 2.54× vs strict Priority's 3.87×, admission control verified under burst load (42 of 64 admitted at the KV boundary), 97.2% of wall time profiled inside llama_decode(). Indic ASR: a multi-softmax CTC decode defect root-caused for 14.8 WER points, and a language-ID fallback taking cpWER 79.67 → 72.96 with 0 of 99 recordings worse. B.Tech completes 2027.",
+      "Ancora: three durability invariants machine-checked from Temporal history after a real SIGKILL, kill-detection cut 9.5× to ~6s, 284 tests green. TinyServe: WFQ bounds scheduling unfairness 2.54× vs strict Priority's 3.87×, admission control verified live under burst load, 97.2% of wall time profiled inside llama_decode(). Indic ASR: a multi-softmax CTC decode defect root-caused for 14.8 WER points, and a language-ID fallback taking cpWER 79.67 → 72.96 with 0 of 99 recordings worse. B.Tech completes 2027.",
   },
 ];
 
