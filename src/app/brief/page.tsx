@@ -107,7 +107,11 @@ const SPOTLIGHT: {
     id: "toolcalllm",
     figure: "97%",
     caption: "BFCL accuracy on single-turn function calling",
-    tone: "paper",
+    tone: "photo",
+    clip: {
+      src: "/brief/clips/toolcalllm-compose.mp4",
+      poster: "/brief/clips/toolcalllm-compose.jpg",
+    },
   },
 ];
 
