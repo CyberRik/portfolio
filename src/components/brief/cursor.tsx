@@ -154,8 +154,8 @@ export function CustomCursor() {
       <svg
         className="b-cursor-arrow"
         viewBox="0 0 20 24"
-        width="20"
-        height="24"
+        width="16"
+        height="19.2"
       >
         <path d="M2 1.5 L2 19.5 L6.8 15.1 L9.9 22.2 L13 20.8 L9.9 13.9 L16.4 13.6 Z" />
       </svg>

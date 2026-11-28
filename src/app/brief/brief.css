@@ -1310,12 +1310,14 @@ html.has-cursor .brief * {
 }
 .b-cursor-arrow {
   display: block;
-  margin: -2px 0 0 -2px;
+  /* drawn at 0.8× the 20×24 viewBox; the tip (2, 1.5) lands at
+     (1.6, 1.2), so these offsets keep it on the real pointer */
+  margin: -1.2px 0 0 -1.6px;
   fill: #fff;
   stroke: #fff;
   stroke-width: 1;
   stroke-linejoin: round;
-  transform-origin: 2px 2px;
+  transform-origin: 1.6px 1.2px;
   transition:
     scale 0.3s var(--ease),
     opacity 0.2s;
