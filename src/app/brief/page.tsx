@@ -93,7 +93,11 @@ const SPOTLIGHT: {
     id: "senpai",
     figure: "11 → 55 tok/s",
     caption: "Inference throughput, via prefix and context caching",
-    tone: "ink",
+    tone: "photo",
+    clip: {
+      src: "/brief/clips/senpai-copilot.mp4",
+      poster: "/brief/clips/senpai-copilot.jpg",
+    },
   },
   {
     id: "toolcalllm",
@@ -275,7 +279,7 @@ function Spread({ s, i }: { s: (typeof SPOTLIGHT)[number]; i: number }) {
           aria-label={`${p.title}: read the case study`}
           data-cursor="CASE STUDY"
         >
-          {s.tone === "photo" && s.clip && p.demo ? (
+          {s.tone === "photo" && s.clip ? (
             <>
               <Clip
                 src={s.clip.src}
@@ -283,9 +287,12 @@ function Spread({ s, i }: { s: (typeof SPOTLIGHT)[number]; i: number }) {
                 label={`${p.title} demo`}
                 className="b-cover-media"
               />
-              <span className="b-tag b-tag-solid b-cover-play">
-                ▶ Demo · {p.demo.length}
-              </span>
+              {/* the badge promises a full video, so only when one exists */}
+              {p.demo && (
+                <span className="b-tag b-tag-solid b-cover-play">
+                  ▶ Demo · {p.demo.length}
+                </span>
+              )}
             </>
           ) : (
             p.architecture.diagram && (
