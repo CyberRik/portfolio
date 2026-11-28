@@ -624,7 +624,10 @@ export const PROJECT_DOCS: Record<ProjectId, ProjectDoc> = {
       { when: "Jun 2026", what: "QLoRA fine-tuning of Qwen3-8B on DGX Spark." },
       { when: "Jul 2026", what: "Automated evals — 97% BFCL single-turn accuracy." },
     ],
-    links: [{ label: "Resume", href: PROFILE.resumeUrl }],
+    links: [
+      { label: "GitHub", href: "https://github.com/CyberRik/tool-calling-bfcl" },
+      { label: "Resume", href: PROFILE.resumeUrl },
+    ],
     related: ["senpai", "medproqa"],
   },
 
